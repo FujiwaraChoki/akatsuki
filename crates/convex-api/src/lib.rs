@@ -24,12 +24,15 @@ use serde::de::DeserializeOwned;
 use serde_json::Value as Json;
 
 use akatsuki_core::convex::client::{
-    self as cf, AckFailureArgs, ClaimTriageArgs, MailApplyArgs, MailApplyResult, MailSetReminderArgs,
-    MailSetReminderResult, MailSnoozeArgs, MailSnoozeResult, MailUndoArgs, MailUndoResult, RegisterDeviceArgs,
-    SaveAiSettingsArgs, SendsCancelArgs, SendsCancelResult, SetTriageArgs, SplitView, SyncChangesArgs,
-    SyncChangesResult,
+    self as cf, AckFailureArgs, ClaimTriageArgs, DraftDiscardArgs, DraftDiscardResult, LabelCreateArgs,
+    LabelCreateResult, LabelOpResult, LabelRemoveArgs, LabelRenameArgs, MailApplyArgs, MailApplyResult,
+    MailSetReminderArgs, MailSetReminderResult, MailSnoozeArgs, MailSnoozeResult, MailUndoArgs, MailUndoResult, MeView,
+    OpRetryArgs, OpRetryResult, RegisterDeviceArgs, SaveAiSettingsArgs, SearchThreadsArgs, SearchThreadsResult,
+    SendsCancelArgs, SendsCancelResult, SendsListArgs, SendsRescheduleArgs, SendsResolveArgs, SetTriageArgs,
+    SnippetIdArgs, SnippetSaveArgs, SnippetSaveResult, SnippetView, SplitView, SyncChangesArgs, SyncChangesResult,
+    UpdatePrefsArgs,
 };
-use akatsuki_core::convex::rows::{AiSettings, LabelView, MailAccountView, OpFailure, TriageInput};
+use akatsuki_core::convex::rows::{AiSettings, LabelView, MailAccountView, OpFailure, ScheduledSendView, TriageInput};
 use akatsuki_core::convex::worker::{
     self as wf, AccountWorkerArgs, AccountsForPushArgs, ApplyTriageArgs, AssignedAccount, ClaimAccountArgs,
     ClaimAccountResult, ClaimOpsArgs, ClaimedOp, CompleteOpsArgs, CreateAccountArgs, CreateAccountResult,
@@ -366,6 +369,36 @@ pub trait ClientApi: Send + Sync {
     async fn set_triage(&self, args: &SetTriageArgs) -> Result<(), ConvexApiError>;
     /// `sync.changes` (subscribed; re-subscribe with `upToRev`).
     async fn sync_changes(&self, args: &SyncChangesArgs) -> Result<Subscription<SyncChangesResult>, ConvexApiError>;
+    /// `me.get`: `None` until the user's rows exist.
+    async fn me(&self) -> Result<Option<MeView>, ConvexApiError>;
+    /// `me.updatePrefs`.
+    async fn update_prefs(&self, args: &UpdatePrefsArgs) -> Result<(), ConvexApiError>;
+    /// `labels.create`.
+    async fn create_label(&self, args: &LabelCreateArgs) -> Result<LabelCreateResult, ConvexApiError>;
+    /// `labels.rename`.
+    async fn rename_label(&self, args: &LabelRenameArgs) -> Result<LabelOpResult, ConvexApiError>;
+    /// `labels.remove` (sets `pendingDelete`).
+    async fn remove_label(&self, args: &LabelRemoveArgs) -> Result<LabelOpResult, ConvexApiError>;
+    /// `snippets.list`.
+    async fn list_snippets(&self) -> Result<Vec<SnippetView>, ConvexApiError>;
+    /// `snippets.save`.
+    async fn save_snippet(&self, args: &SnippetSaveArgs) -> Result<SnippetSaveResult, ConvexApiError>;
+    /// `snippets.remove`.
+    async fn remove_snippet(&self, args: &SnippetIdArgs) -> Result<(), ConvexApiError>;
+    /// `snippets.markUsed`.
+    async fn mark_snippet_used(&self, args: &SnippetIdArgs) -> Result<(), ConvexApiError>;
+    /// `ops.retry`.
+    async fn retry_op(&self, args: &OpRetryArgs) -> Result<OpRetryResult, ConvexApiError>;
+    /// `search.threads`.
+    async fn search_threads(&self, args: &SearchThreadsArgs) -> Result<SearchThreadsResult, ConvexApiError>;
+    /// `sends.list`.
+    async fn list_sends(&self, args: &SendsListArgs) -> Result<Vec<ScheduledSendView>, ConvexApiError>;
+    /// `sends.reschedule`.
+    async fn reschedule_send(&self, args: &SendsRescheduleArgs) -> Result<(), ConvexApiError>;
+    /// `sends.resolveUnknown`.
+    async fn resolve_unknown_send(&self, args: &SendsResolveArgs) -> Result<(), ConvexApiError>;
+    /// `drafts.discard`.
+    async fn discard_draft(&self, args: &DraftDiscardArgs) -> Result<DraftDiscardResult, ConvexApiError>;
 }
 
 #[async_trait]
@@ -417,6 +450,51 @@ impl<T: ConvexTransport> ClientApi for Convex<T> {
     }
     async fn sync_changes(&self, args: &SyncChangesArgs) -> Result<Subscription<SyncChangesResult>, ConvexApiError> {
         self.subscribe(cf::functions::SYNC_CHANGES, args).await
+    }
+    async fn me(&self) -> Result<Option<MeView>, ConvexApiError> {
+        self.query(cf::functions::ME_GET, &NoArgs {}).await
+    }
+    async fn update_prefs(&self, args: &UpdatePrefsArgs) -> Result<(), ConvexApiError> {
+        unit(self.mutation(cf::functions::ME_UPDATE_PREFS, args).await)
+    }
+    async fn create_label(&self, args: &LabelCreateArgs) -> Result<LabelCreateResult, ConvexApiError> {
+        self.mutation(cf::functions::LABELS_CREATE, args).await
+    }
+    async fn rename_label(&self, args: &LabelRenameArgs) -> Result<LabelOpResult, ConvexApiError> {
+        self.mutation(cf::functions::LABELS_RENAME, args).await
+    }
+    async fn remove_label(&self, args: &LabelRemoveArgs) -> Result<LabelOpResult, ConvexApiError> {
+        self.mutation(cf::functions::LABELS_REMOVE, args).await
+    }
+    async fn list_snippets(&self) -> Result<Vec<SnippetView>, ConvexApiError> {
+        self.query(cf::functions::SNIPPETS_LIST, &NoArgs {}).await
+    }
+    async fn save_snippet(&self, args: &SnippetSaveArgs) -> Result<SnippetSaveResult, ConvexApiError> {
+        self.mutation(cf::functions::SNIPPETS_SAVE, args).await
+    }
+    async fn remove_snippet(&self, args: &SnippetIdArgs) -> Result<(), ConvexApiError> {
+        unit(self.mutation(cf::functions::SNIPPETS_REMOVE, args).await)
+    }
+    async fn mark_snippet_used(&self, args: &SnippetIdArgs) -> Result<(), ConvexApiError> {
+        unit(self.mutation(cf::functions::SNIPPETS_MARK_USED, args).await)
+    }
+    async fn retry_op(&self, args: &OpRetryArgs) -> Result<OpRetryResult, ConvexApiError> {
+        self.mutation(cf::functions::OPS_RETRY, args).await
+    }
+    async fn search_threads(&self, args: &SearchThreadsArgs) -> Result<SearchThreadsResult, ConvexApiError> {
+        self.query(cf::functions::SEARCH_THREADS, args).await
+    }
+    async fn list_sends(&self, args: &SendsListArgs) -> Result<Vec<ScheduledSendView>, ConvexApiError> {
+        self.query(cf::functions::SENDS_LIST, args).await
+    }
+    async fn reschedule_send(&self, args: &SendsRescheduleArgs) -> Result<(), ConvexApiError> {
+        unit(self.mutation(cf::functions::SENDS_RESCHEDULE, args).await)
+    }
+    async fn resolve_unknown_send(&self, args: &SendsResolveArgs) -> Result<(), ConvexApiError> {
+        unit(self.mutation(cf::functions::SENDS_RESOLVE_UNKNOWN, args).await)
+    }
+    async fn discard_draft(&self, args: &DraftDiscardArgs) -> Result<DraftDiscardResult, ConvexApiError> {
+        self.mutation(cf::functions::DRAFTS_DISCARD, args).await
     }
 }
 
@@ -583,6 +661,110 @@ mod tests {
         assert_eq!(r.timer_id.as_str(), "tm2");
         let last = c.transport().calls().pop().unwrap();
         assert_eq!(last.args, json!({"threadId": "t1", "at": 10, "condition": "if_no_reply"}));
+    }
+
+    #[tokio::test]
+    async fn desktop_feature_calls_use_contract_names_and_shapes() {
+        use akatsuki_core::convex::client::{
+            DraftDiscardArgs, LabelCreateArgs, LabelRenameArgs, OpRetryArgs, PaginationOpts, PrefsPatch,
+            SearchThreadsArgs, SendsListArgs, SendsRescheduleArgs, SnippetIdArgs, SnippetSaveArgs, UpdatePrefsArgs,
+        };
+        let c = api();
+        let last = |c: &Convex<MockTransport>| c.transport().calls().pop().unwrap();
+
+        c.transport().respond("me:get", Ok(Json::Null));
+        assert_eq!(c.me().await.unwrap(), None, "null before the user's rows exist");
+        c.transport().respond(
+            "me:get",
+            Ok(json!({"userId": "u1", "email": "a@b.example", "profile": {"_id": "p1", "_creationTime": 1.0,
+                "email": "a@b.example", "timezone": "Europe/Zurich", "onboarding": "done", "createdAt": 1, "updatedAt": 2,
+                "prefs": {"undoSendSeconds": 5, "remoteImages": "block", "readReceipts": {"enabled": false},
+                    "cacheBodiesOnDevice": true, "density": "compact", "theme": "dark", "keymap": "gmail",
+                    "unifiedInbox": true, "notifications": "private"}},
+                "entitlement": {"state": "active", "hostedSync": true, "managedAi": true, "until": 9},
+                "billing": {"status": "active", "cancelAtPeriodEnd": false}})),
+        );
+        let me = c.me().await.unwrap().unwrap();
+        assert_eq!(me.profile.timezone, "Europe/Zurich");
+        assert_eq!(me.profile.prefs.undo_send_seconds, 5);
+        assert!(me.entitlement.managed_ai);
+
+        c.transport().respond("me:updatePrefs", Ok(Json::Null));
+        let patch = PrefsPatch { theme: Some(akatsuki_core::convex::ThemePref::Dark), ..PrefsPatch::default() };
+        c.update_prefs(&UpdatePrefsArgs { patch }).await.unwrap();
+        assert_eq!(last(&c).args, json!({"patch": {"theme": "dark"}}), "only changed fields");
+
+        c.transport().respond("labels:create", Ok(json!({"labelId": "l1", "labelKey": "l:l1", "opId": "o1"})));
+        let r = c
+            .create_label(&LabelCreateArgs {
+                client_op_id: "c1".into(),
+                account_id: "a1".into(),
+                name: "Taxes".into(),
+                color: None,
+            })
+            .await
+            .unwrap();
+        assert_eq!(r.label_key, "l:l1");
+        assert_eq!(last(&c).args, json!({"clientOpId": "c1", "accountId": "a1", "name": "Taxes"}));
+        c.transport().respond("labels:rename", Ok(json!({"opId": "o2"})));
+        c.rename_label(&LabelRenameArgs { client_op_id: "c2".into(), label_id: "l1".into(), name: "Tax".into() })
+            .await
+            .unwrap();
+        assert_eq!(last(&c).function, "labels:rename");
+
+        c.transport().respond(
+            "snippets:list",
+            Ok(json!([{"_id": "s1", "_creationTime": 1.0, "name": "Thanks", "shortcut": "thx",
+                "bodyHtml": "<p>Thanks, {{first_name}}!</p>", "variables": ["first_name"], "useCount": 3, "updatedAt": 4}])),
+        );
+        let s = c.list_snippets().await.unwrap();
+        assert_eq!(s[0].shortcut.as_deref(), Some("thx"));
+        c.transport().respond("snippets:save", Ok(json!({"snippetId": "s2"})));
+        c.save_snippet(&SnippetSaveArgs {
+            snippet_id: None,
+            name: "Hi".into(),
+            shortcut: None,
+            subject: None,
+            body_html: "<p>Hi</p>".into(),
+            variables: vec![],
+        })
+        .await
+        .unwrap();
+        assert_eq!(last(&c).args, json!({"name": "Hi", "bodyHtml": "<p>Hi</p>", "variables": []}));
+        c.transport().respond("snippets:markUsed", Ok(Json::Null));
+        c.mark_snippet_used(&SnippetIdArgs { snippet_id: "s1".into() }).await.unwrap();
+
+        c.transport().respond("ops:retry", Ok(json!({"opIds": ["o3"]})));
+        let r = c.retry_op(&OpRetryArgs { op_id: "o1".into(), client_op_id: "c3".into() }).await.unwrap();
+        assert_eq!(r.op_ids.len(), 1);
+
+        c.transport().respond(
+            "search:threads",
+            Ok(json!({"page": [], "isDone": true, "continueCursor": "", "unsupported": ["filename:"], "ast": {"and": []}})),
+        );
+        let r = c
+            .search_threads(&SearchThreadsArgs {
+                q: "filename:plan".into(),
+                now_at: 60_000,
+                account_id: None,
+                pagination_opts: PaginationOpts { num_items: 50, cursor: None },
+            })
+            .await
+            .unwrap();
+        assert_eq!(r.unsupported, vec!["filename:"]);
+        assert_eq!(
+            last(&c).args,
+            json!({"q": "filename:plan", "nowAt": 60_000, "paginationOpts": {"numItems": 50, "cursor": null}})
+        );
+
+        c.transport().respond("sends:list", Ok(json!([])));
+        assert!(c.list_sends(&SendsListArgs::default()).await.unwrap().is_empty());
+        c.transport().respond("sends:reschedule", Ok(Json::Null));
+        c.reschedule_send(&SendsRescheduleArgs { client_send_id: "cs".into(), send_at: 99 }).await.unwrap();
+        assert_eq!(last(&c).args, json!({"clientSendId": "cs", "sendAt": 99}));
+        c.transport().respond("drafts:discard", Ok(json!({"opId": "o4"})));
+        c.discard_draft(&DraftDiscardArgs { client_op_id: "c4".into(), client_draft_id: "d1".into() }).await.unwrap();
+        assert_eq!(last(&c).args, json!({"clientOpId": "c4", "clientDraftId": "d1"}));
     }
 }
 

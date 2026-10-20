@@ -403,6 +403,28 @@ fn outbox_keeps_order_and_dedupes() {
 }
 
 #[test]
+fn local_drafts_survive_a_reset_and_go_with_a_wipe() {
+    let mut s = store();
+    s.put_local_draft("d1", &json!({"subject": "First"})).unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(3));
+    s.put_local_draft("d2", &json!({"subject": "Second"})).unwrap();
+    s.put_local_draft("d1", &json!({"subject": "First, edited"})).unwrap();
+    let all = s.local_drafts().unwrap();
+    assert_eq!(all.iter().map(|d| d.client_draft_id.as_str()).collect::<Vec<_>>(), vec!["d1", "d2"], "newest first");
+    assert_eq!(s.local_draft("d1").unwrap().unwrap().doc["subject"], "First, edited");
+    // A feed reset wipes the account's mirror rows, never what the user typed.
+    s.apply_changes(A, 0, &batch(vec![thread("t1", A, 1, 100, &["sys:inbox"])], vec![], vec![], vec![], 2)).unwrap();
+    let mut reset = batch(vec![], vec![], vec![], vec![], 2);
+    reset.reset_required = true;
+    s.apply_changes(A, 2, &reset).unwrap();
+    assert_eq!(s.local_drafts().unwrap().len(), 2);
+    s.delete_local_draft("d2").unwrap();
+    assert!(s.local_draft("d2").unwrap().is_none());
+    s.wipe().unwrap();
+    assert!(s.local_drafts().unwrap().is_empty(), "sign-out deletes the compose store");
+}
+
+#[test]
 fn bodies_are_compressed_versioned_and_evicted_lru() {
     let mut s = store();
     let html = "<p>".to_owned() + &"hello ".repeat(2000) + "</p>";

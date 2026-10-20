@@ -1,5 +1,6 @@
-//! Device caches next to the mirror: the durable outbox (§16.1), message bodies (zstd, LRU) and
-//! AI outputs. None of this ever leaves the device.
+//! Device caches next to the mirror: the durable outbox (§16.1), message bodies (zstd, LRU), AI
+//! outputs and the compose store (drafts typed on this device, §10.1 step 4). None of this ever
+//! leaves the device.
 
 use rusqlite::{OptionalExtension, params};
 
@@ -20,6 +21,17 @@ pub struct OutboxEntry {
     pub args: serde_json::Value,
     /// Send attempts so far.
     pub attempts: u32,
+}
+
+/// A draft kept on this device (the compose store, §10.1 step 4): the caller's own JSON.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LocalDraft {
+    /// `clientDraftId`.
+    pub client_draft_id: String,
+    /// The caller's serialized draft.
+    pub doc: serde_json::Value,
+    /// Last write (ms).
+    pub updated_at: i64,
 }
 
 /// A cached body.
@@ -197,6 +209,40 @@ impl Store {
             "INSERT OR REPLACE INTO ai_cache (key, output_json, created_at) VALUES (?1, ?2, ?3)",
             params![key, serde_json::to_string(output)?, now_ms()],
         )?;
+        Ok(())
+    }
+
+    /// Writes a draft to the compose store (every edit, so a crash loses nothing).
+    pub fn put_local_draft(&mut self, client_draft_id: &str, doc: &serde_json::Value) -> Result<()> {
+        self.conn.execute(
+            "INSERT OR REPLACE INTO local_drafts (client_draft_id, doc, updated_at) VALUES (?1, ?2, ?3)",
+            params![client_draft_id, serde_json::to_string(doc)?, now_ms()],
+        )?;
+        Ok(())
+    }
+
+    /// Drafts on this device, newest first.
+    pub fn local_drafts(&self) -> Result<Vec<LocalDraft>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT client_draft_id, doc, updated_at FROM local_drafts ORDER BY updated_at DESC, rowid DESC",
+        )?;
+        let rows: Vec<(String, String, i64)> =
+            stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?.collect::<rusqlite::Result<_>>()?;
+        rows.into_iter()
+            .map(|(client_draft_id, doc, updated_at)| {
+                Ok(LocalDraft { client_draft_id, doc: serde_json::from_str(&doc)?, updated_at })
+            })
+            .collect()
+    }
+
+    /// One draft from the compose store.
+    pub fn local_draft(&self, client_draft_id: &str) -> Result<Option<LocalDraft>> {
+        Ok(self.local_drafts()?.into_iter().find(|d| d.client_draft_id == client_draft_id))
+    }
+
+    /// Deletes a draft from the compose store (sent, discarded, or empty).
+    pub fn delete_local_draft(&mut self, client_draft_id: &str) -> Result<()> {
+        self.conn.execute("DELETE FROM local_drafts WHERE client_draft_id = ?1", [client_draft_id])?;
         Ok(())
     }
 }

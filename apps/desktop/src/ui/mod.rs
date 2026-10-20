@@ -1,13 +1,16 @@
 //! GPUI views. The workspace owns the state; the other modules draw parts of it.
 
 pub mod body;
+pub mod features;
 pub mod input;
 pub mod list;
 pub mod overlays;
 pub mod reading;
 pub mod settings;
+pub mod settings_extra;
 pub mod sidebar;
 pub mod signin;
+pub mod status;
 pub mod widgets;
 pub mod workspace;
 

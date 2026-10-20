@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock};
 
 use async_trait::async_trait;
 
-use akatsuki_core::wire::worker::{DraftPut, DraftSaved, SendAccepted, SendRequest, UploadResponse};
+use akatsuki_core::wire::worker::{DraftPut, DraftSaved, SearchResponse, SendAccepted, SendRequest, UploadResponse};
 
 use crate::auth::Jwt;
 use crate::worker::{WorkerClient, WorkerError};
@@ -25,6 +25,8 @@ pub trait MailServer: Send + Sync {
     async fn proxied_html(&self, message_id: &str) -> Result<ProxiedHtml, WorkerError>;
     /// Uploads an attachment (`POST /v1/uploads`, §10.4).
     async fn upload(&self, filename: &str, content_type: &str, bytes: Vec<u8>) -> Result<UploadResponse, WorkerError>;
+    /// Provider search of one mailbox (`GET /v1/search`, §11.2 backend 2).
+    async fn search(&self, account_id: &str, q: &str, cursor: Option<&str>) -> Result<SearchResponse, WorkerError>;
 }
 
 /// See [`MailServer::proxied_html`].
@@ -83,5 +85,9 @@ impl MailServer for LiveMailServer {
 
     async fn upload(&self, filename: &str, content_type: &str, bytes: Vec<u8>) -> Result<UploadResponse, WorkerError> {
         self.client.upload(filename, content_type, bytes, &self.token()?).await
+    }
+
+    async fn search(&self, account_id: &str, q: &str, cursor: Option<&str>) -> Result<SearchResponse, WorkerError> {
+        self.client.search(account_id, q, cursor, &self.token()?).await
     }
 }

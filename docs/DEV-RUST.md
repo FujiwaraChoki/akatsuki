@@ -228,6 +228,14 @@ They sign in with an emailed code, mint a JWT, call the desktop's Convex functio
 through the loopback (crossDomain one-time token) and sign out.
 
 Screens without a keyboard: `AKATSUKI_SCRIPT="go.split:split:other;nav.open"` runs command ids at start-up
-(`search=<q>` types a search). A private headless compositor keeps smoke runs off your screen, e.g.
-`XDG_RUNTIME_DIR=<private dir> WLR_BACKENDS=headless sway -c <config>`, then run the app and `grim` with that
-`XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY`.
+(`search=<q>` types a search, `attach=<path>` drops a file on the composer, `to=`/`subject=`/`body=`/`instruction=`
+fill the composer, `query=` types into the palette or a picker, `pick=<row value>` chooses a row, `ai=<base url>` adds a
+local OpenAI-compatible provider with consent, `wait=<ms>` pauses). A private headless compositor keeps smoke runs off
+your screen (D-454): give it its own short `XDG_RUNTIME_DIR` (the socket path must stay under 108 bytes), unset
+`WAYLAND_DISPLAY`, `DISPLAY` and `DBUS_SESSION_BUS_ADDRESS`, start `WLR_BACKENDS=headless sway -c <config>` (the GPU
+renderer; pixman cannot host GPUI's Vulkan surface), then run the app and `grim` with that runtime dir and
+`WAYLAND_DISPLAY=wayland-1`.
+
+Dictation records with the first recorder on `PATH` (`pw-record`, `parecord`, `arecord`, then `ffmpeg`; macOS: `ffmpeg`
+with AVFoundation) into `<data dir>/dictation/` and deletes the file after transcription (D-445). No audio library is
+linked, so the desktop build needs no ALSA or CoreAudio headers.

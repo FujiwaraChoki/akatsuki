@@ -50,20 +50,16 @@ fn inline_el(t: &Theme, inline: &Inline, id: SharedString) -> AnyElement {
             h.font_style = Some(FontStyle::Italic);
         }
         if s.style.underline || s.link.is_some() {
-            h.underline = Some(UnderlineStyle {
-                thickness: px(1.),
-                color: Some(if s.link.is_some() { t.accent_text } else { t.fg }),
-                wavy: false,
-            });
+            h.underline = Some(UnderlineStyle { thickness: px(1.), color: Some(t.fg), wavy: false });
         }
         if s.style.strike {
             h.strikethrough = Some(StrikethroughStyle { thickness: px(1.), color: Some(t.muted) });
         }
         if s.style.code {
-            h.background_color = Some(t.accent_wash);
+            h.background_color = Some(t.surface_strong);
         }
         if s.link.is_some() {
-            h.color = Some(t.link);
+            h.color = Some(t.fg);
         }
         highlights.push((s.range.clone(), h));
     }
@@ -105,7 +101,7 @@ fn image_el(t: &Theme, alt: &str, source: &ImageSource, images: &InlineImages) -
         .py(px(4.))
         .rounded(px(akatsuki_tokens::radius::SM))
         .border_1()
-        .border_color(t.border_subtle)
+        .border_color(t.line)
         .text_size(px(styles::META.size))
         .text_color(t.muted)
         .child(icon("image", 13., t.muted))
@@ -141,7 +137,7 @@ fn block(t: &Theme, b: &Block, id: &str, images: &InlineImages) -> AnyElement {
             .gap(px(8.))
             .pl(px(12.))
             .border_l_2()
-            .border_color(t.border)
+            .border_color(t.line_strong)
             .text_color(t.secondary)
             .children(blocks(t, inner, id, images))
             .into_any_element(),
@@ -166,19 +162,19 @@ fn block(t: &Theme, b: &Block, id: &str, images: &InlineImages) -> AnyElement {
             .text_size(px(styles::META.size))
             .p(px(10.))
             .rounded(px(akatsuki_tokens::radius::MD))
-            .bg(t.accent_wash)
+            .bg(t.surface)
             .child(text.clone())
             .into_any_element(),
-        Block::Rule => div().h(px(1.)).w_full().bg(t.border_subtle).into_any_element(),
+        Block::Rule => div().h(px(1.)).w_full().bg(t.line).into_any_element(),
         Block::Image { alt, source } => image_el(t, alt, source, images),
         Block::Table(rows) => div()
             .flex()
             .flex_col()
             .border_1()
-            .border_color(t.border_subtle)
+            .border_color(t.line)
             .rounded(px(akatsuki_tokens::radius::SM))
             .children(rows.iter().enumerate().map(|(r, cells)| {
-                div().flex().when(r > 0, |d| d.border_t_1().border_color(t.border_subtle)).children(
+                div().flex().when(r > 0, |d| d.border_t_1().border_color(t.line)).children(
                     cells.iter().enumerate().map(|(c, cell)| {
                         div().flex_1().min_w(px(0.)).p(px(6.)).flex().flex_col().gap(px(4.)).children(blocks(
                             t,

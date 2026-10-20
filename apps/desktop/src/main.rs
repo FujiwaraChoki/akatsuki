@@ -12,7 +12,9 @@
 //!   moves the data directory.
 //! - `AKATSUKI_SCRIPT="go.starred;nav.open;search=teapot"` runs command ids one after another at
 //!   start-up, as if typed (`search=<q>` types a search, `attach=<path>` drops a file on the open
-//!   composer), for smoke tests without a keyboard.
+//!   composer; `to=`, `subject=`, `body=` fill the composer, `query=` types into the palette or a
+//!   picker, `pick=<value>` chooses a picker row, `ai=<base url>` adds a local OpenAI-compatible
+//!   provider with consent and `wait=<ms>` pauses), for smoke tests without a keyboard.
 
 mod assets;
 mod auth;
@@ -20,6 +22,7 @@ mod backend;
 mod commands;
 mod config;
 mod demo;
+mod dictation;
 mod keys;
 mod remote;
 mod render;
@@ -104,7 +107,13 @@ fn main() {
         let window = cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
-                titlebar: Some(TitlebarOptions { title: Some("Akatsuki".into()), ..Default::default() }),
+                // macOS: the sidebar plane runs under the traffic lights (design §5.1); Linux keeps
+                // the server's decorations.
+                titlebar: Some(TitlebarOptions {
+                    title: Some("Akatsuki".into()),
+                    appears_transparent: cfg!(target_os = "macos"),
+                    traffic_light_position: cfg!(target_os = "macos").then(|| gpui::point(px(16.), px(16.))),
+                }),
                 app_id: Some("vc.akatsuki.desktop".into()),
                 window_min_size: Some(size(px(720.), px(480.))),
                 ..Default::default()
@@ -133,11 +142,14 @@ fn main() {
                             ws.search_for(q, window, cx);
                         } else if let Some(p) = step.strip_prefix("attach=") {
                             ws.attach_paths(vec![p.into()], window, cx);
+                        } else if let Some((field, text)) = step.split_once('=') {
+                            ws.script_type(field, text, window, cx);
                         } else {
                             ws.run(&step, window, cx);
                         }
                     });
-                    cx.background_executor().timer(Duration::from_millis(600)).await;
+                    let pause = step.strip_prefix("wait=").and_then(|ms| ms.parse().ok()).unwrap_or(600);
+                    cx.background_executor().timer(Duration::from_millis(pause)).await;
                 }
             })
             .detach();

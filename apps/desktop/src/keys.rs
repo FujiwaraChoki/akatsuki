@@ -299,6 +299,45 @@ pub fn format_keys(keys: &str, platform: Platform) -> String {
         .join(" then ")
 }
 
+/// Keycaps of a binding, one per key: `ctrl+shift+l` → `Ctrl`, `Shift`, `L`; `g i` → `G`, `I`;
+/// `cmd+k` on macOS → `⌘`, `K`. Drawn as separate kbds (First Light: no "then").
+pub fn keycaps(keys: &str, platform: Platform) -> Vec<String> {
+    let Ok(seq) = parse_sequence(keys) else { return vec![keys.to_owned()] };
+    let mut out = Vec::new();
+    for c in seq {
+        let mac = platform == Platform::Mac;
+        for (on, name, sym) in
+            [(c.ctrl, "Ctrl", "⌃"), (c.alt, "Alt", "⌥"), (c.shift, "Shift", "⇧"), (c.cmd, "Win", "⌘")]
+        {
+            if on {
+                out.push(if mac { sym } else { name }.to_owned());
+            }
+        }
+        out.push(match c.key.as_str() {
+            "enter" => "↵".to_owned(),
+            "escape" => "Esc".to_owned(),
+            "tab" => "Tab".to_owned(),
+            "space" => "Space".to_owned(),
+            "backspace" => "⌫".to_owned(),
+            "delete" => "Del".to_owned(),
+            "up" => "↑".to_owned(),
+            "down" => "↓".to_owned(),
+            "left" => "←".to_owned(),
+            "right" => "→".to_owned(),
+            k => k.to_uppercase(),
+        });
+    }
+    out
+}
+
+/// The keycaps of a shortcut's first binding on this platform (empty when it has no key).
+pub fn caps(id: &str, keymap: Keymap) -> Vec<String> {
+    let platform = Platform::current();
+    akatsuki_shortcuts::find(id)
+        .and_then(|s| keys_for(s, platform, keymap).first().map(|k| keycaps(k, platform)))
+        .unwrap_or_default()
+}
+
 /// The first key hint of a shortcut, formatted for this platform (palette and tooltips).
 pub fn hint(id: &str, keymap: Keymap) -> Option<String> {
     let s = akatsuki_shortcuts::find(id)?;
@@ -309,6 +348,15 @@ pub fn hint(id: &str, keymap: Keymap) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn keycaps_split_combos_and_sequences() {
+        assert_eq!(keycaps("g i", Platform::Linux), ["G", "I"]);
+        assert_eq!(keycaps("ctrl+shift+l", Platform::Linux), ["Ctrl", "Shift", "L"]);
+        assert_eq!(keycaps("cmd+k", Platform::Mac), ["⌘", "K"]);
+        assert_eq!(keycaps("ctrl+enter", Platform::Windows), ["Ctrl", "↵"]);
+        assert_eq!(keycaps("#", Platform::Linux), ["#"]);
+    }
 
     fn scopes(s: &[Scope]) -> HashSet<Scope> {
         s.iter().copied().collect()

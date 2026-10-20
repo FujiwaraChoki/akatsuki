@@ -219,6 +219,8 @@ pub type TimerId = Id<tables::Timers>;
 pub type SplitId = Id<tables::Splits>;
 /// `Id<"rules">`
 pub type RuleId = Id<tables::Rules>;
+/// `Id<"snippets">`
+pub type SnippetId = Id<tables::Snippets>;
 /// `Id<"identities">`
 pub type IdentityId = Id<tables::Identities>;
 /// `Id<"syncState">`

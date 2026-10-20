@@ -12,8 +12,8 @@
 //!   mutation returned (`min_rev`), then the row is dropped (D-312).
 //! - **Lists** read the materialized `thread_labels` table (one row per visible key, plus the
 //!   split row of inbox threads), ordered by `sort_at`.
-//! - **Device caches**: the durable outbox (§16.1), bodies (zstd, LRU, §16.1 2 GB cap) and the AI
-//!   output cache. [`Store::wipe`] clears everything on sign-out.
+//! - **Device caches**: the durable outbox (§16.1), bodies (zstd, LRU, §16.1 2 GB cap), the AI
+//!   output cache and the compose store (`local_drafts`). [`Store::wipe`] clears everything on sign-out.
 //!
 //! Bodies and AI outputs never leave the device; nothing here talks to the network.
 
@@ -31,7 +31,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::convex::rows::{LabelView, MailAccountView};
 
-pub use cache::{BODY_CACHE_MAX_BYTES, CachedBody, OutboxEntry};
+pub use cache::{BODY_CACHE_MAX_BYTES, CachedBody, LocalDraft, OutboxEntry};
 pub use feed::FeedOutcome;
 pub use overlay::OverlayRow;
 pub use query::{ListQuery, ThreadSummary};

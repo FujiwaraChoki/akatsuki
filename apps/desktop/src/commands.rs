@@ -20,6 +20,20 @@ pub mod ids {
     pub const DEMO: &str = "app.demo";
     /// Settings: AI providers.
     pub const SETTINGS_AI: &str = "settings.ai";
+    /// Settings: labels.
+    pub const SETTINGS_LABELS: &str = "settings.labels";
+    /// Settings: snippets.
+    pub const SETTINGS_SNIPPETS: &str = "settings.snippets";
+    /// Rewrite in one style: `compose.rewrite:shorter` (the `compose.rewrite` picker's rows).
+    pub const REWRITE_PREFIX: &str = "compose.rewrite:";
+    /// Undo the last AI change to the draft.
+    pub const AI_UNDO: &str = "compose.rewrite:undo";
+    /// Retry one failed op: `ops.retry:<opId>`.
+    pub const RETRY_PREFIX: &str = "ops.retry:";
+    /// Dismiss one failed op: `ops.dismiss:<opId>`.
+    pub const DISMISS_PREFIX: &str = "ops.dismiss:";
+    /// "Keep this one" after a draft conflict: `drafts.keep:<version>`.
+    pub const KEEP_DRAFT_PREFIX: &str = "drafts.keep:";
     /// Theme prefix (`theme.light`).
     pub const THEME: &str = "theme.";
     /// Key map prefix (`keymap.gmail`).
@@ -51,9 +65,9 @@ pub struct PaletteItem {
     pub keywords: Vec<String>,
 }
 
-/// Palette shortcuts the desktop alpha does not implement: not listed (their keys still explain that the web app
-/// has them).
-pub const UNSUPPORTED: [&str; 3] = [sc::COMPOSE_SEND_LATER, sc::COMPOSE_SNIPPET, sc::COMPOSE_AI_WRITE];
+/// Palette shortcuts the desktop does not implement (none since send later, snippets and AI write
+/// landed; kept so a new shared entry can be parked here until it is built).
+pub const UNSUPPORTED: [&str; 0] = [];
 
 /// What the palette needs to know about the app.
 #[derive(Clone, Debug, Default)]
@@ -76,6 +90,12 @@ pub struct PaletteContext {
     pub thread_open: bool,
     /// A composer is open (compose commands apply).
     pub composing: bool,
+    /// Failed actions wait for Retry or Dismiss.
+    pub failures: bool,
+    /// Drafts are kept on this device.
+    pub local_drafts: bool,
+    /// The composer has AI changes to undo.
+    pub ai_undo: bool,
 }
 
 /// Whether a palette shortcut of `scope` applies in this context, as its key would before the palette opened
@@ -86,6 +106,15 @@ fn applies(scope: Scope, ctx: &PaletteContext) -> bool {
         Scope::Thread => ctx.thread_open,
         Scope::Compose => ctx.composing,
         Scope::Search => false,
+    }
+}
+
+/// Commands that only make sense in some states (D-409: the palette offers what this screen can do).
+fn available(id: &str, ctx: &PaletteContext) -> bool {
+    match id {
+        sc::OPS_RETRY => ctx.failures,
+        sc::COMPOSE_CONTINUE_DRAFT => ctx.local_drafts,
+        _ => true,
     }
 }
 
@@ -104,12 +133,31 @@ pub fn palette_items(ctx: &PaletteContext) -> Vec<PaletteItem> {
     let keymap: Keymap = ctx.keymap.keymap();
     let mut items: Vec<PaletteItem> = Vec::new();
     if ctx.signed_in {
-        items.extend(palette_entries().filter(|s| applies(s.scope, ctx) && !UNSUPPORTED.contains(&s.id)).map(|s| {
-            PaletteItem {
-                keywords: s.keywords.iter().map(|k| (*k).to_owned()).collect(),
-                ..row(s.id, s.label, s.group, keys::hint(s.id, keymap), false)
+        items.extend(
+            palette_entries()
+                .filter(|s| applies(s.scope, ctx) && available(s.id, ctx) && !UNSUPPORTED.contains(&s.id))
+                .map(|s| PaletteItem {
+                    keywords: s.keywords.iter().map(|k| (*k).to_owned()).collect(),
+                    ..row(s.id, s.label, s.group, keys::hint(s.id, keymap), false)
+                }),
+        );
+        if ctx.composing {
+            for style in crate::vm::ai::RewriteStyle::ALL {
+                items.push(PaletteItem {
+                    keywords: vec!["ai".into(), "rewrite".into()],
+                    ..row(
+                        format!("{}{}", ids::REWRITE_PREFIX, style.as_str()),
+                        format!("Rewrite: {}", style.label()),
+                        "Compose",
+                        None,
+                        false,
+                    )
+                });
             }
-        }));
+            if ctx.ai_undo {
+                items.push(row(ids::AI_UNDO, "Undo the AI change", "Compose", None, false));
+            }
+        }
         for (key, name) in &ctx.splits {
             items.push(row(
                 format!("{}{key}", ids::GO_SPLIT_PREFIX),
@@ -141,6 +189,14 @@ pub fn palette_items(ctx: &PaletteContext) -> Vec<PaletteItem> {
             }
         }
         items.push(row(ids::SETTINGS_AI, "AI providers", "Settings", None, false));
+        items.push(PaletteItem {
+            keywords: vec!["manage labels".into(), "folders".into()],
+            ..row(ids::SETTINGS_LABELS, "Labels", "Settings", None, false)
+        });
+        items.push(PaletteItem {
+            keywords: vec!["templates".into(), "canned".into()],
+            ..row(ids::SETTINGS_SNIPPETS, "Snippets", "Settings", None, false)
+        });
     }
     for t in [ThemePref::System, ThemePref::Light, ThemePref::Dark] {
         let id = format!("{}{}", ids::THEME, t.label().to_lowercase());
@@ -214,6 +270,8 @@ mod tests {
             signed_in: true,
             thread_open: true,
             composing: true,
+            failures: true,
+            local_drafts: true,
             labels: vec![("l:1".into(), "Receipts".into())],
             splits: vec![("split:a".into(), "VIP".into())],
             accounts: vec![("a1".into(), "me@example.com".into()), ("a2".into(), "me@work.example".into())],
@@ -246,9 +304,23 @@ mod tests {
         assert!(list.iter().any(|i| i.id == sc::COMPOSE_NEW));
         let composing = palette_items(&ctx());
         assert!(composing.iter().any(|i| i.id == sc::COMPOSE_SEND));
-        for id in UNSUPPORTED {
-            assert!(composing.iter().all(|i| i.id != id), "{id} is not listed");
+        for id in [
+            sc::COMPOSE_SEND_LATER,
+            sc::COMPOSE_SNIPPET,
+            sc::COMPOSE_AI_WRITE,
+            sc::COMPOSE_REWRITE,
+            sc::COMPOSE_DICTATE,
+        ] {
+            assert!(composing.iter().any(|i| i.id == id), "{id} is listed");
         }
+        assert!(composing.iter().any(|i| i.id == "compose.rewrite:shorter"));
+        assert!(list.iter().all(|i| !i.id.starts_with(ids::REWRITE_PREFIX)), "rewrite rows need a composer");
+        let calm = palette_items(&PaletteContext { failures: false, local_drafts: false, ..ctx() });
+        assert!(calm.iter().all(|i| i.id != sc::OPS_RETRY), "Retry only with something to retry");
+        assert!(calm.iter().all(|i| i.id != sc::COMPOSE_CONTINUE_DRAFT));
+        assert!(composing.iter().any(|i| i.id == sc::OPS_RETRY));
+        assert!(composing.iter().any(|i| i.id == ids::SETTINGS_SNIPPETS));
+        assert!(composing.iter().any(|i| i.id == sc::LABELS_CREATE));
     }
 
     #[test]

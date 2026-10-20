@@ -14,7 +14,8 @@ pub const AUTOSAVE_DEBOUNCE_MS: u64 = 2000;
 pub const MAX_ATTACHMENT_BYTES: u64 = 25 * 1024 * 1024;
 
 /// Where an attachment is.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "state", rename_all = "snake_case")]
 pub enum AttachmentState {
     /// Being read and uploaded.
     Uploading,
@@ -24,11 +25,14 @@ pub enum AttachmentState {
         upload_id: String,
     },
     /// Could not be uploaded; the text says why.
-    Failed(String),
+    Failed {
+        /// Why.
+        reason: String,
+    },
 }
 
 /// A file attached on this device.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Attachment {
     /// Local key.
     pub key: String,
@@ -85,7 +89,8 @@ pub fn content_type_for(filename: &str) -> &'static str {
 }
 
 /// What the draft answers.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ComposeKind {
     /// A new message.
     New,
@@ -105,8 +110,10 @@ pub enum ComposeKind {
     },
 }
 
-/// A draft being edited.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// A draft being edited. It is also the device's compose store record (§10.1 step 4): every edit
+/// is written to the mirror's `local_drafts` table, so a crash or quit loses nothing.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct Draft {
     /// Idempotency key of the draft (UUIDv7).
     pub client_draft_id: String,
@@ -130,6 +137,14 @@ pub struct Draft {
     pub base_version: u64,
     /// Files attached on this device.
     pub attachments: Vec<Attachment>,
+    /// When the device copy was last written (ms; for "Continue a draft").
+    pub updated_at: i64,
+}
+
+impl Default for Draft {
+    fn default() -> Self {
+        Self::new(String::new(), "", "")
+    }
 }
 
 /// Why a draft cannot be sent.
@@ -243,7 +258,38 @@ impl Draft {
             kind: ComposeKind::New,
             base_version: 0,
             attachments: Vec::new(),
+            updated_at: 0,
         }
+    }
+
+    /// A device copy restored after a restart: uploads that were in flight are gone, so those
+    /// attachments ask to be added again (uploaded ones stay valid for 24 h, §10.4).
+    pub fn restored(mut self) -> Self {
+        for a in &mut self.attachments {
+            if a.state == AttachmentState::Uploading {
+                a.state = AttachmentState::Failed { reason: "Attach it again.".into() };
+            }
+        }
+        self
+    }
+
+    /// Nothing typed: no recipients, subject, body or files.
+    pub fn is_blank(&self) -> bool {
+        self.to.trim().is_empty()
+            && self.cc.trim().is_empty()
+            && self.bcc.trim().is_empty()
+            && self.subject.trim().is_empty()
+            && self.body.trim().is_empty()
+            && self.attachments.is_empty()
+    }
+
+    /// A one-line description for pickers: the subject, else the recipients, else the body.
+    pub fn title(&self) -> String {
+        let pick = [self.subject.trim(), self.to.trim(), self.body.trim()]
+            .into_iter()
+            .find(|s| !s.is_empty())
+            .map(|s| s.lines().next().unwrap_or(s).chars().take(80).collect::<String>());
+        pick.unwrap_or_else(|| "(empty draft)".into())
     }
 
     /// Bytes attached.
@@ -255,7 +301,7 @@ impl Draft {
     pub fn attachment_problem(&self) -> Option<ComposeError> {
         if self.attachments.iter().any(|a| a.state == AttachmentState::Uploading) {
             Some(ComposeError::Uploading)
-        } else if self.attachments.iter().any(|a| matches!(a.state, AttachmentState::Failed(_))) {
+        } else if self.attachments.iter().any(|a| matches!(a.state, AttachmentState::Failed { .. })) {
             Some(ComposeError::FailedAttachment)
         } else if self.attachment_bytes() > MAX_ATTACHMENT_BYTES {
             Some(ComposeError::TooLarge)
@@ -404,11 +450,13 @@ impl Draft {
         }
     }
 
-    /// The `POST /v1/send` request (`sendAt` absent: now + `undo_seconds`).
+    /// The `POST /v1/send` request: `send_at` absent sends at now + `undo_seconds`; a later send
+    /// (§10 "Send later") carries its instant and no undo window (Undo is `sends.cancel`).
     pub fn send_request(
         &self,
         client_send_id: String,
         undo_seconds: u32,
+        send_at: Option<i64>,
         device_id: &str,
     ) -> Result<SendRequest, ComposeError> {
         Ok(SendRequest {
@@ -416,12 +464,15 @@ impl Draft {
             client_draft_id: self.client_draft_id.clone(),
             base_version: self.base_version,
             draft: Some(self.content()?),
-            send_at: None,
-            undo_seconds,
+            send_at,
+            undo_seconds: if send_at.is_some() { 0 } else { undo_seconds },
             device_id: device_id.to_owned(),
         })
     }
 }
+
+/// Undo stays offered this long after scheduling a later send (the web's `LATER_UNDO_MS`).
+pub const LATER_UNDO_MS: i64 = 10_000;
 
 /// A send in its undo window.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -432,9 +483,24 @@ pub struct PendingSend {
     pub draft: Draft,
     /// When it leaves (ms).
     pub send_at: i64,
+    /// A later send: Undo is offered until `undo_until`, not until `send_at`.
+    pub later: bool,
+    /// Undo is offered until then.
+    pub undo_until: i64,
 }
 
 impl PendingSend {
+    /// A send now with an undo window of `undo_seconds`.
+    pub fn now(client_send_id: String, draft: Draft, now_ms: i64, undo_seconds: u32) -> Self {
+        let send_at = now_ms + i64::from(undo_seconds) * 1000;
+        Self { client_send_id, draft, send_at, later: false, undo_until: send_at }
+    }
+
+    /// A send at `at`, undoable for [`LATER_UNDO_MS`].
+    pub fn later(client_send_id: String, draft: Draft, now_ms: i64, at: i64) -> Self {
+        Self { client_send_id, draft, send_at: at, later: true, undo_until: now_ms + LATER_UNDO_MS }
+    }
+
     /// Seconds left in the undo window.
     pub fn seconds_left(&self, now_ms: i64) -> i64 {
         ((self.send_at - now_ms) + 999).div_euclid(1000).max(0)
@@ -489,14 +555,19 @@ mod tests {
         d.subject = "Hello".into();
         d.body = "Hi".into();
         d.base_version = 3;
-        let r = d.send_request("s1".into(), 10, "dev").unwrap();
+        let r = d.send_request("s1".into(), 10, None, "dev").unwrap();
         assert_eq!(r.undo_seconds, 10);
         assert_eq!(r.base_version, 3);
         assert_eq!(r.send_at, None);
         assert_eq!(r.draft.unwrap().text, "Hi");
-        let p = PendingSend { client_send_id: "s1".into(), draft: d.clone(), send_at: 10_000 };
+        let later = d.send_request("s2".into(), 10, Some(99_000), "dev").unwrap();
+        assert_eq!((later.send_at, later.undo_seconds), (Some(99_000), 0), "a later send has no undo window");
+        let p = PendingSend::now("s1".into(), d.clone(), 0, 10);
         assert_eq!(p.seconds_left(1_500), 9);
         assert_eq!(p.seconds_left(20_000), 0);
+        let l = PendingSend::later("s2".into(), d.clone(), 1_000, 3_600_000);
+        assert_eq!(l.undo_until, 1_000 + LATER_UNDO_MS);
+        assert!(l.later);
         assert!(Draft::new("d".into(), "a", "m").autosave_content().is_none(), "empty drafts are not saved");
         d.to = "garbage".into();
         assert!(d.autosave_content().unwrap().to.is_empty());
@@ -524,11 +595,43 @@ mod tests {
             state: AttachmentState::Ready { upload_id: "u2".into() },
         });
         assert_eq!(d.content(), Err(ComposeError::TooLarge));
-        d.attachments[1].state = AttachmentState::Failed("x".into());
+        d.attachments[1].state = AttachmentState::Failed { reason: "x".into() };
         assert_eq!(d.content(), Err(ComposeError::FailedAttachment));
         assert_eq!(content_type_for("Q3.PDF"), "application/pdf");
         assert_eq!(content_type_for("noext"), "application/octet-stream");
         assert_eq!(file_size(2048), "2 KB");
         assert_eq!(file_size(3 * 1024 * 1024 + 1), "3.0 MB");
+    }
+
+    #[test]
+    fn drafts_round_trip_through_the_compose_store_format() {
+        let mut d = Draft::new("d1".into(), "a1", "me@example.com");
+        d.subject = "Plan".into();
+        d.kind = ComposeKind::Reply { thread_id: "t1".into(), message_id: "m1".into() };
+        d.attachments.push(Attachment {
+            key: "k".into(),
+            filename: "a.pdf".into(),
+            size: 3,
+            state: AttachmentState::Uploading,
+        });
+        d.attachments.push(Attachment {
+            key: "k2".into(),
+            filename: "b.pdf".into(),
+            size: 3,
+            state: AttachmentState::Ready { upload_id: "u1".into() },
+        });
+        let json = serde_json::to_value(&d).unwrap();
+        let back: Draft = serde_json::from_value(json).unwrap();
+        assert_eq!(back, d);
+        let restored = back.restored();
+        assert!(matches!(restored.attachments[0].state, AttachmentState::Failed { .. }), "in-flight uploads are gone");
+        assert!(matches!(restored.attachments[1].state, AttachmentState::Ready { .. }));
+        assert_eq!(restored.title(), "Plan");
+        assert!(Draft::new("x".into(), "a", "m").is_blank());
+        assert!(!restored.is_blank());
+        let partial: Draft =
+            serde_json::from_value(serde_json::json!({"client_draft_id": "d9", "body": "hi"})).unwrap();
+        assert_eq!(partial.body, "hi", "missing fields default");
+        assert_eq!(partial.title(), "hi");
     }
 }

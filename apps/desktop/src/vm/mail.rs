@@ -203,6 +203,8 @@ pub enum Intent {
     Summarize(String),
     /// AI reply suggestions for the open thread.
     InstantReply(String),
+    /// AI action items of the open thread.
+    ExtractActions(String),
     /// A new message.
     Compose,
     /// Focus search.
@@ -477,6 +479,7 @@ impl MailVm {
             sc::THREAD_EXPAND_ALL => Intent::ExpandAll,
             sc::AI_SUMMARIZE => self.single().map_or(Intent::None, Intent::Summarize),
             sc::AI_INSTANT_REPLY => self.single().map_or(Intent::None, Intent::InstantReply),
+            sc::AI_EXTRACT_ACTIONS => self.single().map_or(Intent::None, Intent::ExtractActions),
             sc::COMPOSE_NEW => Intent::Compose,
             sc::SEARCH_OPEN => Intent::Search,
             sc::PALETTE_OPEN => Intent::Palette,
@@ -486,6 +489,19 @@ impl MailVm {
             _ => Intent::Unhandled,
         };
         Ok(intent)
+    }
+
+    /// Adds hits from another search backend to the search list without moving the cursor.
+    pub fn add_hits(&mut self, query: &str, more: &[String], store: &Store) -> Result<(), StoreError> {
+        if !matches!(&self.folder, Folder::Search { query: q } if q == query) {
+            return Ok(());
+        }
+        for h in more {
+            if !self.hits.contains(h) {
+                self.hits.push(h.clone());
+            }
+        }
+        self.refresh(store)
     }
 
     /// Shows search results.
@@ -750,5 +766,19 @@ mod folder_tests {
         assert_eq!(p[0].action, actions::untrash());
         let p = plan(ActionKind::Trash, &["t-board".into()], &Folder::Inbox, &store).unwrap();
         assert_eq!(p[0].action, actions::trash());
+    }
+
+    #[test]
+    fn other_backends_add_hits_without_moving_the_cursor() {
+        let mut store = Store::open_in_memory().unwrap();
+        crate::demo::seed_store(&mut store).unwrap();
+        let mut vm = MailVm::default();
+        vm.show_search("deck", vec!["t-board".into()], &store).unwrap();
+        vm.add_hits("other query", &["t-dawn".into()], &store).unwrap();
+        assert_eq!(vm.ids, vec!["t-board"], "hits of another query are ignored");
+        vm.add_hits("deck", &["t-board".into(), "t-dawn".into(), "t-missing".into()], &store).unwrap();
+        assert_eq!(vm.ids, vec!["t-board", "t-dawn"], "appended once; unknown threads wait for the feed");
+        assert_eq!(vm.hits.len(), 3);
+        assert_eq!(vm.cursor, 0);
     }
 }

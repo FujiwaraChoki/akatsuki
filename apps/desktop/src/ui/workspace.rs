@@ -54,6 +54,10 @@ pub enum SettingsTab {
     General,
     /// AI providers.
     Ai,
+    /// Labels: create, rename, delete.
+    Labels,
+    /// Snippets.
+    Snippets,
     /// Account and device.
     Account,
 }
@@ -81,6 +85,42 @@ pub enum PickerKind {
         /// Not at the sender's domain.
         foreign: bool,
     },
+    /// Send the open draft at a time.
+    SendLater,
+    /// Insert a snippet.
+    Snippet,
+    /// Rewrite the selection or the body.
+    Rewrite,
+    /// Scheduled and unresolved sends.
+    Scheduled,
+    /// What to do with one scheduled send.
+    ScheduledAction(String),
+    /// A new time for a scheduled send.
+    Reschedule(String),
+    /// Create a label (typed name; one row per account).
+    LabelCreate,
+    /// Choose a label to rename.
+    LabelRename,
+    /// The new name of a label.
+    LabelRenameTo {
+        /// Label id.
+        label_id: String,
+        /// Current name.
+        name: String,
+    },
+    /// Choose a label to delete.
+    LabelRemove,
+    /// Confirm a delete.
+    LabelRemoveConfirm {
+        /// Label id.
+        label_id: String,
+        /// Name.
+        name: String,
+    },
+    /// Reopen a draft kept on this device.
+    ContinueDraft,
+    /// Describe a search in words.
+    AiSearch,
 }
 
 /// One picker row.
@@ -105,6 +145,10 @@ pub struct Toast {
     pub undo: bool,
     /// Created.
     pub at: i64,
+    /// Buttons: `(label, command id)` (Retry, Dismiss, Keep this one).
+    pub actions: Vec<(String, String)>,
+    /// Stable key (an op id) so one failure is shown once.
+    pub key: Option<String>,
 }
 
 /// The open thread.
@@ -119,6 +163,23 @@ pub struct ThreadView {
     pub show_quoted: HashSet<String>,
     /// Bodies.
     pub bodies: HashMap<String, Result<Arc<Rendered>, String>>,
+}
+
+/// Search beyond the local index for the list on screen (§11.2).
+#[derive(Clone, Debug, Default)]
+pub struct SearchState {
+    /// The query.
+    pub query: String,
+    /// Convex is still answering.
+    pub server_pending: bool,
+    /// Grammar Convex could not apply.
+    pub unsupported: Vec<String>,
+    /// The provider search runs.
+    pub provider_pending: bool,
+    /// The provider search ran.
+    pub provider_done: bool,
+    /// Its error.
+    pub provider_error: Option<String>,
 }
 
 /// The AI panel over the reading pane.
@@ -139,6 +200,8 @@ pub struct AiPanel {
     pub done: bool,
     /// Egress line.
     pub egress: Option<String>,
+    /// The model that answered (from the stream's `meta`).
+    pub model: Option<String>,
 }
 
 /// An open draft.
@@ -161,6 +224,20 @@ pub struct ComposeState {
     pub error: Option<String>,
     /// Last edit, for the 2 s autosave debounce.
     pub dirty_at: Option<i64>,
+    /// The "write with AI" instruction field.
+    pub instruction: Entity<TextField>,
+    /// The instruction row is open.
+    pub ai_bar: bool,
+    /// The AI request changing the body, if one runs.
+    pub ai_edit: Option<crate::vm::ai::AiEdit>,
+    /// Streamed text so far.
+    pub ai_output: String,
+    /// The body before the last AI change (Undo).
+    pub ai_undo: Option<String>,
+    /// Dictation state, while it is not idle.
+    pub dictation: Option<crate::backend::DictationState>,
+    /// The worker holds a newer copy (version); saving waits for "Keep this one".
+    pub conflict: Option<u64>,
     _subs: Vec<Subscription>,
 }
 
@@ -227,6 +304,15 @@ pub struct Workspace {
     pub(crate) system_reduces_motion: bool,
     pub(crate) theme: Theme,
     pub(crate) email: String,
+    pub(crate) me: Option<akatsuki_core::convex::client::MeView>,
+    pub(crate) snippets: Vec<akatsuki_core::convex::client::SnippetView>,
+    pub(crate) failures: Vec<akatsuki_core::convex::rows::OpFailure>,
+    pub(crate) scheduled: Vec<akatsuki_core::convex::rows::ScheduledSendView>,
+    pub(crate) splits: Vec<akatsuki_core::convex::client::SplitView>,
+    pub(crate) search_state: SearchState,
+    pub(crate) nl_request: Option<u64>,
+    pub(crate) forms: super::settings_extra::Forms,
+    pub(crate) hud: Vec<(String, i64)>,
     _subs: Vec<Subscription>,
 }
 
@@ -326,6 +412,15 @@ impl Workspace {
             tz_name,
             theme: Theme::new(akatsuki_tokens::Appearance::Light),
             email: String::new(),
+            me: None,
+            snippets: Vec::new(),
+            failures: Vec::new(),
+            scheduled: Vec::new(),
+            splits: Vec::new(),
+            search_state: SearchState::default(),
+            nl_request: None,
+            forms: super::settings_extra::Forms::new(cx),
+            hud: Vec::new(),
             _subs: subs,
         };
         this.apply_motion();
@@ -379,10 +474,16 @@ impl Workspace {
     fn tick(&mut self, cx: &mut Context<'_, Self>) {
         let now = now_ms();
         let before = self.toasts.len();
-        self.toasts.retain(|t| now - t.at < if t.undo { crate::backend::UNDO_WINDOW_MS } else { 4000 });
-        let mut changed = before != self.toasts.len() || self.pending_send.is_some();
+        self.toasts.retain(|t| {
+            now - t.at < if t.undo || !t.actions.is_empty() { crate::backend::UNDO_WINDOW_MS } else { 4000 }
+        });
+        let huds = self.hud.len();
+        self.hud.retain(|(_, at)| now - at < super::status::HUD_MS);
+        let mut changed = before != self.toasts.len() || self.pending_send.is_some() || huds != self.hud.len();
+        // The status bar echoes the last action for 4 s.
+        changed |= self.toasts.last().is_some_and(|t| (4000..4600).contains(&(now - t.at)));
         if let Some(p) = &self.pending_send
-            && p.send_at + 1500 < now
+            && p.undo_until + 1500 < now
         {
             self.pending_send = None;
             changed = true;
@@ -392,7 +493,10 @@ impl Workspace {
         {
             c.dirty_at = None;
             let draft = Self::read_draft(c, cx);
-            self.backend.autosave(draft);
+            self.backend.save_local_draft(&draft);
+            if c.conflict.is_none() {
+                self.backend.autosave(draft);
+            }
         }
         if changed {
             cx.notify();
@@ -400,8 +504,23 @@ impl Workspace {
     }
 
     pub(crate) fn toast(&mut self, text: impl Into<String>, undo: bool, cx: &mut Context<'_, Self>) {
+        self.toast_with(text, undo, Vec::new(), None, cx);
+    }
+
+    /// A toast with buttons; a `key` already shown is not shown again.
+    pub(crate) fn toast_with(
+        &mut self,
+        text: impl Into<String>,
+        undo: bool,
+        actions: Vec<(String, String)>,
+        key: Option<String>,
+        cx: &mut Context<'_, Self>,
+    ) {
+        if key.as_ref().is_some_and(|k| self.toasts.iter().any(|t| t.key.as_ref() == Some(k))) {
+            return;
+        }
         self.toast_seq += 1;
-        self.toasts.push(Toast { id: self.toast_seq, text: sentence(text.into()), undo, at: now_ms() });
+        self.toasts.push(Toast { id: self.toast_seq, text: sentence(text.into()), undo, at: now_ms(), actions, key });
         if self.toasts.len() > 3 {
             self.toasts.remove(0);
         }
@@ -434,6 +553,7 @@ impl Workspace {
             Event::MirrorChanged | Event::AccountsChanged => self.refresh(cx),
             Event::Splits(splits) => {
                 self.vm.set_splits(&splits);
+                self.splits = splits;
                 self.refresh(cx);
             }
             Event::AiSettings(s) => self.ai_settings = s,
@@ -452,7 +572,7 @@ impl Workspace {
                 {
                     a.state = match result {
                         Ok(upload_id) => AttachmentState::Ready { upload_id },
-                        Err(e) => AttachmentState::Failed(e),
+                        Err(reason) => AttachmentState::Failed { reason },
                     };
                     // The provider draft gets the file with the next autosave.
                     c.dirty_at = Some(now_ms());
@@ -463,8 +583,18 @@ impl Workspace {
                     && c.draft.client_draft_id == client_draft_id
                 {
                     c.draft.base_version = version;
+                    let draft = Self::read_draft(c, cx);
+                    self.backend.save_local_draft(&draft);
                 }
             }
+            e @ (Event::Me(_)
+            | Event::PrefsSynced(_)
+            | Event::Snippets(_)
+            | Event::Failures(_)
+            | Event::Scheduled(_)
+            | Event::SearchResults { .. }
+            | Event::DraftConflict { .. }
+            | Event::Dictation(_)) => self.on_feature_event(e, window, cx),
             Event::SendDone { client_send_id, reopen, error } => {
                 if self.pending_send.as_ref().is_some_and(|p| p.client_send_id == client_send_id) {
                     self.pending_send = None;
@@ -483,7 +613,11 @@ impl Workspace {
                     (None, None) => self.toast("Sent", false, cx),
                 }
             }
-            Event::Ai { request, event } => self.on_ai(request, event),
+            Event::Ai { request, event } => {
+                if !self.on_feature_ai(request, &event, window, cx) {
+                    self.on_ai(request, event);
+                }
+            }
             Event::AiTest { profile_id, result } => {
                 let name = self
                     .ai_settings
@@ -506,7 +640,7 @@ impl Workspace {
             return;
         }
         match event {
-            akatsuki_ai::AaspEvent::Meta(_) => {}
+            akatsuki_ai::AaspEvent::Meta(m) => p.model = Some(m.model),
             akatsuki_ai::AaspEvent::Delta { text } => p.text.push_str(&text),
             akatsuki_ai::AaspEvent::Partial { object } => p.object = Some(object),
             akatsuki_ai::AaspEvent::Done(d) => {
@@ -593,8 +727,17 @@ impl Workspace {
 
     // ───────────── keys ─────────────
 
+    /// List and reader side by side (§5.1: from 1100 px).
+    pub(crate) fn three_panes(&self, window: &Window) -> bool {
+        f32::from(window.viewport_size().width) >= 1100.
+    }
+
     pub(crate) fn signed_in(&self) -> bool {
         matches!(self.session, SessionState::SignedIn { .. })
+    }
+
+    pub(crate) fn compose_has_focus(&self, window: &Window, cx: &App) -> bool {
+        self.compose_focused(window, cx)
     }
 
     fn compose_focused(&self, window: &Window, cx: &App) -> bool {
@@ -638,6 +781,10 @@ impl Workspace {
 
     fn on_key_down(&mut self, e: &KeyDownEvent, window: &mut Window, cx: &mut Context<'_, Self>) {
         let ks = &e.keystroke;
+        if ks.key == "tab" && !ks.modifiers.modified() && self.expand_snippet_trigger(window, cx) {
+            cx.stop_propagation();
+            return;
+        }
         if ks.key == "escape" && matches!(self.overlay, Overlay::Help | Overlay::Settings(_)) {
             self.close_overlay(window, cx);
             cx.stop_propagation();
@@ -651,12 +798,19 @@ impl Workspace {
             ks.modifiers.platform,
         );
         let scopes = self.scopes(window, cx);
+        let shown = hud_label(&combo);
         match self.matcher.handle(combo, &scopes, now_ms()) {
             MatchResult::Match(id) => {
                 cx.stop_propagation();
+                if !scopes.iter().any(|s| keys::TEXT_SCOPES.contains(s)) {
+                    self.hud_push(shown);
+                }
                 self.run(id, window, cx);
             }
-            MatchResult::Pending => cx.stop_propagation(),
+            MatchResult::Pending => {
+                self.hud_push(shown);
+                cx.stop_propagation();
+            }
             MatchResult::None => {}
         }
     }
@@ -691,6 +845,9 @@ impl Workspace {
             signed_in: self.signed_in(),
             thread_open: self.vm.open.is_some(),
             composing: self.compose.is_some(),
+            failures: !self.failures.is_empty(),
+            local_drafts: store.local_drafts().is_ok_and(|d| !d.is_empty()),
+            ai_undo: self.compose.as_ref().is_some_and(|c| c.ai_undo.is_some()),
         }
     }
 
@@ -699,6 +856,18 @@ impl Workspace {
         let q = self.palette_query.read(cx).content.clone();
         match &self.overlay {
             Overlay::Picker(kind) => {
+                let typed: Vec<PaletteItem> = self
+                    .typed_picker_rows(kind, &q)
+                    .into_iter()
+                    .map(|p| PaletteItem {
+                        id: p.value,
+                        label: p.label,
+                        group: String::new(),
+                        hint: p.hint,
+                        checked: false,
+                        keywords: Vec::new(),
+                    })
+                    .collect();
                 let items: Vec<PaletteItem> = self
                     .picker_items(kind)
                     .into_iter()
@@ -711,7 +880,9 @@ impl Workspace {
                         keywords: Vec::new(),
                     })
                     .collect();
-                commands::filter(items, &q)
+                let mut rows = typed;
+                rows.extend(commands::filter(items, &q));
+                rows
             }
             _ => commands::filter(commands::palette_items(&self.palette_context()), &q),
         }
@@ -752,13 +923,28 @@ impl Workspace {
                 },
                 PickerItem { value: "cancel".into(), label: "Cancel".into(), hint: None },
             ],
+            other => self.feature_picker_items(other),
         }
     }
 
-    fn open_palette(&mut self, overlay: Overlay, window: &mut Window, cx: &mut Context<'_, Self>) {
+    pub(crate) fn open_palette(&mut self, overlay: Overlay, window: &mut Window, cx: &mut Context<'_, Self>) {
+        let placeholder = match &overlay {
+            Overlay::Picker(
+                PickerKind::Snooze(_) | PickerKind::Remind(_) | PickerKind::SendLater | PickerKind::Reschedule(_),
+            ) => "tomorrow 9am, 3d, fri 2pm",
+            Overlay::Picker(PickerKind::Label(_)) => "Label, or a new name",
+            Overlay::Picker(PickerKind::LabelCreate | PickerKind::LabelRenameTo { .. }) => "Label name",
+            Overlay::Picker(PickerKind::AiSearch) => "mail from Mira about the deck last week",
+            Overlay::Picker(PickerKind::Snippet) => "Snippet",
+            Overlay::Picker(_) => "Filter",
+            _ => "Type a command or search mail",
+        };
         self.overlay = overlay;
         self.palette_sel = 0;
-        self.palette_query.update(cx, |f, cx| f.set_text("", cx));
+        self.palette_query.update(cx, |f, cx| {
+            f.set_text("", cx);
+            f.set_placeholder(placeholder, cx);
+        });
         window.focus(&self.palette_query.focus_handle(cx));
         self.matcher.reset();
         cx.notify();
@@ -769,12 +955,12 @@ impl Workspace {
         self.close_overlay(window, cx);
         match overlay {
             Overlay::Palette => self.run(&value, window, cx),
-            Overlay::Picker(kind) => self.picked(kind, value, cx),
+            Overlay::Picker(kind) => self.picked(kind, value, window, cx),
             _ => {}
         }
     }
 
-    fn picked(&mut self, kind: PickerKind, value: String, cx: &mut Context<'_, Self>) {
+    fn picked(&mut self, kind: PickerKind, value: String, window: &mut Window, cx: &mut Context<'_, Self>) {
         match kind {
             PickerKind::Snooze(ids) => {
                 if let Ok(at) = value.parse::<i64>() {
@@ -802,6 +988,9 @@ impl Workspace {
                 let folder = Folder::Label { key: value, name: name.unwrap_or_default() };
                 let _ = self.vm.go(folder, &self.backend.store.lock().unwrap_or_else(|e| e.into_inner()));
                 self.thread = None;
+            }
+            PickerKind::Label(ref ids) if value.starts_with(super::features::CREATE_PREFIX) => {
+                self.create_label_for(ids.clone(), &value[super::features::CREATE_PREFIX.len()..], cx);
             }
             PickerKind::Label(ref ids) | PickerKind::Move(ref ids) => {
                 let ids = ids.clone();
@@ -853,6 +1042,7 @@ impl Workspace {
                     Some(&done),
                 );
             }
+            other => self.picked_feature(other, value, window, cx),
         }
         self.refresh(cx);
     }
@@ -915,7 +1105,7 @@ impl Workspace {
                 return cx.notify();
             }
             sc::SEARCH_SUBMIT => return self.submit_search(window, cx),
-            sc::COMPOSE_SEND => return self.send_compose(window, cx),
+            sc::COMPOSE_SEND => return self.send_compose_at(None, window, cx),
             sc::COMPOSE_CLOSE => return self.close_compose(true, window, cx),
             sc::COMPOSE_DISCARD => return self.close_compose(false, window, cx),
             sc::COMPOSE_CC | sc::COMPOSE_BCC => {
@@ -927,30 +1117,26 @@ impl Workspace {
                 return cx.notify();
             }
             sc::COMPOSE_ATTACH => return self.attach_dialog(window, cx),
-            sc::COMPOSE_SEND_LATER | sc::COMPOSE_SNIPPET | sc::COMPOSE_AI_WRITE => {
-                return self.toast("Not in the desktop alpha yet: use the web app for this.", false, cx);
-            }
             _ => {}
         }
+        if self.run_feature_command(id, window, cx) {
+            return;
+        }
         if let Some(t) = id.strip_prefix(cmd::THEME) {
-            self.settings.theme = match t {
+            let theme = match t {
                 "light" => ThemePref::Light,
                 "dark" => ThemePref::Dark,
                 _ => ThemePref::System,
             };
-            self.save_settings();
-            return self.apply_theme(window, cx);
+            return self.change_settings(|s| s.theme = theme, window, cx);
         }
         if let Some(k) = id.strip_prefix(cmd::KEYMAP) {
-            self.settings.keymap = if k == "gmail" { KeymapPref::Gmail } else { KeymapPref::Superhuman };
-            self.matcher = Matcher::new(Platform::current(), self.settings.keymap.keymap());
-            self.save_settings();
-            return cx.notify();
+            let keymap = if k == "gmail" { KeymapPref::Gmail } else { KeymapPref::Superhuman };
+            return self.change_settings(|s| s.keymap = keymap, window, cx);
         }
         if let Some(d) = id.strip_prefix(cmd::DENSITY) {
-            self.settings.density = if d == "compact" { Density::Compact } else { Density::Comfortable };
-            self.save_settings();
-            return cx.notify();
+            let density = if d == "compact" { Density::Compact } else { Density::Comfortable };
+            return self.change_settings(|s| s.density = density, window, cx);
         }
         if !self.signed_in() {
             return;
@@ -1052,6 +1238,7 @@ impl Workspace {
             }
             Intent::Palette => self.open_palette(Overlay::Palette, window, cx),
             Intent::Settings => self.overlay = Overlay::Settings(SettingsTab::General),
+            Intent::ExtractActions(id) => self.run_ai(AiFeature::ExtractActions, &id, cx),
             Intent::Help => self.overlay = Overlay::Help,
             Intent::Undo => {
                 if !self.backend.undo_last() {
@@ -1071,7 +1258,7 @@ impl Workspace {
         self.submit_search(window, cx);
     }
 
-    fn submit_search(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) {
+    pub(crate) fn submit_search(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) {
         let q = self.search.read(cx).content.trim().to_owned();
         if q.is_empty() {
             return self.run(sc::SEARCH_CLOSE, window, cx);
@@ -1082,6 +1269,9 @@ impl Workspace {
                 let _ = self.vm.show_search(&q, hits, &self.backend.store.lock().unwrap_or_else(|e| e.into_inner()));
                 self.thread = None;
                 window.focus(&self.focus);
+                // Convex search runs too and its hits are merged by thread id (§11.2).
+                self.search_state = SearchState { query: q.clone(), server_pending: true, ..SearchState::default() };
+                self.backend.search_server(&q, self.vm.account.clone());
             }
             Err(e) => self.search_error = Some(e),
         }
@@ -1124,7 +1314,7 @@ impl Workspace {
         }
     }
 
-    fn run_ai(&mut self, feature: AiFeature, thread_id: &str, cx: &mut Context<'_, Self>) {
+    pub(crate) fn run_ai(&mut self, feature: AiFeature, thread_id: &str, cx: &mut Context<'_, Self>) {
         let name = self.email.split('@').next().unwrap_or("").to_owned();
         match self.backend.run_ai(feature, thread_id, &name, &self.tz_name) {
             Ok(request) => {
@@ -1137,6 +1327,7 @@ impl Workspace {
                     error: None,
                     done: false,
                     egress: self.backend.ai_egress(feature),
+                    model: None,
                 });
             }
             Err(e) => self.toast(e, false, cx),
@@ -1146,7 +1337,7 @@ impl Workspace {
 
     // ───────────── compose ─────────────
 
-    fn new_compose(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) {
+    pub(crate) fn new_compose(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) {
         let accounts = self.store().accounts().unwrap_or_default();
         let account =
             self.vm.account.as_ref().and_then(|a| accounts.iter().find(|x| x.id.as_str() == a)).or(accounts.first());
@@ -1207,6 +1398,7 @@ impl Workspace {
         if let Some(old) = self.compose.take() {
             let previous = Self::read_draft(&old, cx);
             if previous.client_draft_id != draft.client_draft_id {
+                self.backend.save_local_draft(&previous);
                 self.backend.autosave(previous);
                 self.toast("The previous draft was saved to Drafts.", false, cx);
             }
@@ -1219,10 +1411,10 @@ impl Workspace {
             f.update(cx, |f, cx| f.set_text(value, cx));
             f
         };
-        let to = mk(cx, "To", &draft.to, false);
-        let cc = mk(cx, "Cc", &draft.cc, false);
-        let bcc = mk(cx, "Bcc", &draft.bcc, false);
-        let subject = mk(cx, "Subject", &draft.subject, false);
+        let to = mk(cx, "name@example.com", &draft.to, false);
+        let cc = mk(cx, "", &draft.cc, false);
+        let bcc = mk(cx, "", &draft.bcc, false);
+        let subject = mk(cx, "", &draft.subject, false);
         let body = mk(cx, "Write your message", &draft.body, true);
         let mut subs = Vec::new();
         for f in [&to, &cc, &bcc, &subject, &body] {
@@ -1237,10 +1429,40 @@ impl Workspace {
                 _ => {}
             }));
         }
+        let instruction = mk(cx, "Tell AI what to write, then Enter", "", false);
+        subs.push(cx.subscribe_in(&instruction, window, |this, _, e: &FieldEvent, window, cx| match e {
+            FieldEvent::Submit => this.run_ai_write(window, cx),
+            FieldEvent::Cancel => {
+                if let Some(c) = &mut this.compose {
+                    c.ai_bar = false;
+                    window.focus(&c.body.focus_handle(cx));
+                }
+                cx.notify();
+            }
+            _ => {}
+        }));
         let show_cc = !draft.cc.is_empty() || !draft.bcc.is_empty();
         let focus_to = draft.to.is_empty();
-        self.compose =
-            Some(ComposeState { draft, to, cc, bcc, subject, body, show_cc, error: None, dirty_at: None, _subs: subs });
+        self.backend.save_local_draft(&draft);
+        self.compose = Some(ComposeState {
+            draft,
+            to,
+            cc,
+            bcc,
+            subject,
+            body,
+            show_cc,
+            error: None,
+            dirty_at: None,
+            instruction,
+            ai_bar: false,
+            ai_edit: None,
+            ai_output: String::new(),
+            ai_undo: None,
+            dictation: None,
+            conflict: None,
+            _subs: subs,
+        });
         if let Some(c) = &self.compose {
             let f = if focus_to { c.to.clone() } else { c.body.clone() };
             window.focus(&f.focus_handle(cx));
@@ -1306,7 +1528,7 @@ impl Workspace {
         }
     }
 
-    fn read_draft(c: &ComposeState, cx: &App) -> Draft {
+    pub(crate) fn read_draft(c: &ComposeState, cx: &App) -> Draft {
         Draft {
             to: c.to.read(cx).content.clone(),
             cc: c.cc.read(cx).content.clone(),
@@ -1317,12 +1539,24 @@ impl Workspace {
         }
     }
 
-    fn send_compose(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) {
+    pub(crate) fn send_compose_at(&mut self, at: Option<i64>, window: &mut Window, cx: &mut Context<'_, Self>) {
         let Some(c) = &self.compose else { return };
+        if c.ai_edit.is_some() {
+            if let Some(c) = &mut self.compose {
+                c.error = Some("Wait for the AI to finish, or press Escape to stop it.".into());
+            }
+            return cx.notify();
+        }
+        self.backend.cancel_dictation();
         let draft = Self::read_draft(c, cx);
-        match self.backend.send(draft, self.settings.undo_send_seconds) {
+        self.backend.save_local_draft(&draft);
+        match self.backend.send(draft, self.settings.undo_send_seconds, at) {
             Ok(p) => {
-                self.pending_send = Some(p);
+                if p.later {
+                    let when = time::full_time(p.send_at, &self.tz);
+                    self.toast(format!("Scheduled for {when}"), true, cx);
+                }
+                self.pending_send = (!p.later).then_some(p);
                 self.compose = None;
                 window.focus(&self.focus);
             }
@@ -1336,12 +1570,31 @@ impl Workspace {
     }
 
     fn close_compose(&mut self, keep: bool, window: &mut Window, cx: &mut Context<'_, Self>) {
+        if let Some(c) = &mut self.compose {
+            // Escape first stops a running AI request or closes the instruction row.
+            if keep && c.ai_edit.is_some() {
+                return self.stop_ai_edit(window, cx);
+            }
+            if keep && c.ai_bar {
+                c.ai_bar = false;
+                window.focus(&c.body.focus_handle(cx));
+                return cx.notify();
+            }
+        }
+        self.backend.cancel_dictation();
         if let Some(c) = self.compose.take() {
             let draft = Self::read_draft(&c, cx);
-            if keep {
-                self.backend.autosave(draft);
+            if keep && draft.is_blank() {
+                // An empty composer leaves nothing behind (D-281).
+                self.backend.discard_draft(&draft);
+            } else if keep {
+                self.backend.save_local_draft(&draft);
+                if c.conflict.is_none() {
+                    self.backend.autosave(draft);
+                }
                 self.toast("Draft saved", false, cx);
             } else {
+                self.backend.discard_draft(&draft);
                 self.toast("Draft discarded", false, cx);
             }
         }
@@ -1373,18 +1626,45 @@ impl Workspace {
             return self.render_signin(window, cx).into_any_element();
         }
         let t = self.theme;
+        let width = f32::from(window.viewport_size().width);
+        let content: AnyElement = if self.three_panes(window) {
+            // ≥ 1100 px: list and reader side by side; compose takes the reader slot (§5.1).
+            let slot = (width * 0.38).clamp(420., 720.);
+            let reader = if self.compose.is_some() {
+                self.render_compose_slot(window, cx)
+            } else if self.vm.open.is_some() {
+                self.render_reading(window, cx)
+            } else {
+                self.render_no_thread(cx)
+            };
+            div()
+                .size_full()
+                .flex()
+                .child(div().flex_1().min_w(px(0.)).h_full().child(self.render_list(window, cx)))
+                .child(div().w(px(slot)).flex_none().h_full().border_l_1().border_color(t.line).child(reader))
+                .into_any_element()
+        } else if self.vm.open.is_some() {
+            self.render_reading(window, cx)
+        } else {
+            self.render_list(window, cx)
+        };
         div()
             .size_full()
             .flex()
-            .child(self.render_sidebar(window, cx))
-            .child(div().w(px(1.)).h_full().bg(t.border_subtle))
-            .child(div().flex_1().min_w(px(0.)).h_full().flex().flex_col().child(self.render_header(window, cx)).child(
-                div().flex_1().min_h(px(0.)).child(if self.vm.open.is_some() {
-                    self.render_reading(window, cx).into_any_element()
-                } else {
-                    self.render_list(window, cx).into_any_element()
-                }),
-            ))
+            .flex_col()
+            .child(
+                div().flex_1().min_h(px(0.)).flex().child(self.render_sidebar(window, cx)).child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.))
+                        .h_full()
+                        .flex()
+                        .flex_col()
+                        .child(self.render_header(window, cx))
+                        .child(div().flex_1().min_h(px(0.)).child(content)),
+                ),
+            )
+            .child(self.render_status(cx))
             .into_any_element()
     }
 }
@@ -1408,6 +1688,29 @@ impl Render for Workspace {
             .child(root)
             .children(overlays)
     }
+}
+
+/// The HUD's text of a key press: `Ctrl K`, `⇧E`, `G`.
+fn hud_label(c: &keys::Combo) -> String {
+    let mac = cfg!(target_os = "macos");
+    let mut parts: Vec<String> = Vec::new();
+    for (on, name, sym) in [(c.ctrl, "Ctrl", "⌃"), (c.alt, "Alt", "⌥"), (c.shift, "Shift", "⇧"), (c.cmd, "Win", "⌘")]
+    {
+        if on {
+            parts.push(if mac { sym } else { name }.to_owned());
+        }
+    }
+    let key = match c.key.as_str() {
+        "enter" => "↵".to_owned(),
+        "escape" => "Esc".to_owned(),
+        "up" => "↑".to_owned(),
+        "down" => "↓".to_owned(),
+        "left" => "←".to_owned(),
+        "right" => "→".to_owned(),
+        k => k.to_uppercase(),
+    };
+    parts.push(key);
+    parts.join(if mac { "" } else { " " })
 }
 
 /// Toasts are sentences: one rule for every message, however it was built ("Sent" → "Sent.").

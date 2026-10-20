@@ -118,7 +118,8 @@ impl Density {
     }
 }
 
-/// Settings kept on this device (`desktop.json`).
+/// Settings kept on this device (`desktop.json`). Theme, density, key map, undo send and the body
+/// cache are also synced to `prefs` (`crate::vm::prefs`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct LocalSettings {
@@ -136,6 +137,8 @@ pub struct LocalSettings {
     pub cache_bodies: bool,
     /// Self-hosting: endpoints (the environment overrides them).
     pub endpoints: Endpoints,
+    /// Synced settings changed here that `me.updatePrefs` has not confirmed yet.
+    pub pending_prefs: crate::vm::prefs::Pending,
 }
 
 impl Default for LocalSettings {
@@ -148,6 +151,7 @@ impl Default for LocalSettings {
             undo_send_seconds: 10,
             cache_bodies: true,
             endpoints: Endpoints::default(),
+            pending_prefs: crate::vm::prefs::Pending::default(),
         }
     }
 }

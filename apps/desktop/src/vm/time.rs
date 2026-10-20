@@ -36,6 +36,11 @@ pub fn full_time(ms: i64, tz: &TimeZone) -> String {
     zoned(ms, tz).map(|t| t.strftime("%a, %b %-d, %Y at %H:%M").to_string()).unwrap_or_default()
 }
 
+/// A typed time in pickers: `Fri 23 Oct 15:00`.
+pub fn short_time(ms: i64, tz: &TimeZone) -> String {
+    zoned(ms, tz).map(|t| t.strftime("%a %-d %b %H:%M").to_string()).unwrap_or_default()
+}
+
 /// A snooze or reminder choice.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Preset {
@@ -96,6 +101,7 @@ mod tests {
         assert_eq!(list_time(ms("2026-10-03T07:05:00Z"), now, &tz), "Oct 3");
         assert_eq!(list_time(ms("2025-10-03T07:05:00Z"), now, &tz), "Oct 3, 2025");
         assert_eq!(full_time(ms("2026-10-20T07:05:00Z"), &tz), "Tue, Oct 20, 2026 at 09:05");
+        assert_eq!(short_time(ms("2026-10-23T13:00:00Z"), &tz), "Fri 23 Oct 15:00");
         assert_eq!(tz_name(&tz), "Europe/Zurich");
     }
 

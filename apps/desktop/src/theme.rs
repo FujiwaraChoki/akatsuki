@@ -49,41 +49,41 @@ fn alpha(c: Rgb, a: f32) -> Hsla {
     rgba(c.rgba_hex(a)).into()
 }
 
-/// The resolved colours for one appearance.
+/// The resolved colours for one appearance ("First Light", the design spec §2.3): ink on paper,
+/// hairlines for structure, and red only where something needs the eye.
 #[derive(Clone, Copy, Debug)]
 pub struct Theme {
-    /// Window background.
+    /// The appearance.
+    pub appearance: Appearance,
+    /// Window background (paper).
     pub bg: Hsla,
-    /// Text.
+    /// Text (ink).
     pub fg: Hsla,
     /// Secondary text (80 %).
     pub secondary: Hsla,
+    /// Tertiary text (70 %): nav rows, text on surfaces.
+    pub tertiary: Hsla,
     /// Muted text, placeholders, metadata (60 %).
     pub muted: Hsla,
-    /// Hovered borders and disabled text (40 %).
-    pub faint: Hsla,
-    /// Borders (20 %).
-    pub border: Hsla,
+    /// Strokes: input hover, active borders (40 %). Never text.
+    pub stroke: Hsla,
+    /// Strong hairline and input borders (20 %).
+    pub line_strong: Hsla,
     /// Hairlines between regions (10 %).
-    pub border_subtle: Hsla,
-    /// The accent.
+    pub line: Hsla,
+    /// The sidebar and status planes, hover rows, keycaps (4 %).
+    pub surface: Hsla,
+    /// Selected and active rows (7 %).
+    pub surface_strong: Hsla,
+    /// The emissive red: cursor bar, carets, recording dot, the horizon, the logo dot.
+    pub dawn: Hsla,
+    /// Accent fill, for the few brand buttons only.
     pub accent: Hsla,
-    /// Accent at 70 % (gradient core).
-    pub accent_core: Hsla,
-    /// Accent at 30 % (glow).
-    pub accent_glow: Hsla,
-    /// Accent at 15 % (selected rows, text selection).
-    pub accent_tint: Hsla,
-    /// Accent at 8 % (hover, cursor row).
-    pub accent_wash: Hsla,
     /// Text on an accent fill.
     pub on_accent: Hsla,
-    /// Accent-coloured text, icons and thin strokes: the `accentText` token (the crimson in light
-    /// mode, the deep crimson lifted toward the foreground in dark mode, D-399). Fills keep `accent`.
+    /// Error text and destructive labels.
     pub accent_text: Hsla,
-    /// Link text: `accent_text`.
-    pub link: Hsla,
-    /// Behind modal surfaces.
+    /// Behind modal surfaces (palette, help).
     pub scrim: Hsla,
     /// Raw palette.
     pub palette: Palette,
@@ -93,60 +93,57 @@ impl Theme {
     /// The theme of an appearance.
     pub fn new(appearance: Appearance) -> Self {
         let p = appearance.palette();
-        let fg = opacity::foreground::TEXT;
+        let over = |a: f32| solid(p.foreground.over(p.background, a));
         Self {
+            appearance,
             bg: solid(p.background),
-            fg: alpha(p.foreground, fg),
-            secondary: solid(p.foreground.over(p.background, opacity::foreground::SECONDARY)),
-            muted: solid(p.foreground.over(p.background, opacity::foreground::MUTED)),
-            faint: solid(p.foreground.over(p.background, opacity::foreground::BORDER_HOVER)),
-            border: solid(p.foreground.over(p.background, opacity::foreground::BORDER)),
-            border_subtle: solid(p.foreground.over(p.background, opacity::foreground::BORDER_SUBTLE)),
+            fg: alpha(p.foreground, opacity::foreground::TEXT),
+            secondary: over(opacity::foreground::SECONDARY),
+            tertiary: over(opacity::foreground::TERTIARY),
+            muted: over(opacity::foreground::MUTED),
+            stroke: over(opacity::foreground::BORDER_HOVER),
+            line_strong: over(opacity::foreground::BORDER),
+            line: over(opacity::foreground::BORDER_SUBTLE),
+            surface: over(opacity::foreground::SURFACE),
+            surface_strong: over(opacity::foreground::SURFACE_STRONG),
+            dawn: solid(p.dawn),
             accent: solid(p.accent),
-            accent_core: alpha(p.accent, opacity::accent::CORE),
-            accent_glow: alpha(p.accent, opacity::accent::GLOW),
-            accent_tint: alpha(p.accent, opacity::accent::TINT),
-            accent_wash: alpha(p.accent, opacity::accent::WASH),
-            // White on crimson in light mode; the light foreground on deep crimson in dark mode.
-            on_accent: match appearance {
-                Appearance::Light => solid(p.background),
-                Appearance::Dark => solid(p.foreground),
-            },
+            on_accent: solid(p.on_accent),
             accent_text: solid(p.accent_text),
-            link: solid(p.accent_text),
-            scrim: alpha(p.background, opacity::foreground::MUTED),
+            // Light: ink at 6 %; dark: paper at 50 % (§2.7). No blur.
+            scrim: match appearance {
+                Appearance::Light => alpha(p.foreground, 0.06),
+                Appearance::Dark => alpha(p.background, 0.5),
+            },
             palette: p,
         }
     }
 
-    /// The subtle crimson glow on primary actions (BRIEF "Atmosphere").
-    pub fn glow(&self) -> Vec<BoxShadow> {
-        vec![BoxShadow {
-            color: alpha(self.palette.accent, akatsuki_tokens::effect::GLOW_OPACITY * opacity::accent::GLOW),
-            offset: point(px(0.), px(2.)),
-            blur_radius: px(akatsuki_tokens::effect::GLOW_BLUR / 2.),
-            spread_radius: px(0.),
-        }]
-    }
-
-    /// Elevation for floating surfaces (palette, pickers, toasts), tinted with the foreground.
+    /// Level-1 elevation for everything raised (palette, pickers, toasts, the compose pop-out):
+    /// one hairline (drawn by the caller) and one soft shadow, built from the tokens (§2.7).
     pub fn popover(&self) -> Vec<BoxShadow> {
-        vec![BoxShadow {
-            color: alpha(self.palette.foreground, opacity::accent::WASH),
-            offset: point(px(0.), px(12.)),
-            blur_radius: px(akatsuki_tokens::space::S4),
-            spread_radius: px(-akatsuki_tokens::space::S0_5),
-        }]
-    }
-
-    /// A blurred crimson orb (BRIEF "Atmosphere"): a transparent dot whose shadow is the orb.
-    pub fn orb(&self, size: f32) -> Vec<BoxShadow> {
-        vec![BoxShadow {
-            color: alpha(self.palette.accent, akatsuki_tokens::motion::orb::OPACITY),
-            offset: point(px(0.), px(0.)),
-            blur_radius: px(akatsuki_tokens::motion::orb::BLUR),
-            spread_radius: px(size / 2.),
-        }]
+        match self.appearance {
+            Appearance::Light => vec![
+                BoxShadow {
+                    color: alpha(self.palette.foreground, akatsuki_tokens::effect::POP_OPACITY_LIGHT),
+                    offset: point(px(0.), px(16.)),
+                    blur_radius: px(48.),
+                    spread_radius: px(-16.),
+                },
+                BoxShadow {
+                    color: alpha(self.palette.foreground, 0.06),
+                    offset: point(px(0.), px(2.)),
+                    blur_radius: px(6.),
+                    spread_radius: px(-2.),
+                },
+            ],
+            Appearance::Dark => vec![BoxShadow {
+                color: alpha(self.palette.background, akatsuki_tokens::effect::POP_OPACITY_DARK),
+                offset: point(px(0.), px(16.)),
+                blur_radius: px(48.),
+                spread_radius: px(-16.),
+            }],
+        }
     }
 }
 
@@ -171,30 +168,16 @@ pub mod styles {
     pub const BODY: TextStyle = text::app::BODY;
     /// 15 px reading text.
     pub const READING: TextStyle = text::app::READING;
-    /// Uppercase tracked labels.
+    /// Mono caps: the reader crumb, the AI provenance line, chips (§2.1).
     pub const LABEL: TextStyle = text::app::LABEL;
+    /// Section headers: 12/500, sentence case.
+    pub const SECTION: TextStyle = text::app::SECTION;
     /// Opened-thread subject (serif).
     pub const SUBJECT: TextStyle = text::app::SUBJECT;
     /// Section headings (serif).
     pub const HEADING: TextStyle = text::app::HEADING;
     /// Empty states (serif).
     pub const EMPTY: TextStyle = text::app::EMPTY;
-    /// Brand display (serif).
-    pub const DISPLAY: TextStyle = text::brand::DISPLAY;
-}
-
-/// Uppercases a label and spaces it out: GPUI 0.2.2 has no letter-spacing, so the tracking of
-/// `text::app::LABEL` (0.12 em) is approximated with hair spaces between letters.
-pub fn tracked(label: &str) -> String {
-    let upper = label.to_uppercase();
-    let mut out = String::with_capacity(upper.len() * 4);
-    for (i, ch) in upper.chars().enumerate() {
-        if i > 0 && ch != ' ' {
-            out.push('\u{200A}');
-        }
-        out.push(ch);
-    }
-    out
 }
 
 #[cfg(test)]
@@ -206,15 +189,19 @@ mod tests {
         let light = Theme::new(Appearance::Light);
         assert_eq!(light.accent, solid(akatsuki_tokens::LIGHT.accent));
         assert_eq!(light.bg, solid(akatsuki_tokens::LIGHT.background));
+        assert_eq!(light.dawn, solid(akatsuki_tokens::LIGHT.dawn));
         let dark = Theme::new(Appearance::Dark);
         assert_eq!(dark.accent, solid(akatsuki_tokens::DARK.accent));
         assert_eq!(dark.bg, solid(akatsuki_tokens::DARK.background));
-        assert_eq!(dark.on_accent, solid(akatsuki_tokens::DARK.foreground));
-        // Accent text is the token's lifted crimson, never the deep fill colour (D-399).
+        assert_eq!(dark.on_accent, solid(akatsuki_tokens::DARK.on_accent));
+        assert_eq!(dark.dawn, light.dawn, "the same red in both themes (D-431)");
+        // Error text is the token's lifted crimson, never the deep fill colour (D-399).
         assert_eq!(dark.accent_text, solid(akatsuki_tokens::DARK.accent_text));
         assert_ne!(dark.accent_text, dark.accent);
-        assert_eq!(dark.link, dark.accent_text);
-        assert_eq!(light.link, solid(akatsuki_tokens::LIGHT.accent));
+        // Surfaces are the foreground over the paper: 4 % and 7 %, darker than the page in light mode.
+        assert!(light.surface.l < light.bg.l && light.surface_strong.l < light.surface.l);
+        assert!(dark.surface.l > dark.bg.l && dark.surface_strong.l > dark.surface.l);
+        assert_eq!(dark.popover().len(), 1, "dark shadows are never lighter than the page");
     }
 
     #[test]
@@ -222,11 +209,5 @@ mod tests {
         assert_eq!(ThemePref::System.resolve(WindowAppearance::Dark), Appearance::Dark);
         assert_eq!(ThemePref::Light.resolve(WindowAppearance::Dark), Appearance::Light);
         assert_eq!(ThemePref::Dark.resolve(WindowAppearance::Light), Appearance::Dark);
-    }
-
-    #[test]
-    fn labels_are_uppercase_and_tracked() {
-        assert_eq!(tracked("in"), "I\u{200A}N");
-        assert_eq!(tracked("a b"), "A \u{200A}B");
     }
 }

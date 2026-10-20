@@ -4,7 +4,8 @@
 //! filter on, so the mirror never loses a field the server sends and needs no migration when a
 //! view gains one. `messages_fts` lives in `crates/search`'s index file (D-311).
 
-/// Bumped when the layout changes; an older file is dropped and re-pulled from rev 0.
+/// Bumped when the layout changes; an older file is dropped and re-pulled from rev 0. Adding a
+/// table (`CREATE TABLE IF NOT EXISTS`) is not a layout change: `local_drafts` joined version 1.
 pub const SCHEMA_VERSION: i64 = 1;
 
 /// The tables. Statements are idempotent.
@@ -109,6 +110,11 @@ CREATE TABLE IF NOT EXISTS ai_cache (
     output_json TEXT NOT NULL,
     created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS local_drafts (
+    client_draft_id TEXT PRIMARY KEY,
+    doc TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
 "#;
 
 /// Tables wiped on sign-out (§16.1), in dependency order.
@@ -124,4 +130,5 @@ pub const ALL_TABLES: &[&str] = &[
     "outbox",
     "bodies",
     "ai_cache",
+    "local_drafts",
 ];

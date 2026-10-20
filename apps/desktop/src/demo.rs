@@ -16,15 +16,22 @@ use tokio::sync::watch;
 
 use akatsuki_convex_api::{ClientApi, ConvexApiError, Subscription};
 use akatsuki_core::convex::client::{
-    AckFailureArgs, CancelOutcome, ClaimTriageArgs, MailApplyArgs, MailApplyResult, MailSetReminderArgs,
-    MailSetReminderResult, MailSnoozeArgs, MailSnoozeResult, MailUndoArgs, MailUndoResult, RegisterDeviceArgs,
-    SaveAiSettingsArgs, SendsCancelArgs, SendsCancelResult, SetTriageArgs, SplitView, SyncChangesArgs,
-    SyncChangesResult, TombstoneRef, UndoMode,
+    AckFailureArgs, CancelOutcome, ClaimTriageArgs, DraftDiscardArgs, DraftDiscardResult, LabelCreateArgs,
+    LabelCreateResult, LabelOpResult, LabelRemoveArgs, LabelRenameArgs, MailApplyArgs, MailApplyResult,
+    MailSetReminderArgs, MailSetReminderResult, MailSnoozeArgs, MailSnoozeResult, MailUndoArgs, MailUndoResult, MeView,
+    OpRetryArgs, OpRetryResult, ProfileView, RegisterDeviceArgs, SaveAiSettingsArgs, SearchThreadsArgs,
+    SearchThreadsResult, SendsCancelArgs, SendsCancelResult, SendsListArgs, SendsRescheduleArgs, SendsResolveArgs,
+    SetTriageArgs, SnippetIdArgs, SnippetSaveArgs, SnippetSaveResult, SnippetView, SplitView, SyncChangesArgs,
+    SyncChangesResult, TombstoneRef, UndoMode, UpdatePrefsArgs,
 };
 use akatsuki_core::convex::rows::{
-    AiSettings, LabelView, MailAccountView, MessageMeta, OpFailure, ThreadMirror, TriageInput,
+    AiSettings, FailureState, LabelView, MailAccountView, MessageMeta, OpFailure, ScheduledSendView, SendPreview,
+    ThreadMirror, ThreadRow, TriageInput,
 };
-use akatsuki_core::convex::{ThreadAction, TombstoneTable};
+use akatsuki_core::convex::{
+    AppError, Density, Entitlement, EntitlementState, Keymap, NotificationPref, Onboarding, Prefs, ReadReceiptPrefs,
+    RemoteImages, SendKind, SendState, ThemePref, ThreadAction, TombstoneTable, Triage, TriageSource, TriageState,
+};
 use akatsuki_core::model::apply_ops::Effect;
 use akatsuki_core::model::{ApplyContext, Visible, apply_action};
 #[cfg(test)]
@@ -397,6 +404,52 @@ struct DemoState {
     sent: HashSet<String>,
     ai: Option<AiSettings>,
     seq: u64,
+    prefs: Prefs,
+    snippets: Vec<SnippetView>,
+    /// Revision at which each label last changed (the feed sends labels newer than `sinceRev`).
+    label_rev: HashMap<String, u64>,
+    /// Threads whose next change fails at the "provider" once, to show Retry (§5.7).
+    flaky: HashSet<String>,
+    failures: Vec<OpFailure>,
+    /// Failed op id → what to run again on Retry.
+    retryable: HashMap<String, (Vec<String>, ThreadAction)>,
+    /// Sends with their row as `sends.list` shows it.
+    scheduled: BTreeMap<String, ScheduledSendView>,
+    /// The request of each scheduled send (fired at its time).
+    requests: HashMap<String, SendRequest>,
+}
+
+/// The demo's default preferences (`vPrefs` defaults).
+pub fn default_prefs() -> Prefs {
+    Prefs {
+        undo_send_seconds: 10,
+        remote_images: RemoteImages::Block,
+        read_receipts: ReadReceiptPrefs { enabled: false, warning_acknowledged_at: None },
+        cache_bodies_on_device: true,
+        density: Density::Comfortable,
+        theme: ThemePref::System,
+        keymap: Keymap::Superhuman,
+        unified_inbox: true,
+        notifications: NotificationPref::Private,
+    }
+}
+
+fn demo_snippets() -> Vec<SnippetView> {
+    serde_json::from_value(json!([
+        {"_id": "snip-thanks", "_creationTime": 1.0, "name": "Thanks", "shortcut": "thx",
+         "bodyHtml": "<p>Thanks, {{first_name}}! I will get back to you by {{day}}.</p>", "variables": ["first_name", "day"],
+         "useCount": 4, "updatedAt": 1},
+        {"_id": "snip-intro", "_creationTime": 1.0, "name": "Intro call", "shortcut": "intro", "subject": "Quick intro call",
+         "bodyHtml": "<p>Hi {{first_name}},</p><p>Would a 20-minute call this week work? Here is my calendar: {{calendar_link}}</p>",
+         "variables": ["first_name", "calendar_link"], "useCount": 1, "updatedAt": 1},
+        {"_id": "snip-ooo", "_creationTime": 1.0, "name": "Out of office",
+         "bodyHtml": "<p>I am away until Monday and will reply then.</p>", "variables": [], "useCount": 0, "updatedAt": 1}
+    ]))
+    .unwrap_or_default()
+}
+
+fn app_error(function: &str, code: &str, message: &str) -> ConvexApiError {
+    ConvexApiError::from_app_error(function, message.into(), json!({"code": code, "message": message}))
 }
 
 impl DemoState {
@@ -428,7 +481,18 @@ impl DemoState {
             sent: HashSet::new(),
             ai: None,
             seq: 0,
+            prefs: default_prefs(),
+            snippets: demo_snippets(),
+            label_rev: HashMap::new(),
+            flaky: HashSet::from(["t-staging".to_owned()]),
+            failures: Vec::new(),
+            retryable: HashMap::new(),
+            scheduled: BTreeMap::new(),
+            requests: HashMap::new(),
         };
+        for l in &s.labels {
+            s.label_rev.insert(l.id.as_str().to_owned(), 1);
+        }
         for spec in specs(now) {
             s.insert(spec, now);
         }
@@ -561,11 +625,14 @@ impl DemoState {
                 reset_required: true,
             };
         }
-        let labels = if since < 1 {
-            self.labels.iter().filter(|l| l.account_id.as_str() == account).cloned().collect()
-        } else {
-            vec![]
-        };
+        let labels = self
+            .labels
+            .iter()
+            .filter(|l| {
+                l.account_id.as_str() == account && self.label_rev.get(l.id.as_str()).copied().unwrap_or(1) > since
+            })
+            .cloned()
+            .collect();
         SyncChangesResult {
             threads: self
                 .threads
@@ -672,6 +739,49 @@ impl Default for DemoApi {
 }
 
 impl DemoApi {
+    /// Schedules a later send (§10 "Send later"): it shows in `sends.list` and goes out at `at`.
+    fn schedule_later(&self, req: &SendRequest, at: i64) -> SendAccepted {
+        let preview = SendPreview {
+            subject: req.draft.as_ref().map(|d| d.subject.clone()).unwrap_or_default(),
+            to: req.draft.as_ref().map(|d| d.to.clone()).unwrap_or_default(),
+        };
+        {
+            let mut s = self.lock();
+            s.seq += 1;
+            let row = ScheduledSendView {
+                id: format!("send-{}", req.client_send_id).as_str().into(),
+                creation_time: 1.0,
+                account_id: req.draft.as_ref().map(|d| d.account_id.clone()),
+                client_send_id: req.client_send_id.clone(),
+                draft_id: Some(format!("draft-{}", req.client_draft_id).as_str().into()),
+                kind: SendKind::Later,
+                send_at: at,
+                state: SendState::Scheduled,
+                op_id: None,
+                preview,
+                sent_provider_message_id: None,
+                error: None,
+                created_at: now_ms(),
+            };
+            s.scheduled.insert(req.client_send_id.clone(), row);
+            s.requests.insert(req.client_send_id.clone(), req.clone());
+            s.pending_sends.insert(req.client_send_id.clone());
+        }
+        let me = self.clone();
+        let id = req.client_send_id.clone();
+        let req2 = req.clone();
+        let wait = u64::try_from(at - now_ms()).unwrap_or(0);
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(wait)).await;
+            me.fire_scheduled(&id, &req2);
+        });
+        SendAccepted {
+            send_id: format!("send-{}", req.client_send_id).into(),
+            send_at: at,
+            state: akatsuki_core::convex::worker::ScheduleOutcome::Scheduled,
+        }
+    }
+
     /// A fresh demo mailbox.
     pub fn new() -> Self {
         Self { state: Arc::new(Mutex::new(DemoState::new(now_ms()))), changed: Arc::new(watch::channel(0).0) }
@@ -683,6 +793,59 @@ impl DemoApi {
 
     fn notify(&self) {
         self.changed.send_modify(|g| *g += 1);
+    }
+
+    fn fail_op(&self, thread: &str, effect: &Effect, action: ThreadAction) {
+        {
+            let mut s = self.lock();
+            s.apply(&[thread.to_owned()], &effect.inverse());
+            s.seq += 1;
+            let id = format!("op-failed-{}", s.seq);
+            let (subject, account_email) = match s.threads.get(thread) {
+                Some(t) => (
+                    Some(t.subject.clone()),
+                    s.accounts.iter().find(|a| a.id == t.account_id).map(|a| a.email.clone()).unwrap_or_default(),
+                ),
+                None => (None, String::new()),
+            };
+            s.failures.push(OpFailure {
+                id: id.as_str().into(),
+                thread_id: Some(thread.into()),
+                subject,
+                account_email,
+                payload_kind: "thread".into(),
+                error: AppError {
+                    code: "provider_transient".into(),
+                    message: "The mail provider did not answer in time.".into(),
+                    retryable: true,
+                },
+                state: FailureState::Failed,
+                at: now_ms(),
+            });
+            s.retryable.insert(id, (vec![thread.to_owned()], action));
+        }
+        self.notify();
+    }
+
+    fn fire_scheduled(&self, client_send_id: &str, req: &SendRequest) {
+        let fire = {
+            let mut s = self.lock();
+            match s.scheduled.get_mut(client_send_id) {
+                Some(row) if row.state == SendState::Scheduled && row.send_at <= now_ms() => {
+                    row.state = SendState::Sent;
+                    true
+                }
+                _ => false,
+            }
+        };
+        if fire {
+            let mut s = self.lock();
+            s.pending_sends.remove(client_send_id);
+            s.sent.insert(client_send_id.to_owned());
+            s.add_sent(req, now_ms());
+            drop(s);
+            self.notify();
+        }
     }
 
     /// Accounts (for seeding a mirror directly).
@@ -726,16 +889,27 @@ impl ClientApi for DemoApi {
     async fn mail_apply(&self, args: &MailApplyArgs) -> Result<MailApplyResult, ConvexApiError> {
         // A short delay, like a round trip.
         tokio::time::sleep(Duration::from_millis(120)).await;
-        let (revs, op_ids) = {
+        let (revs, op_ids, flaky) = {
             let mut s = self.lock();
             let ids: Vec<String> = args.thread_ids.iter().map(|t| t.as_str().to_owned()).collect();
             let (revs, effects) = s.apply(&ids, &args.action);
             s.seq += 1;
             let seq = s.seq;
+            let flaky: Vec<(String, Effect)> = effects.iter().filter(|(t, _)| s.flaky.remove(t)).cloned().collect();
             s.effects.insert(args.client_op_id.clone(), effects);
-            (revs, (0..ids.len()).map(|i| format!("op-{seq}-{i}").into()).collect())
+            (revs, (0..ids.len()).map(|i| format!("op-{seq}-{i}").into()).collect(), flaky)
         };
         self.notify();
+        // The demo's "provider" refuses the first change to a flaky thread a moment later: the op
+        // fails, Convex rolls the thread back and `ops.failures` reports it (§5.5, §5.7).
+        for (thread, effect) in flaky {
+            let me = self.clone();
+            let action = args.action.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(700)).await;
+                me.fail_op(&thread, &effect, action);
+            });
+        }
         Ok(MailApplyResult { op_ids, rev: revs })
     }
 
@@ -758,10 +932,24 @@ impl ClientApi for DemoApi {
     }
 
     async fn op_failures(&self) -> Result<Subscription<Vec<OpFailure>>, ConvexApiError> {
-        Ok(futures::stream::iter([Ok(Vec::new())]).chain(futures::stream::pending()).boxed())
+        let state = self.state.clone();
+        let rx = self.changed.subscribe();
+        let stream = futures::stream::unfold((rx, true), move |(mut rx, first)| {
+            let state = state.clone();
+            async move {
+                if !first && rx.changed().await.is_err() {
+                    return None;
+                }
+                let list = state.lock().unwrap_or_else(|e| e.into_inner()).failures.clone();
+                Some((Ok(list), (rx, false)))
+            }
+        });
+        Ok(stream.boxed())
     }
 
-    async fn ack_failures(&self, _args: &AckFailureArgs) -> Result<(), ConvexApiError> {
+    async fn ack_failures(&self, args: &AckFailureArgs) -> Result<(), ConvexApiError> {
+        let mut s = self.lock();
+        s.failures.retain(|f| !args.op_ids.contains(&f.id));
         Ok(())
     }
 
@@ -786,11 +974,60 @@ impl ClientApi for DemoApi {
         Ok(())
     }
 
-    async fn claim_triage(&self, _args: &ClaimTriageArgs) -> Result<Vec<TriageInput>, ConvexApiError> {
-        Ok(Vec::new())
+    async fn claim_triage(&self, args: &ClaimTriageArgs) -> Result<Vec<TriageInput>, ConvexApiError> {
+        // Untriaged inbox conversations, headers and snippet only (§12.5); claimed until set.
+        let mut s = self.lock();
+        let ids: Vec<String> = s
+            .threads
+            .values()
+            .filter(|t| t.triage_state == TriageState::None && t.label_keys.iter().any(|k| k == "sys:inbox"))
+            .map(|t| t.id.as_str().to_owned())
+            .take(args.limit.min(25) as usize)
+            .collect();
+        let mut out = Vec::new();
+        for id in ids {
+            let Some(t) = s.threads.get_mut(&id) else { continue };
+            t.triage_state = TriageState::Pending;
+            let latest = s.messages.values().filter(|m| m.thread_id.as_str() == id).max_by_key(|m| m.date).cloned();
+            let Some(t) = s.threads.get(&id) else { continue };
+            out.push(TriageInput {
+                thread_id: t.id.clone(),
+                from: t.last_from.clone(),
+                to: latest.as_ref().map(|m| m.to.clone()).unwrap_or_default(),
+                subject: t.subject.clone(),
+                snippet: t.snippet.clone(),
+                list_id: latest.and_then(|m| m.list_id),
+                is_bulk: t.is_bulk,
+                has_attachments: t.has_attachments,
+            });
+        }
+        Ok(out)
     }
 
-    async fn set_triage(&self, _args: &SetTriageArgs) -> Result<(), ConvexApiError> {
+    async fn set_triage(&self, args: &SetTriageArgs) -> Result<(), ConvexApiError> {
+        {
+            let mut s = self.lock();
+            for r in &args.results {
+                let Some(account) = s.threads.get(r.thread_id.as_str()).map(|t| t.account_id.as_str().to_owned())
+                else {
+                    continue;
+                };
+                let rev = s.bump(&account);
+                if let Some(t) = s.threads.get_mut(r.thread_id.as_str()) {
+                    t.triage = Some(Triage {
+                        category: r.category,
+                        needs_reply: r.needs_reply,
+                        source: TriageSource::Client,
+                        model: r.model.clone(),
+                        prompt_version: r.prompt_version,
+                        at: now_ms(),
+                    });
+                    t.triage_state = TriageState::Done;
+                    t.rev = rev;
+                }
+            }
+        }
+        self.notify();
         Ok(())
     }
 
@@ -876,7 +1113,301 @@ impl ClientApi for DemoApi {
             s.cancelled_sends.insert(id.clone());
             CancelOutcome::Cancelled
         };
+        if result == CancelOutcome::Cancelled {
+            s.scheduled.remove(id);
+        }
         Ok(SendsCancelResult { result })
+    }
+
+    async fn me(&self) -> Result<Option<MeView>, ConvexApiError> {
+        let prefs = self.lock().prefs.clone();
+        let timezone = crate::vm::time::tz_name(&crate::vm::time::local_tz());
+        Ok(Some(MeView {
+            user_id: "demo-user".into(),
+            email: ME.into(),
+            name: Some("Demo".into()),
+            profile: ProfileView {
+                email: ME.into(),
+                name: Some("Demo".into()),
+                timezone,
+                onboarding: Onboarding::Done,
+                prefs,
+            },
+            entitlement: Entitlement {
+                state: EntitlementState::Selfhost,
+                hosted_sync: true,
+                managed_ai: false,
+                until: 0,
+            },
+        }))
+    }
+
+    async fn update_prefs(&self, args: &UpdatePrefsArgs) -> Result<(), ConvexApiError> {
+        let mut s = self.lock();
+        let p = &args.patch;
+        if let Some(v) = p.undo_send_seconds {
+            if ![0, 5, 10, 20, 30].contains(&v) {
+                return Err(app_error(
+                    "me:updatePrefs",
+                    "invalid_argument",
+                    "Undo send must be 0, 5, 10, 20 or 30 seconds.",
+                ));
+            }
+            s.prefs.undo_send_seconds = v;
+        }
+        if let Some(v) = p.remote_images {
+            s.prefs.remote_images = v;
+        }
+        if let Some(v) = &p.read_receipts {
+            s.prefs.read_receipts = v.clone();
+        }
+        if let Some(v) = p.cache_bodies_on_device {
+            s.prefs.cache_bodies_on_device = v;
+        }
+        if let Some(v) = p.density {
+            s.prefs.density = v;
+        }
+        if let Some(v) = p.theme {
+            s.prefs.theme = v;
+        }
+        if let Some(v) = p.keymap {
+            s.prefs.keymap = v;
+        }
+        if let Some(v) = p.unified_inbox {
+            s.prefs.unified_inbox = v;
+        }
+        if let Some(v) = p.notifications {
+            s.prefs.notifications = v;
+        }
+        Ok(())
+    }
+
+    async fn create_label(&self, args: &LabelCreateArgs) -> Result<LabelCreateResult, ConvexApiError> {
+        let result = {
+            let mut s = self.lock();
+            let account = args.account_id.as_str().to_owned();
+            let name = args.name.trim().to_owned();
+            if name.is_empty() || name.chars().count() > 225 {
+                return Err(app_error("labels:create", "invalid_argument", "Label names are 1 to 225 characters."));
+            }
+            if s.labels.iter().any(|l| l.account_id.as_str() == account && l.name.eq_ignore_ascii_case(&name)) {
+                return Err(app_error("labels:create", "invalid_argument", "A label with that name already exists."));
+            }
+            s.seq += 1;
+            let id = format!("label-{}", s.seq);
+            let rev = s.bump(&account);
+            let exclusive = false;
+            let Ok(view) = serde_json::from_value::<LabelView>(label(&id, &account, &name, exclusive, None)) else {
+                return Err(app_error("labels:create", "internal", "The label could not be created."));
+            };
+            s.labels.push(view);
+            s.label_rev.insert(id.clone(), rev);
+            LabelCreateResult { label_id: id.as_str().into(), label_key: format!("l:{id}"), op_id: "op-label".into() }
+        };
+        self.notify();
+        Ok(result)
+    }
+
+    async fn rename_label(&self, args: &LabelRenameArgs) -> Result<LabelOpResult, ConvexApiError> {
+        {
+            let mut s = self.lock();
+            let Some(account) = s.labels.iter().find(|l| l.id == args.label_id).map(|l| l.account_id.clone()) else {
+                return Err(app_error("labels:rename", "not_found", "That label no longer exists."));
+            };
+            let rev = s.bump(account.as_str());
+            if let Some(l) = s.labels.iter_mut().find(|l| l.id == args.label_id) {
+                l.name = args.name.trim().to_owned();
+            }
+            s.label_rev.insert(args.label_id.as_str().to_owned(), rev);
+        }
+        self.notify();
+        Ok(LabelOpResult { op_id: "op-label-rename".into() })
+    }
+
+    async fn remove_label(&self, args: &LabelRemoveArgs) -> Result<LabelOpResult, ConvexApiError> {
+        {
+            let mut s = self.lock();
+            let Some(label) = s.labels.iter().find(|l| l.id == args.label_id).cloned() else {
+                return Err(app_error("labels:remove", "not_found", "That label no longer exists."));
+            };
+            if label.role.is_some() {
+                return Err(app_error("labels:remove", "invalid_action", "System labels cannot be deleted."));
+            }
+            // The worker deletes it at the provider; the threads lose the key and the label is tombstoned.
+            let carrying: Vec<String> = s
+                .threads
+                .values()
+                .filter(|t| t.label_keys.contains(&label.label_key))
+                .map(|t| t.id.as_str().to_owned())
+                .collect();
+            let remove = ThreadAction::Modify { add: vec![], remove: vec![label.label_key.clone()] };
+            s.apply(&carrying, &remove);
+            let account = label.account_id.as_str().to_owned();
+            let rev = s.bump(&account);
+            s.labels.retain(|l| l.id != args.label_id);
+            s.tombstones.push((account, rev, TombstoneTable::Labels, args.label_id.as_str().to_owned()));
+        }
+        self.notify();
+        Ok(LabelOpResult { op_id: "op-label-remove".into() })
+    }
+
+    async fn list_snippets(&self) -> Result<Vec<SnippetView>, ConvexApiError> {
+        Ok(self.lock().snippets.clone())
+    }
+
+    async fn save_snippet(&self, args: &SnippetSaveArgs) -> Result<SnippetSaveResult, ConvexApiError> {
+        let mut s = self.lock();
+        let name = args.name.trim().to_owned();
+        if name.is_empty() || name.chars().count() > 100 {
+            return Err(app_error("snippets:save", "invalid_argument", "Snippet names are 1 to 100 characters."));
+        }
+        let shortcut = args.shortcut.as_deref().map(|x| x.trim().to_lowercase()).filter(|x| !x.is_empty());
+        if let Some(sc) = &shortcut
+            && s.snippets.iter().any(|x| x.shortcut.as_ref() == Some(sc) && Some(&x.id) != args.snippet_id.as_ref())
+        {
+            return Err(app_error("snippets:save", "invalid_argument", "That shortcut is already used."));
+        }
+        s.seq += 1;
+        let id = args.snippet_id.clone().unwrap_or_else(|| format!("snip-{}", s.seq).as_str().into());
+        let view = SnippetView {
+            id: id.clone(),
+            creation_time: 1.0,
+            name,
+            shortcut,
+            subject: args.subject.clone().filter(|x| !x.trim().is_empty()),
+            body_html: args.body_html.clone(),
+            variables: args.variables.clone(),
+            use_count: 0.0,
+            last_used_at: None,
+            updated_at: now_ms() as f64,
+        };
+        s.snippets.retain(|x| x.id != id);
+        s.snippets.push(view);
+        s.snippets.sort_by_key(|a| a.name.to_lowercase());
+        Ok(SnippetSaveResult { snippet_id: id })
+    }
+
+    async fn remove_snippet(&self, args: &SnippetIdArgs) -> Result<(), ConvexApiError> {
+        self.lock().snippets.retain(|x| x.id != args.snippet_id);
+        Ok(())
+    }
+
+    async fn mark_snippet_used(&self, args: &SnippetIdArgs) -> Result<(), ConvexApiError> {
+        if let Some(x) = self.lock().snippets.iter_mut().find(|x| x.id == args.snippet_id) {
+            x.use_count += 1.0;
+            x.last_used_at = Some(now_ms() as f64);
+        }
+        Ok(())
+    }
+
+    async fn retry_op(&self, args: &OpRetryArgs) -> Result<OpRetryResult, ConvexApiError> {
+        {
+            let mut s = self.lock();
+            let Some((threads, action)) = s.retryable.remove(args.op_id.as_str()) else {
+                return Err(app_error("ops:retry", "invalid_argument", "Only failed ops can be retried."));
+            };
+            s.failures.retain(|f| f.id != args.op_id);
+            let (_, effects) = s.apply(&threads, &action);
+            s.effects.insert(args.client_op_id.clone(), effects);
+        }
+        self.notify();
+        Ok(OpRetryResult { op_ids: vec![format!("op-retry-{}", args.op_id.as_str()).as_str().into()] })
+    }
+
+    async fn search_threads(&self, args: &SearchThreadsArgs) -> Result<SearchThreadsResult, ConvexApiError> {
+        // Headers and snippets, like the Convex search index (§11.2 backend 1); field syntax the demo
+        // does not understand is reported as unsupported.
+        let s = self.lock();
+        let mut unsupported = Vec::new();
+        let words: Vec<String> = args
+            .q
+            .split_whitespace()
+            .filter_map(|w| {
+                if w.contains(':') {
+                    let field = w.split(':').next().unwrap_or("");
+                    unsupported.push(format!("{field}:"));
+                    None
+                } else {
+                    Some(w.to_lowercase())
+                }
+            })
+            .collect();
+        let page: Vec<ThreadRow> = s
+            .threads
+            .values()
+            .filter(|t| args.account_id.as_ref().is_none_or(|a| *a == t.account_id))
+            .filter(|_| !words.is_empty())
+            .filter(|t| {
+                let hay = format!(
+                    "{} {} {}",
+                    t.subject,
+                    t.snippet,
+                    t.participants
+                        .iter()
+                        .map(|p| format!("{} {}", p.name.clone().unwrap_or_default(), p.email))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                )
+                .to_lowercase();
+                words.iter().all(|w| hay.contains(w.as_str()))
+            })
+            .filter_map(|t| serde_json::to_value(t).ok().and_then(|v| serde_json::from_value(v).ok()))
+            .collect();
+        Ok(SearchThreadsResult { page, is_done: true, continue_cursor: String::new(), unsupported })
+    }
+
+    async fn list_sends(&self, args: &SendsListArgs) -> Result<Vec<ScheduledSendView>, ConvexApiError> {
+        let wanted = args.states.clone().unwrap_or_else(|| {
+            vec![SendState::Scheduled, SendState::Due, SendState::Sending, SendState::Failed, SendState::Unknown]
+        });
+        let mut rows: Vec<ScheduledSendView> =
+            self.lock().scheduled.values().filter(|r| wanted.contains(&r.state)).cloned().collect();
+        rows.sort_by_key(|r| r.send_at);
+        Ok(rows)
+    }
+
+    async fn reschedule_send(&self, args: &SendsRescheduleArgs) -> Result<(), ConvexApiError> {
+        let req = {
+            let mut s = self.lock();
+            if args.send_at <= now_ms() {
+                return Err(app_error("sends:reschedule", "invalid_argument", "The send time must be in the future."));
+            }
+            match s.scheduled.get_mut(&args.client_send_id) {
+                Some(row) if row.state == SendState::Scheduled => {
+                    row.send_at = args.send_at;
+                    row.kind = SendKind::Later;
+                }
+                Some(_) => {
+                    return Err(app_error(
+                        "sends:reschedule",
+                        "invalid_argument",
+                        "Only scheduled sends can be rescheduled.",
+                    ));
+                }
+                None => return Err(app_error("sends:reschedule", "not_found", "That send no longer exists.")),
+            }
+            s.requests.get(&args.client_send_id).cloned()
+        };
+        if let Some(req) = req {
+            let me = self.clone();
+            let id = args.client_send_id.clone();
+            let wait = u64::try_from(args.send_at - now_ms()).unwrap_or(0);
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(wait)).await;
+                me.fire_scheduled(&id, &req);
+            });
+        }
+        Ok(())
+    }
+
+    async fn resolve_unknown_send(&self, args: &SendsResolveArgs) -> Result<(), ConvexApiError> {
+        self.lock().scheduled.remove(&args.client_send_id);
+        Ok(())
+    }
+
+    async fn discard_draft(&self, args: &DraftDiscardArgs) -> Result<DraftDiscardResult, ConvexApiError> {
+        let _ = &args.client_draft_id;
+        Ok(DraftDiscardResult { op_id: "op-discard".into() })
     }
 }
 
@@ -902,6 +1433,9 @@ impl MailServer for DemoApi {
     }
 
     async fn send(&self, req: &SendRequest) -> Result<SendAccepted, WorkerError> {
+        if let Some(at) = req.send_at {
+            return Ok(self.schedule_later(req, at));
+        }
         let send_at = now_ms() + i64::from(req.undo_seconds) * 1000;
         if self.lock().cancelled_sends.contains(&req.client_send_id) {
             return Ok(SendAccepted {
@@ -942,6 +1476,31 @@ impl MailServer for DemoApi {
             upload_id: uuid::Uuid::now_v7().simple().to_string(),
             size: bytes.len() as u64,
             sha256: String::new(),
+        })
+    }
+
+    async fn search(
+        &self,
+        account_id: &str,
+        q: &str,
+        _cursor: Option<&str>,
+    ) -> Result<akatsuki_core::wire::worker::SearchResponse, WorkerError> {
+        // The "provider" searches whole messages, bodies included (§11.2 backend 2).
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        let s = self.lock();
+        let words: Vec<String> = q.split_whitespace().filter(|w| !w.contains(':')).map(str::to_lowercase).collect();
+        let mut hits: Vec<String> = Vec::new();
+        for m in s.messages.values().filter(|m| m.account_id.as_str() == account_id) {
+            let raw = s.raw.get(m.id.as_str()).map(|r| String::from_utf8_lossy(r).to_lowercase()).unwrap_or_default();
+            let hay = format!("{} {raw}", m.subject.to_lowercase());
+            let thread = m.thread_id.as_str().to_owned();
+            if !words.is_empty() && words.iter().all(|w| hay.contains(w.as_str())) && !hits.contains(&thread) {
+                hits.push(thread);
+            }
+        }
+        Ok(akatsuki_core::wire::worker::SearchResponse {
+            thread_ids: hits.iter().map(|t| t.as_str().into()).collect(),
+            next_cursor: None,
         })
     }
 

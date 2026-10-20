@@ -229,6 +229,32 @@ impl TextField {
         self.move_to(0, cx);
     }
 
+    /// Changes the placeholder (the palette's field serves every picker).
+    pub fn set_placeholder(&mut self, placeholder: &str, cx: &mut Context<'_, Self>) {
+        self.placeholder = SharedString::from(placeholder.to_owned());
+        cx.notify();
+    }
+
+    /// The selected byte range (empty at the caret).
+    pub fn selection(&self) -> Range<usize> {
+        self.selected.clone()
+    }
+
+    /// The caret's byte offset.
+    pub fn caret(&self) -> usize {
+        self.cursor()
+    }
+
+    /// Replaces the selection with `text` (snippets, dictation) and puts the caret after it.
+    pub fn insert(&mut self, text: &str, cx: &mut Context<'_, Self>) {
+        self.replace(self.selected.clone(), text, cx);
+    }
+
+    /// Replaces `range` with `text` (a `;shortcut` expanding into its snippet).
+    pub fn replace_range(&mut self, range: Range<usize>, text: &str, cx: &mut Context<'_, Self>) {
+        self.replace(range, text, cx);
+    }
+
     fn cursor(&self) -> usize {
         if self.reversed { self.selected.start } else { self.selected.end }
     }
@@ -588,7 +614,7 @@ impl Element for FieldElement {
             let at = if field.content.is_empty() { point(px(0.), px(0.)) } else { layout.position(field.cursor()) };
             let quad = fill(
                 Bounds::new(point(bounds.left() + at.x, bounds.top() + at.y - shift), size(px(1.5), line_height)),
-                t.accent_text,
+                t.dawn,
             );
             (Vec::new(), Some(quad))
         } else {
@@ -612,7 +638,7 @@ impl Element for FieldElement {
                             point(bounds.left() + x0, top),
                             point(bounds.left() + x1, top + line_height),
                         ),
-                        t.accent_tint,
+                        t.dawn.opacity(0.22),
                     ))
                 })
                 .collect();

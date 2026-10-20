@@ -4,7 +4,7 @@
 
 use akatsuki_core::ErrorCode;
 use akatsuki_core::wire::ErrorBody;
-use akatsuki_core::wire::worker::{DraftPut, DraftSaved, SendAccepted, SendRequest, UploadResponse};
+use akatsuki_core::wire::worker::{DraftPut, DraftSaved, SearchResponse, SendAccepted, SendRequest, UploadResponse};
 
 /// Worker errors, safe to show.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -149,6 +149,28 @@ impl WorkerClient {
         res.json().await.map_err(|_| WorkerError::Protocol)
     }
 
+    /// `GET /v1/search` (§11.2 backend 2): the provider searches the mailbox; hits missing from
+    /// Convex are upserted before the response, so they reach the mirror through the feed.
+    pub async fn search(
+        &self,
+        account_id: &str,
+        q: &str,
+        cursor: Option<&str>,
+        jwt: &str,
+    ) -> Result<SearchResponse, WorkerError> {
+        let mut query: Vec<(&str, &str)> = vec![("accountId", account_id), ("q", q)];
+        if let Some(c) = cursor {
+            query.push(("cursor", c));
+        }
+        let url = url::Url::parse_with_params(&format!("{}/v1/search", self.base), &query)
+            .map_err(|_| WorkerError::Protocol)?;
+        let res = self.http.get(url).bearer_auth(jwt).send().await.map_err(|_| WorkerError::Network)?;
+        if !res.status().is_success() {
+            return Err(api_error(res).await);
+        }
+        res.json().await.map_err(|_| WorkerError::Protocol)
+    }
+
     /// `POST /v1/send`.
     pub async fn send(&self, req: &SendRequest, jwt: &str) -> Result<SendAccepted, WorkerError> {
         let res = self
@@ -276,6 +298,25 @@ mod tests {
         assert_eq!(r.upload_id, "u1");
         let got = &server.received_requests().await.unwrap()[0];
         assert_eq!(got.body, b"pdf");
+    }
+
+    #[tokio::test]
+    async fn provider_search_sends_the_account_query_and_cursor() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/v1/search"))
+            .and(query_param("accountId", "a1"))
+            .and(query_param("q", "filename:plan from:ada"))
+            .and(query_param("cursor", "c1"))
+            .and(header("authorization", "Bearer jwt"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"threadIds": ["t1"], "nextCursor": null})))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let c = WorkerClient::new(reqwest::Client::new(), &server.uri());
+        let r = c.search("a1", "filename:plan from:ada", Some("c1"), "jwt").await.unwrap();
+        assert_eq!(r.thread_ids.len(), 1);
+        assert_eq!(r.next_cursor, None);
     }
 
     #[tokio::test]

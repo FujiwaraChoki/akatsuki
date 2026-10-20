@@ -1,5 +1,7 @@
 //! The desktop's service layer: the session, the Convex connection, the mirror feed (§16.3),
 //! optimistic actions with the durable outbox (§16.1), bodies, search indexing, compose and BYO AI.
+//! The feature modules below add settings sync, snippets, labels, Retry, send later, the compose
+//! store, server and provider search, AI write, dictation and BYO auto-triage.
 //!
 //! It runs on a tokio runtime next to GPUI. The UI reads the mirror directly (lists render from
 //! SQLite) and calls the methods here, which return at once; results arrive as [`Event`]s on a
@@ -16,14 +18,13 @@ use serde_json::{Value, json};
 use tokio::runtime::Handle;
 use tokio::task::AbortHandle;
 
-use akatsuki_ai::transcript::{RenderAddr, ThreadForTranscript, TranscriptMessage, render_transcript, strip_quoted};
 use akatsuki_ai::{AaspEvent, AiClient, PromptPack, ROUTING, resolve};
 use akatsuki_convex_api::{ClientApi, Convex, ConvexApiError, ConvexClientTransport};
 use akatsuki_core::convex::client::{
-    MailApplyArgs, MailSnoozeArgs, MailUndoArgs, RegisterDeviceArgs, SaveAiSettingsArgs, SendsCancelArgs, SplitView,
-    SyncChangesArgs,
+    MailApplyArgs, MailSnoozeArgs, MailUndoArgs, MeView, RegisterDeviceArgs, SaveAiSettingsArgs, SendsCancelArgs,
+    SnippetView, SplitView, SyncChangesArgs,
 };
-use akatsuki_core::convex::rows::{AiProfile, AiRoute, AiRouteFeature, AiSettings};
+use akatsuki_core::convex::rows::{AiProfile, AiRoute, AiRouteFeature, AiSettings, OpFailure, ScheduledSendView};
 use akatsuki_core::convex::{AiFeature, DeviceKind};
 use akatsuki_core::store::{BODY_CACHE_MAX_BYTES, FeedOutcome, Store};
 use akatsuki_core::time::now_ms;
@@ -39,7 +40,17 @@ use crate::secrets::SecretStore;
 use crate::vm::actions::{AccountCtx, snooze_overlay};
 use crate::vm::compose::{Draft, PendingSend};
 use crate::vm::mail::PlannedApply;
-use crate::worker::WorkerClient;
+use crate::worker::{WorkerClient, WorkerError};
+
+mod ai_extra;
+mod features;
+mod search;
+#[cfg(test)]
+mod tests_features;
+
+pub use ai_extra::DictationState;
+pub use features::failure_text;
+pub use search::SearchSource;
 
 /// How long Undo stays offered after an action (§5.2).
 pub const UNDO_WINDOW_MS: i64 = 10_000;
@@ -135,6 +146,38 @@ pub enum Event {
         /// `Ok` or a safe error.
         result: Result<(), String>,
     },
+    /// The profile, synced prefs and entitlement (`me.get`).
+    Me(Box<MeView>),
+    /// `me.updatePrefs` stored these values.
+    PrefsSynced(crate::vm::prefs::Synced),
+    /// Snippets (`snippets.list`).
+    Snippets(Vec<SnippetView>),
+    /// Unacknowledged op failures (`ops.failures`, §5.7), newest first.
+    Failures(Vec<OpFailure>),
+    /// Scheduled and unresolved sends (`sends.list`).
+    Scheduled(Vec<ScheduledSendView>),
+    /// Search hits from a backend other than the local index.
+    SearchResults {
+        /// The query they answer.
+        query: String,
+        /// Which backend.
+        source: SearchSource,
+        /// Thread ids, best first.
+        hits: Vec<String>,
+        /// Grammar the server could not apply (offer the provider search).
+        unsupported: Vec<String>,
+        /// A safe error.
+        error: Option<String>,
+    },
+    /// The draft changed on another device (`409 draft_version_conflict`, §10.1 step 3).
+    DraftConflict {
+        /// Draft.
+        client_draft_id: String,
+        /// The version the worker holds.
+        version: u64,
+    },
+    /// Dictation progress.
+    Dictation(DictationState),
 }
 
 /// What can be undone with `z`.
@@ -183,6 +226,11 @@ pub struct Backend {
     ai_settings: RwLock<Option<AiSettings>>,
     ai_seq: Mutex<u64>,
     cache_bodies: RwLock<bool>,
+    me: RwLock<Option<MeView>>,
+    snippets: RwLock<Vec<SnippetView>>,
+    failures: Mutex<Vec<OpFailure>>,
+    recording: Mutex<Option<crate::dictation::Recording>>,
+    dictation_seq: Mutex<u64>,
 }
 
 impl std::fmt::Debug for Backend {
@@ -265,6 +313,11 @@ impl Backend {
             ai_settings: RwLock::new(None),
             ai_seq: Mutex::new(0),
             cache_bodies: RwLock::new(cache_bodies),
+            me: RwLock::new(None),
+            snippets: RwLock::new(Vec::new()),
+            failures: Mutex::new(Vec::new()),
+            recording: Mutex::new(None),
+            dictation_seq: Mutex::new(0),
         });
         (b, rx)
     }
@@ -531,6 +584,13 @@ impl Backend {
         crate::render::original::clear_originals(&self.paths.originals());
         self.bodies.lock().unwrap_or_else(|e| e.into_inner()).0.clear();
         self.undo.lock().unwrap_or_else(|e| e.into_inner()).clear();
+        *self.me.write().unwrap_or_else(|e| e.into_inner()) = None;
+        self.snippets.write().unwrap_or_else(|e| e.into_inner()).clear();
+        self.failures.lock().unwrap_or_else(|e| e.into_inner()).clear();
+        *self.ai_settings.write().unwrap_or_else(|e| e.into_inner()) = None;
+        if let Some(r) = self.recording.lock().unwrap_or_else(|e| e.into_inner()).take() {
+            r.cancel();
+        }
         self.emit(Event::MirrorChanged);
         self.emit(Event::Session(SessionState::SignedOut { reason }));
     }
@@ -548,24 +608,10 @@ impl Backend {
             }
         });
         let me = self.clone();
-        let r = remote;
-        self.spawn(async move {
-            let Ok(mut failures) = r.api.op_failures().await else { return };
-            let mut seen: HashSet<String> = HashSet::new();
-            while let Some(Ok(list)) = failures.next().await {
-                let mut ack = Vec::new();
-                for f in list {
-                    if seen.insert(f.id.as_str().to_owned()) {
-                        let what = f.subject.as_deref().map(|s| format!(" \"{s}\"")).unwrap_or_default();
-                        me.toast(format!("Couldn't update{what} in {}: {}", f.account_email, f.error.message), false);
-                        ack.push(f.id.clone());
-                    }
-                }
-                if !ack.is_empty() {
-                    let _ = r.api.ack_failures(&akatsuki_core::convex::client::AckFailureArgs { op_ids: ack }).await;
-                }
-            }
-        });
+        let r = remote.clone();
+        self.spawn(async move { me.watch_failures(r).await });
+        let me = self.clone();
+        self.spawn(async move { me.triage_loop(remote).await });
     }
 
     async fn refresh_accounts(self: &Arc<Self>, r: &Remote) {
@@ -583,6 +629,8 @@ impl Backend {
             *self.ai_settings.write().unwrap_or_else(|e| e.into_inner()) = ai.clone();
             self.emit(Event::AiSettings(ai));
         }
+        self.refresh_me(r).await;
+        self.refresh_snippets_now(r).await;
         for a in accounts {
             let id = a.id.as_str().to_owned();
             if self.feeds.lock().unwrap_or_else(|e| e.into_inner()).insert(id.clone()) {
@@ -851,7 +899,7 @@ impl Backend {
             let mut stack = self.undo.lock().unwrap_or_else(|e| e.into_inner());
             stack.retain(|u| match u {
                 Undoable::Gesture { at, .. } => now - at <= UNDO_WINDOW_MS,
-                Undoable::Send(p) => p.send_at > now,
+                Undoable::Send(p) => p.undo_until > now,
             });
             stack.pop()
         };
@@ -949,16 +997,34 @@ impl Backend {
 
     /// Sets a reminder (`mail.setReminder`, condition `if_no_reply`, §10).
     pub fn set_reminder(self: &Arc<Self>, thread_id: String, at: i64) {
+        self.remind(thread_id, at, akatsuki_core::convex::TimerCondition::IfNoReply, None);
+    }
+
+    /// A reminder with the user's own note (an action item's "Remind me", §12.1): it always comes back.
+    pub fn remind_with_note(self: &Arc<Self>, thread_id: String, at: i64, note: String) {
+        let note: String = note.chars().take(500).collect();
+        self.remind(thread_id, at, akatsuki_core::convex::TimerCondition::Always, Some(note));
+    }
+
+    fn remind(
+        self: &Arc<Self>,
+        thread_id: String,
+        at: i64,
+        condition: akatsuki_core::convex::TimerCondition,
+        note: Option<String>,
+    ) {
         let Some(r) = self.remote() else { return };
         let me = self.clone();
+        let always = condition == akatsuki_core::convex::TimerCondition::Always;
         self.rt.spawn(async move {
             let args = akatsuki_core::convex::client::MailSetReminderArgs {
                 thread_id: thread_id.as_str().into(),
                 at,
-                condition: akatsuki_core::convex::TimerCondition::IfNoReply,
-                note: None,
+                condition,
+                note,
             };
             match r.api.set_reminder(&args).await {
+                Ok(_) if always => me.toast("Reminder set", false),
                 Ok(_) => me.toast("Reminder set. It comes back if nobody replies.", false),
                 Err(e) => me.toast(safe(&e), false),
             }
@@ -1107,8 +1173,16 @@ impl Backend {
         self.rt.spawn(async move {
             let put =
                 akatsuki_core::wire::worker::DraftPut { base_version: draft.base_version, draft: content, device_id };
-            if let Ok(saved) = r.mail.put_draft(&draft.client_draft_id, &put).await {
-                me.emit(Event::DraftSaved { client_draft_id: draft.client_draft_id, version: saved.version });
+            match r.mail.put_draft(&draft.client_draft_id, &put).await {
+                Ok(saved) => {
+                    me.emit(Event::DraftSaved { client_draft_id: draft.client_draft_id, version: saved.version })
+                }
+                Err(WorkerError::Api {
+                    code: Some(akatsuki_core::ErrorCode::DraftVersionConflict),
+                    version: Some(version),
+                    ..
+                }) => me.emit(Event::DraftConflict { client_draft_id: draft.client_draft_id, version }),
+                Err(_) => {}
             }
         });
     }
@@ -1145,21 +1219,34 @@ impl Backend {
         });
     }
 
-    /// Sends with the undo window. Returns the pending send for the "Sending… Undo" bar.
-    pub fn send(self: &Arc<Self>, draft: Draft, undo_seconds: u32) -> Result<PendingSend, String> {
+    /// Sends with the undo window, or at `send_at` (send later, §10). Returns the pending send for
+    /// the "Sending… Undo" bar. The device copy of the draft is deleted once the send can no longer
+    /// be undone.
+    pub fn send(
+        self: &Arc<Self>,
+        draft: Draft,
+        undo_seconds: u32,
+        send_at: Option<i64>,
+    ) -> Result<PendingSend, String> {
         let r = self.remote().ok_or("Sign in to send.")?;
         let client_send_id = uuid::Uuid::now_v7().to_string();
-        let req =
-            draft.send_request(client_send_id.clone(), undo_seconds, &self.device_id).map_err(|e| e.to_string())?;
+        if send_at.is_some_and(|at| at <= now_ms() + 30_000) {
+            return Err("Pick a time in the future.".into());
+        }
+        let req = draft
+            .send_request(client_send_id.clone(), undo_seconds, send_at, &self.device_id)
+            .map_err(|e| e.to_string())?;
         // Reopened as it was (attachments included) if the worker refuses the send.
         let reopen = draft.clone();
-        let pending = PendingSend {
-            client_send_id: client_send_id.clone(),
-            draft,
-            send_at: now_ms() + i64::from(undo_seconds) * 1000,
+        let client_draft_id = draft.client_draft_id.clone();
+        let now = now_ms();
+        let pending = match send_at {
+            Some(at) => PendingSend::later(client_send_id.clone(), draft, now, at),
+            None => PendingSend::now(client_send_id.clone(), draft, now, undo_seconds),
         };
         self.undo.lock().unwrap_or_else(|e| e.into_inner()).push(Undoable::Send(pending.clone()));
         let me = self.clone();
+        let wait = u64::try_from(pending.undo_until - now).unwrap_or(0);
         self.rt.spawn(async move {
             if let Err(e) = r.mail.send(&req).await {
                 me.undo
@@ -1169,7 +1256,7 @@ impl Backend {
                 me.emit(Event::SendDone { client_send_id, reopen: Some(reopen), error: Some(e.to_string()) });
                 return;
             }
-            tokio::time::sleep(Duration::from_millis(u64::from(undo_seconds) * 1000)).await;
+            tokio::time::sleep(Duration::from_millis(wait)).await;
             let still = me
                 .undo
                 .lock()
@@ -1177,7 +1264,11 @@ impl Backend {
                 .iter()
                 .any(|u| matches!(u, Undoable::Send(p) if p.client_send_id == client_send_id));
             if still {
+                me.delete_local_draft(&client_draft_id);
                 me.emit(Event::SendDone { client_send_id, reopen: None, error: None });
+                if send_at.is_some() {
+                    me.list_scheduled();
+                }
             }
         });
         Ok(pending)
@@ -1291,8 +1382,8 @@ impl Backend {
         });
     }
 
-    /// Runs `summarize` or `instant_reply` on a thread; events arrive as [`Event::Ai`]. Returns the
-    /// request id.
+    /// Runs `summarize`, `instant_reply` or `extract_actions` on a thread; events arrive as
+    /// [`Event::Ai`]. Returns the request id.
     pub fn run_ai(
         self: &Arc<Self>,
         feature: AiFeature,
@@ -1300,58 +1391,25 @@ impl Backend {
         user_name: &str,
         tz: &str,
     ) -> Result<u64, String> {
-        let settings = self.ai_settings().ok_or("Set up an AI provider in Settings first.")?;
-        let pack = self.prompts.clone().ok_or("The prompt pack is not installed.")?;
-        let request = {
-            let mut seq = self.ai_seq.lock().unwrap_or_else(|e| e.into_inner());
-            *seq += 1;
-            *seq
-        };
-        let messages =
-            self.store.lock().unwrap_or_else(|e| e.into_inner()).messages(thread_id).map_err(|e| e.to_string())?;
-        let texts: Vec<TranscriptMessage> = messages
-            .iter()
-            .map(|m| {
-                let body =
-                    self.cached_body(m.id.as_str()).and_then(|b| b.text.clone()).unwrap_or_else(|| m.snippet.clone());
-                TranscriptMessage {
-                    from: m.from.as_ref().map(RenderAddr::from),
-                    to: m.to.iter().map(RenderAddr::from).collect(),
-                    cc: m.cc.iter().map(RenderAddr::from).collect(),
-                    date: m.date,
-                    text: strip_quoted(&body).to_owned(),
-                }
-            })
-            .collect();
-        let today = jiff::Timestamp::now().strftime("%Y-%m-%d").to_string();
+        self.ai_settings().ok_or("Set up an AI provider in Settings first.")?;
+        let today = ai_extra::today(tz);
         let mut vars = serde_json::Map::new();
-        vars.insert("userName".into(), json!(user_name));
         match feature {
             AiFeature::Summarize => {
+                vars.insert("userName".into(), json!(user_name));
                 vars.insert("today".into(), json!(today));
             }
             AiFeature::InstantReply => {
+                vars.insert("userName".into(), json!(user_name));
                 vars.insert("voice".into(), Value::Null);
+            }
+            AiFeature::ExtractActions => {
+                vars.insert("today".into(), json!(today));
             }
             _ => return Err("Not available here.".into()),
         }
-        let budget = pack.transcript_budget(feature, &vars).map_err(|e| e.to_string())?;
-        let transcript = render_transcript(&ThreadForTranscript {
-            timezone: tz.to_owned(),
-            max_input_chars: Some(budget),
-            messages: texts,
-        });
-        vars.insert("transcript".into(), json!(transcript));
-        let profile_key = resolve(feature, &settings, &ROUTING).ok().and_then(|r| self.key_for(r.profile));
-        let stream = akatsuki_ai::run_feature(&self.ai, &pack, &settings, feature, vars, move |_| profile_key);
-        let me = self.clone();
-        self.rt.spawn(async move {
-            let mut stream = stream;
-            while let Some(event) = stream.next().await {
-                me.emit(Event::Ai { request, event });
-            }
-        });
-        Ok(request)
+        self.with_transcript(feature, thread_id, tz, &mut vars)?;
+        self.stream_feature(feature, vars)
     }
 }
 
@@ -1686,13 +1744,16 @@ mod tests {
         d.to = "hana@kitsune-mail.example".into();
         d.subject = "Hello".into();
         d.body = "Hi".into();
-        let p = b.send(d.clone(), 5).unwrap();
+        let p = b.send(d.clone(), 5, None).unwrap();
         assert!(p.seconds_left(now_ms()) >= 4);
         assert!(b.undo_last());
         let e = next_matching(&mut rx, |e| matches!(e, Event::SendDone { .. })).await;
         let Event::SendDone { reopen, error, .. } = e else { unreachable!() };
         assert_eq!(error, None);
         assert_eq!(reopen.unwrap().subject, "Hello", "undo reopens the local copy");
-        assert!(b.send(Draft::new("d2".into(), crate::demo::GMAIL, crate::demo::ME), 0).is_err(), "no recipients");
+        assert!(
+            b.send(Draft::new("d2".into(), crate::demo::GMAIL, crate::demo::ME), 0, None).is_err(),
+            "no recipients"
+        );
     }
 }

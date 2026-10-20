@@ -6,10 +6,13 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use super::rows::{AiConsent, AiProfile, AiRoute, LabelView, MessageMeta, ThreadMirror};
-use super::schema::{DeviceKind, Rule, ThreadAction, TimerCondition, TombstoneTable};
+use super::rows::{AiConsent, AiProfile, AiRoute, LabelView, MessageMeta, ThreadMirror, ThreadRow};
+use super::schema::{
+    Density, DeviceKind, Entitlement, Keymap, NotificationPref, Onboarding, Prefs, ReadReceiptPrefs, RemoteImages,
+    Rule, SendState, ThemePref, ThreadAction, TimerCondition, TombstoneTable,
+};
 use super::worker::TriageResult;
-use crate::ids::{AccountId, OpId, SplitId, ThreadId, TimerId};
+use crate::ids::{AccountId, LabelId, OpId, SnippetId, SplitId, ThreadId, TimerId};
 use crate::time::UnixMs;
 
 /// Fully qualified names of the client functions Rust calls.
@@ -48,6 +51,34 @@ pub mod functions {
     pub const AI_SAVE_SETTINGS: &str = "ai:saveSettings";
     /// `mail.setReminder`
     pub const MAIL_SET_REMINDER: &str = "mail:setReminder";
+    /// `me.updatePrefs` (desktop settings sync)
+    pub const ME_UPDATE_PREFS: &str = "me:updatePrefs";
+    /// `labels.create`
+    pub const LABELS_CREATE: &str = "labels:create";
+    /// `labels.rename`
+    pub const LABELS_RENAME: &str = "labels:rename";
+    /// `labels.remove`
+    pub const LABELS_REMOVE: &str = "labels:remove";
+    /// `snippets.list`
+    pub const SNIPPETS_LIST: &str = "snippets:list";
+    /// `snippets.save`
+    pub const SNIPPETS_SAVE: &str = "snippets:save";
+    /// `snippets.remove`
+    pub const SNIPPETS_REMOVE: &str = "snippets:remove";
+    /// `snippets.markUsed`
+    pub const SNIPPETS_MARK_USED: &str = "snippets:markUsed";
+    /// `ops.retry` (failure toasts, §5.7)
+    pub const OPS_RETRY: &str = "ops:retry";
+    /// `search.threads` (Convex search, §11.2 backend 1)
+    pub const SEARCH_THREADS: &str = "search:threads";
+    /// `sends.list` (scheduled messages)
+    pub const SENDS_LIST: &str = "sends:list";
+    /// `sends.reschedule`
+    pub const SENDS_RESCHEDULE: &str = "sends:reschedule";
+    /// `sends.resolveUnknown`
+    pub const SENDS_RESOLVE_UNKNOWN: &str = "sends:resolveUnknown";
+    /// `drafts.discard`
+    pub const DRAFTS_DISCARD: &str = "drafts:discard";
 }
 
 /// `devices.register` arguments.
@@ -294,4 +325,313 @@ pub struct MailSetReminderArgs {
 pub struct MailSetReminderResult {
     /// The timer.
     pub timer_id: TimerId,
+}
+
+/// The `profiles` row as `me.get` returns it (`vProfile`, minus `userId`).
+#[skip_serializing_none]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfileView {
+    /// Address.
+    pub email: String,
+    /// Display name.
+    pub name: Option<String>,
+    /// IANA time zone; user-facing dates resolve in it (§1.3).
+    pub timezone: String,
+    /// Onboarding step.
+    pub onboarding: Onboarding,
+    /// Synced preferences.
+    pub prefs: Prefs,
+}
+
+/// `me.get` result (`null` until the user's rows exist). Billing is not decoded.
+#[skip_serializing_none]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeView {
+    /// Better Auth user id.
+    pub user_id: String,
+    /// Address.
+    pub email: String,
+    /// Display name.
+    pub name: Option<String>,
+    /// Profile and prefs.
+    pub profile: ProfileView,
+    /// What the user may use.
+    pub entitlement: Entitlement,
+}
+
+/// A partial `vPrefs` for `me.updatePrefs`: absent fields keep their stored value.
+#[skip_serializing_none]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrefsPatch {
+    /// 0, 5, 10, 20 or 30.
+    pub undo_send_seconds: Option<u32>,
+    /// Remote images.
+    pub remote_images: Option<RemoteImages>,
+    /// Read receipts.
+    pub read_receipts: Option<ReadReceiptPrefs>,
+    /// Keep bodies on devices.
+    pub cache_bodies_on_device: Option<bool>,
+    /// Density.
+    pub density: Option<Density>,
+    /// Theme.
+    pub theme: Option<ThemePref>,
+    /// Key map.
+    pub keymap: Option<Keymap>,
+    /// Unified inbox.
+    pub unified_inbox: Option<bool>,
+    /// Notifications.
+    pub notifications: Option<NotificationPref>,
+}
+
+impl PrefsPatch {
+    /// Nothing to change.
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
+/// `me.updatePrefs` arguments.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePrefsArgs {
+    /// Fields to change.
+    pub patch: PrefsPatch,
+}
+
+/// `labels.create` arguments.
+#[skip_serializing_none]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelCreateArgs {
+    /// Gesture id (UUIDv7).
+    pub client_op_id: String,
+    /// Mailbox.
+    pub account_id: AccountId,
+    /// Name.
+    pub name: String,
+    /// `#RRGGBB`.
+    pub color: Option<String>,
+}
+
+/// `labels.create` result.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelCreateResult {
+    /// The new label.
+    pub label_id: LabelId,
+    /// `l:<labelId>`.
+    pub label_key: String,
+    /// The `label_create` op.
+    pub op_id: OpId,
+}
+
+/// `labels.rename` arguments.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelRenameArgs {
+    /// Gesture id.
+    pub client_op_id: String,
+    /// Label.
+    pub label_id: LabelId,
+    /// New name.
+    pub name: String,
+}
+
+/// `labels.remove` arguments.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelRemoveArgs {
+    /// Gesture id.
+    pub client_op_id: String,
+    /// Label.
+    pub label_id: LabelId,
+}
+
+/// `labels.rename` / `labels.remove` result.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelOpResult {
+    /// The op.
+    pub op_id: OpId,
+}
+
+/// `SnippetView`: `snippets` minus `userId`, `searchText`.
+#[skip_serializing_none]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SnippetView {
+    /// Snippet id.
+    #[serde(rename = "_id")]
+    pub id: SnippetId,
+    /// Creation time.
+    #[serde(rename = "_creationTime")]
+    pub creation_time: f64,
+    /// Name.
+    pub name: String,
+    /// `;shortcut` trigger.
+    pub shortcut: Option<String>,
+    /// Subject filled into an empty draft.
+    pub subject: Option<String>,
+    /// Sanitized body (≤ 20 KB).
+    pub body_html: String,
+    /// Variables used (`first_name`, …).
+    pub variables: Vec<String>,
+    /// Times inserted.
+    pub use_count: f64,
+    /// Last insert.
+    pub last_used_at: Option<f64>,
+    /// Updated.
+    pub updated_at: f64,
+}
+
+/// `snippets.save` arguments (`snippetId` absent creates one).
+#[skip_serializing_none]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SnippetSaveArgs {
+    /// Existing snippet.
+    pub snippet_id: Option<SnippetId>,
+    /// Name (1–100 chars).
+    pub name: String,
+    /// Trigger (`[a-z0-9][a-z0-9_-]{0,31}`).
+    pub shortcut: Option<String>,
+    /// Subject.
+    pub subject: Option<String>,
+    /// Body HTML (sanitized by Convex).
+    pub body_html: String,
+    /// Variables used.
+    pub variables: Vec<String>,
+}
+
+/// `snippets.save` result.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SnippetSaveResult {
+    /// The snippet.
+    pub snippet_id: SnippetId,
+}
+
+/// `snippets.remove` / `snippets.markUsed` arguments.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SnippetIdArgs {
+    /// The snippet.
+    pub snippet_id: SnippetId,
+}
+
+/// `ops.retry` arguments.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpRetryArgs {
+    /// The failed op.
+    pub op_id: OpId,
+    /// New gesture id.
+    pub client_op_id: String,
+}
+
+/// `ops.retry` result.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpRetryResult {
+    /// Ops enqueued.
+    pub op_ids: Vec<OpId>,
+}
+
+/// Convex `paginationOpts`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaginationOpts {
+    /// Page size (50 on desktop, §1.5).
+    pub num_items: u32,
+    /// `null` for the first page.
+    pub cursor: Option<String>,
+}
+
+/// `search.threads` arguments.
+#[skip_serializing_none]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchThreadsArgs {
+    /// Query in the grammar (≤ 500 chars).
+    pub q: String,
+    /// Rounded down to the minute by the caller (query cache).
+    pub now_at: i64,
+    /// One mailbox.
+    pub account_id: Option<AccountId>,
+    /// Page.
+    pub pagination_opts: PaginationOpts,
+}
+
+/// `search.threads` result (the parsed `ast` is not decoded).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchThreadsResult {
+    /// Matching rows.
+    pub page: Vec<ThreadRow>,
+    /// Last page.
+    pub is_done: bool,
+    /// Next cursor.
+    pub continue_cursor: String,
+    /// Grammar Convex could not apply; the UI offers the provider search.
+    pub unsupported: Vec<String>,
+}
+
+/// `sends.list` arguments.
+#[skip_serializing_none]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SendsListArgs {
+    /// States (default: scheduled, due, sending, failed, unknown).
+    pub states: Option<Vec<SendState>>,
+}
+
+/// `sends.reschedule` arguments.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SendsRescheduleArgs {
+    /// The send.
+    pub client_send_id: String,
+    /// New time (future).
+    pub send_at: i64,
+}
+
+/// How an `unknown` send is resolved.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UnknownResolution {
+    /// The user saw it arrive.
+    WasSent,
+    /// Drop it.
+    Discard,
+}
+
+/// `sends.resolveUnknown` arguments.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SendsResolveArgs {
+    /// The send.
+    pub client_send_id: String,
+    /// Resolution.
+    pub resolution: UnknownResolution,
+}
+
+/// `drafts.discard` arguments.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DraftDiscardArgs {
+    /// Gesture id.
+    pub client_op_id: String,
+    /// The draft.
+    pub client_draft_id: String,
+}
+
+/// `drafts.discard` result.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DraftDiscardResult {
+    /// The `delete_draft` op.
+    pub op_id: OpId,
 }
