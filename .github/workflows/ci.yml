@@ -304,7 +304,8 @@ jobs:
           { echo "$common"; echo "AKATSUKI_BILLING=off"; cat "$keys/api.env.part"; } | sudo tee /opt/akatsuki/api.env >/dev/null
           sudo chmod 0600 /opt/akatsuki/sync.env /opt/akatsuki/api.env
           printf 'AKATSUKI_SYNC_IMAGE=akatsuki-sync:ci\nAKATSUKI_API_IMAGE=akatsuki-api:ci\n' > "$RUNNER_TEMP/release.env"
-          compose=(docker compose -p akatsuki --env-file "$RUNNER_TEMP/release.env" -f infra/hetzner/docker-compose.yml)
+          # The env files are root-owned 0600, as on the server, where compose also runs as root.
+          compose=(sudo docker compose -p akatsuki --env-file "$RUNNER_TEMP/release.env" -f infra/hetzner/docker-compose.yml)
           "${compose[@]}" config --quiet
           "${compose[@]}" up -d --wait --wait-timeout 120
           curl -fsS http://127.0.0.1:47310/healthz
@@ -313,7 +314,7 @@ jobs:
           docker inspect -f '{{.HostConfig.ReadonlyRootfs}} {{.Config.User}}' akatsuki-sync akatsuki-api
       - name: Compose logs
         if: always()
-        run: docker compose -p akatsuki -f infra/hetzner/docker-compose.yml logs --no-color --tail 100 || true
+        run: sudo docker compose -p akatsuki --env-file "$RUNNER_TEMP/release.env" -f infra/hetzner/docker-compose.yml logs --no-color --tail 100 || true
 
   e2e:
     name: Playwright smoke (${{ matrix.app }})
