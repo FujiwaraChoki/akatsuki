@@ -1,0 +1,31 @@
+# secrets: never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# account identifiers (zone ids, Stripe ids, DNS tokens) kept out of git: docs/CREDENTIALS.local.md
+docs/*.local.md
+
+# deps / build
+node_modules/
+target/
+dist/
+.next/
+.turbo/
+.expo/
+.vercel/
+coverage/
+.DS_Store
+
+# local tooling state (self-hosted Convex harness, caches)
+.convex-dev/
+*.tsbuildinfo
+.vitest/
+
+# rust
+**/*.rs.bk
+*.profraw
+*.profdata
+/crates/**/target/
+/apps/**/target/

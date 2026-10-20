@@ -1,0 +1,32 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "root": true,
+  "extends": ["./packages/config/biome.preset.json"],
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/target",
+      "!**/.next",
+      "!**/.turbo",
+      "!**/.expo",
+      "!**/coverage",
+      "!**/_generated",
+      "!crates",
+      "!apps/desktop",
+      "!apps/sync",
+      "!docs",
+      "!**/*.md",
+      "!**/fonts",
+      "!**/.env",
+      "!**/.env.*"
+    ]
+  }
+}

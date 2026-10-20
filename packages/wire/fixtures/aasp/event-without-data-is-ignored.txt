@@ -1,0 +1,7 @@
+event: delta
+
+event: done
+id: 7
+retry: 100
+data: {"text":"x","object":null,"usage":{"inputTokens":1,"outputTokens":1},"finishReason":"length"}
+

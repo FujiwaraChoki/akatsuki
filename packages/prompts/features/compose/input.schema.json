@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["instruction", "transcript", "draft", "voice", "userName"],
+  "properties": {
+    "instruction": {
+      "type": "string",
+      "maxLength": 4000,
+      "minLength": 1
+    },
+    "transcript": {
+      "type": ["string", "null"],
+      "maxLength": 120000
+    },
+    "draft": {
+      "type": ["string", "null"],
+      "maxLength": 40000
+    },
+    "voice": {
+      "type": ["string", "null"],
+      "maxLength": 2048
+    },
+    "userName": {
+      "type": "string",
+      "maxLength": 200
+    }
+  }
+}

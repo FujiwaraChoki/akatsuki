@@ -1,0 +1,2047 @@
+{
+  "description": "Search grammar conformance (ARCHITECTURE §11.1, D-094). Run by convex/lib/query.ts (until packages/mail-model/src/query exists) and crates/search::query. Each case: input, ast, normalized (normalize(ast) in the case's zone) and errors (exact messages). nowAt and timezone apply unless a case overrides them.",
+  "nowAt": 1792540800000,
+  "timezone": "Europe/Zurich",
+  "cases": [
+    {
+      "input": "",
+      "ast": {
+        "and": []
+      },
+      "normalized": "",
+      "errors": []
+    },
+    {
+      "input": "   ",
+      "ast": {
+        "and": []
+      },
+      "normalized": "",
+      "errors": []
+    },
+    {
+      "input": "\t\n",
+      "ast": {
+        "and": []
+      },
+      "normalized": "",
+      "errors": []
+    },
+    {
+      "input": "hello",
+      "ast": {
+        "text": "hello",
+        "phrase": false
+      },
+      "normalized": "hello",
+      "errors": []
+    },
+    {
+      "input": " hello  world ",
+      "ast": {
+        "and": [
+          {
+            "text": "hello",
+            "phrase": false
+          },
+          {
+            "text": "world",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "hello world",
+      "errors": []
+    },
+    {
+      "input": "hello world again",
+      "ast": {
+        "and": [
+          {
+            "text": "hello",
+            "phrase": false
+          },
+          {
+            "text": "world",
+            "phrase": false
+          },
+          {
+            "text": "again",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "hello world again",
+      "errors": []
+    },
+    {
+      "input": "café",
+      "ast": {
+        "text": "café",
+        "phrase": false
+      },
+      "normalized": "café",
+      "errors": []
+    },
+    {
+      "input": "日本語 メール",
+      "ast": {
+        "and": [
+          {
+            "text": "日本語",
+            "phrase": false
+          },
+          {
+            "text": "メール",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "日本語 メール",
+      "errors": []
+    },
+    {
+      "input": "a b",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a b",
+      "errors": []
+    },
+    {
+      "input": "a　b",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a b",
+      "errors": []
+    },
+    {
+      "input": "ab",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a b",
+      "errors": []
+    },
+    {
+      "input": "a﻿b",
+      "ast": {
+        "text": "a﻿b",
+        "phrase": false
+      },
+      "normalized": "a﻿b",
+      "errors": []
+    },
+    {
+      "input": "https://a.example/c?d=e",
+      "ast": {
+        "text": "https://a.example/c?d=e",
+        "phrase": false
+      },
+      "normalized": "https://a.example/c?d=e",
+      "errors": []
+    },
+    {
+      "input": "x:y",
+      "ast": {
+        "text": "x:y",
+        "phrase": false
+      },
+      "normalized": "x:y",
+      "errors": []
+    },
+    {
+      "input": "foo:bar:baz",
+      "ast": {
+        "text": "foo:bar:baz",
+        "phrase": false
+      },
+      "normalized": "foo:bar:baz",
+      "errors": []
+    },
+    {
+      "input": ":leading",
+      "ast": {
+        "text": ":leading",
+        "phrase": false
+      },
+      "normalized": ":leading",
+      "errors": []
+    },
+    {
+      "input": "trailing:",
+      "ast": {
+        "text": "trailing:",
+        "phrase": false
+      },
+      "normalized": "trailing:",
+      "errors": []
+    },
+    {
+      "input": "a-b",
+      "ast": {
+        "text": "a-b",
+        "phrase": false
+      },
+      "normalized": "a-b",
+      "errors": []
+    },
+    {
+      "input": "-",
+      "ast": {
+        "text": "-",
+        "phrase": false
+      },
+      "normalized": "\"-\"",
+      "errors": []
+    },
+    {
+      "input": "a - b",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "-",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a \"-\" b",
+      "errors": []
+    },
+    {
+      "input": "--a",
+      "ast": {
+        "not": {
+          "text": "-a",
+          "phrase": false
+        }
+      },
+      "normalized": "-\"-a\"",
+      "errors": []
+    },
+    {
+      "input": "-\"x\"",
+      "ast": {
+        "not": {
+          "text": "x",
+          "phrase": true
+        }
+      },
+      "normalized": "-\"x\"",
+      "errors": []
+    },
+    {
+      "input": "\"quarterly report\"",
+      "ast": {
+        "text": "quarterly report",
+        "phrase": true
+      },
+      "normalized": "\"quarterly report\"",
+      "errors": []
+    },
+    {
+      "input": "\"say \\\"hi\\\" \\\\ bye\"",
+      "ast": {
+        "text": "say \"hi\" \\ bye",
+        "phrase": true
+      },
+      "normalized": "\"say \\\"hi\\\" \\\\ bye\"",
+      "errors": []
+    },
+    {
+      "input": "\"open",
+      "ast": {
+        "text": "open",
+        "phrase": true
+      },
+      "normalized": "\"open\"",
+      "errors": ["unterminated quote at 0"]
+    },
+    {
+      "input": "\"a\\b\"",
+      "ast": {
+        "text": "a\\b",
+        "phrase": true
+      },
+      "normalized": "\"a\\\\b\"",
+      "errors": []
+    },
+    {
+      "input": "\"\"",
+      "ast": {
+        "text": "",
+        "phrase": true
+      },
+      "normalized": "\"\"",
+      "errors": []
+    },
+    {
+      "input": "pre\"mid\"post",
+      "ast": {
+        "and": [
+          {
+            "text": "pre",
+            "phrase": false
+          },
+          {
+            "text": "mid",
+            "phrase": true
+          },
+          {
+            "text": "post",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "pre \"mid\" post",
+      "errors": []
+    },
+    {
+      "input": "\"x\"y",
+      "ast": {
+        "and": [
+          {
+            "text": "x",
+            "phrase": true
+          },
+          {
+            "text": "y",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "\"x\" y",
+      "errors": []
+    },
+    {
+      "input": "\"(not a group)\"",
+      "ast": {
+        "text": "(not a group)",
+        "phrase": true
+      },
+      "normalized": "\"(not a group)\"",
+      "errors": []
+    },
+    {
+      "input": "from:ada@example.com",
+      "ast": {
+        "field": "from",
+        "value": "ada@example.com"
+      },
+      "normalized": "from:ada@example.com",
+      "errors": []
+    },
+    {
+      "input": "FROM:Ada@Example.com",
+      "ast": {
+        "field": "from",
+        "value": "Ada@Example.com"
+      },
+      "normalized": "from:Ada@Example.com",
+      "errors": []
+    },
+    {
+      "input": "From:Ada",
+      "ast": {
+        "field": "from",
+        "value": "Ada"
+      },
+      "normalized": "from:Ada",
+      "errors": []
+    },
+    {
+      "input": "to:sam@example.org",
+      "ast": {
+        "field": "to",
+        "value": "sam@example.org"
+      },
+      "normalized": "to:sam@example.org",
+      "errors": []
+    },
+    {
+      "input": "cc:kim@example.net",
+      "ast": {
+        "field": "cc",
+        "value": "kim@example.net"
+      },
+      "normalized": "cc:kim@example.net",
+      "errors": []
+    },
+    {
+      "input": "subject:invoice",
+      "ast": {
+        "field": "subject",
+        "value": "invoice"
+      },
+      "normalized": "subject:invoice",
+      "errors": []
+    },
+    {
+      "input": "subject:\"weekly sync\"",
+      "ast": {
+        "field": "subject",
+        "value": "weekly sync"
+      },
+      "normalized": "subject:\"weekly sync\"",
+      "errors": []
+    },
+    {
+      "input": "subject:\"\"",
+      "ast": {
+        "field": "subject",
+        "value": ""
+      },
+      "normalized": "subject:\"\"",
+      "errors": []
+    },
+    {
+      "input": "label:Work",
+      "ast": {
+        "field": "label",
+        "value": "Work"
+      },
+      "normalized": "label:Work",
+      "errors": []
+    },
+    {
+      "input": "label:\"Work Stuff\"",
+      "ast": {
+        "field": "label",
+        "value": "Work Stuff"
+      },
+      "normalized": "label:\"Work Stuff\"",
+      "errors": []
+    },
+    {
+      "input": "label:sys:inbox",
+      "ast": {
+        "field": "label",
+        "value": "sys:inbox"
+      },
+      "normalized": "label:sys:inbox",
+      "errors": []
+    },
+    {
+      "input": "list:news.example.com",
+      "ast": {
+        "field": "list",
+        "value": "news.example.com"
+      },
+      "normalized": "list:news.example.com",
+      "errors": []
+    },
+    {
+      "input": "filename:report.pdf",
+      "ast": {
+        "field": "filename",
+        "value": "report.pdf"
+      },
+      "normalized": "filename:report.pdf",
+      "errors": []
+    },
+    {
+      "input": "account:me@example.com",
+      "ast": {
+        "field": "account",
+        "value": "me@example.com"
+      },
+      "normalized": "account:me@example.com",
+      "errors": []
+    },
+    {
+      "input": "in:inbox",
+      "ast": {
+        "field": "in",
+        "value": "inbox"
+      },
+      "normalized": "in:inbox",
+      "errors": []
+    },
+    {
+      "input": "in:Inbox",
+      "ast": {
+        "field": "in",
+        "value": "inbox"
+      },
+      "normalized": "in:inbox",
+      "errors": []
+    },
+    {
+      "input": "IN:SENT",
+      "ast": {
+        "field": "in",
+        "value": "sent"
+      },
+      "normalized": "in:sent",
+      "errors": []
+    },
+    {
+      "input": "in:Newsletters",
+      "ast": {
+        "field": "in",
+        "value": "Newsletters"
+      },
+      "normalized": "in:Newsletters",
+      "errors": []
+    },
+    {
+      "input": "in:archive",
+      "ast": {
+        "field": "in",
+        "value": "archive"
+      },
+      "normalized": "in:archive",
+      "errors": []
+    },
+    {
+      "input": "in:anywhere",
+      "ast": {
+        "field": "in",
+        "value": "anywhere"
+      },
+      "normalized": "in:anywhere",
+      "errors": []
+    },
+    {
+      "input": "in:\"My Split\"",
+      "ast": {
+        "field": "in",
+        "value": "My Split"
+      },
+      "normalized": "in:\"My Split\"",
+      "errors": []
+    },
+    {
+      "input": "is:unread",
+      "ast": {
+        "field": "is",
+        "value": "unread"
+      },
+      "normalized": "is:unread",
+      "errors": []
+    },
+    {
+      "input": "is:UNREAD",
+      "ast": {
+        "field": "is",
+        "value": "unread"
+      },
+      "normalized": "is:unread",
+      "errors": []
+    },
+    {
+      "input": "is:Read",
+      "ast": {
+        "field": "is",
+        "value": "read"
+      },
+      "normalized": "is:read",
+      "errors": []
+    },
+    {
+      "input": "is:starred",
+      "ast": {
+        "field": "is",
+        "value": "starred"
+      },
+      "normalized": "is:starred",
+      "errors": []
+    },
+    {
+      "input": "is:important",
+      "ast": {
+        "field": "is",
+        "value": "important"
+      },
+      "normalized": "is:important",
+      "errors": []
+    },
+    {
+      "input": "is:snoozed",
+      "ast": {
+        "field": "is",
+        "value": "snoozed"
+      },
+      "normalized": "is:snoozed",
+      "errors": []
+    },
+    {
+      "input": "is:needs_reply",
+      "ast": {
+        "field": "is",
+        "value": "needs_reply"
+      },
+      "normalized": "is:needs_reply",
+      "errors": []
+    },
+    {
+      "input": "is:bogus",
+      "ast": {
+        "field": "is",
+        "value": "bogus"
+      },
+      "normalized": "is:bogus",
+      "errors": ["unknown value for is: bogus"]
+    },
+    {
+      "input": "is:Unknown",
+      "ast": {
+        "field": "is",
+        "value": "unknown"
+      },
+      "normalized": "is:unknown",
+      "errors": ["unknown value for is: unknown"]
+    },
+    {
+      "input": "has:attachment",
+      "ast": {
+        "field": "has",
+        "value": "attachment"
+      },
+      "normalized": "has:attachment",
+      "errors": []
+    },
+    {
+      "input": "has:Attachment",
+      "ast": {
+        "field": "has",
+        "value": "attachment"
+      },
+      "normalized": "has:attachment",
+      "errors": []
+    },
+    {
+      "input": "has:link",
+      "ast": {
+        "field": "has",
+        "value": "link"
+      },
+      "normalized": "has:link",
+      "errors": ["unknown value for has: link"]
+    },
+    {
+      "input": "category:updates",
+      "ast": {
+        "field": "category",
+        "value": "updates"
+      },
+      "normalized": "category:updates",
+      "errors": []
+    },
+    {
+      "input": "category:Promotions",
+      "ast": {
+        "field": "category",
+        "value": "promotions"
+      },
+      "normalized": "category:promotions",
+      "errors": []
+    },
+    {
+      "input": "category:spam",
+      "ast": {
+        "field": "category",
+        "value": "spam"
+      },
+      "normalized": "category:spam",
+      "errors": ["unknown value for category: spam"]
+    },
+    {
+      "input": "from:",
+      "ast": {
+        "text": "from:",
+        "phrase": false
+      },
+      "normalized": "from:",
+      "errors": ["missing value for from:"]
+    },
+    {
+      "input": "to:",
+      "ast": {
+        "text": "to:",
+        "phrase": false
+      },
+      "normalized": "to:",
+      "errors": ["missing value for to:"]
+    },
+    {
+      "input": "from: ada",
+      "ast": {
+        "and": [
+          {
+            "text": "from:",
+            "phrase": false
+          },
+          {
+            "text": "ada",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "from: ada",
+      "errors": ["missing value for from:"]
+    },
+    {
+      "input": "from:(a)",
+      "ast": {
+        "and": [
+          {
+            "text": "from:",
+            "phrase": false
+          },
+          {
+            "text": "a",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "from: a",
+      "errors": ["missing value for from:"]
+    },
+    {
+      "input": "from:\"Ada Example\"",
+      "ast": {
+        "field": "from",
+        "value": "Ada Example"
+      },
+      "normalized": "from:\"Ada Example\"",
+      "errors": []
+    },
+    {
+      "input": "from:\"unterminated",
+      "ast": {
+        "field": "from",
+        "value": "unterminated"
+      },
+      "normalized": "from:unterminated",
+      "errors": ["unterminated quote at 5"]
+    },
+    {
+      "input": "from:a:b",
+      "ast": {
+        "field": "from",
+        "value": "a:b"
+      },
+      "normalized": "from:a:b",
+      "errors": []
+    },
+    {
+      "input": "from:-x",
+      "ast": {
+        "field": "from",
+        "value": "-x"
+      },
+      "normalized": "from:-x",
+      "errors": []
+    },
+    {
+      "input": "after:2026-10-01",
+      "ast": {
+        "field": "after",
+        "at": 1790805600000
+      },
+      "normalized": "after:2026-10-01",
+      "errors": []
+    },
+    {
+      "input": "before:2026/10/01",
+      "ast": {
+        "field": "before",
+        "at": 1790805600000
+      },
+      "normalized": "before:2026-10-01",
+      "errors": []
+    },
+    {
+      "input": "after:2026-1-5",
+      "ast": {
+        "field": "after",
+        "at": 1767567600000
+      },
+      "normalized": "after:2026-01-05",
+      "errors": []
+    },
+    {
+      "input": "before:2026-02-29",
+      "ast": {
+        "text": "before:2026-02-29",
+        "phrase": false
+      },
+      "normalized": "before:2026-02-29",
+      "errors": ["invalid date: 2026-02-29"]
+    },
+    {
+      "input": "before:2028-02-29",
+      "ast": {
+        "field": "before",
+        "at": 1835391600000
+      },
+      "normalized": "before:2028-02-29",
+      "errors": []
+    },
+    {
+      "input": "before:2026-13-01",
+      "ast": {
+        "text": "before:2026-13-01",
+        "phrase": false
+      },
+      "normalized": "before:2026-13-01",
+      "errors": ["invalid date: 2026-13-01"]
+    },
+    {
+      "input": "before:2026-02-30",
+      "ast": {
+        "text": "before:2026-02-30",
+        "phrase": false
+      },
+      "normalized": "before:2026-02-30",
+      "errors": ["invalid date: 2026-02-30"]
+    },
+    {
+      "input": "before:26-02-01",
+      "ast": {
+        "text": "before:26-02-01",
+        "phrase": false
+      },
+      "normalized": "before:26-02-01",
+      "errors": ["invalid date: 26-02-01"]
+    },
+    {
+      "input": "before:2026-10/01",
+      "ast": {
+        "text": "before:2026-10/01",
+        "phrase": false
+      },
+      "normalized": "before:2026-10/01",
+      "errors": ["invalid date: 2026-10/01"]
+    },
+    {
+      "input": "before:2026-10-01-",
+      "ast": {
+        "text": "before:2026-10-01-",
+        "phrase": false
+      },
+      "normalized": "before:2026-10-01-",
+      "errors": ["invalid date: 2026-10-01-"]
+    },
+    {
+      "input": "before:7d",
+      "ast": {
+        "text": "before:7d",
+        "phrase": false
+      },
+      "normalized": "before:7d",
+      "errors": ["invalid date: 7d"]
+    },
+    {
+      "input": "after:3w",
+      "ast": {
+        "text": "after:3w",
+        "phrase": false
+      },
+      "normalized": "after:3w",
+      "errors": ["invalid date: 3w"]
+    },
+    {
+      "input": "before:soon",
+      "ast": {
+        "text": "before:soon",
+        "phrase": false
+      },
+      "normalized": "before:soon",
+      "errors": ["invalid date: soon"]
+    },
+    {
+      "input": "before:\"2026-10-01\"",
+      "ast": {
+        "field": "before",
+        "at": 1790805600000
+      },
+      "normalized": "before:2026-10-01",
+      "errors": []
+    },
+    {
+      "input": "before:",
+      "ast": {
+        "text": "before:",
+        "phrase": false
+      },
+      "normalized": "before:",
+      "errors": ["missing value for before:"]
+    },
+    {
+      "input": "BEFORE:2026-10-01",
+      "ast": {
+        "field": "before",
+        "at": 1790805600000
+      },
+      "normalized": "before:2026-10-01",
+      "errors": []
+    },
+    {
+      "note": "DST starts in Zurich",
+      "input": "after:2026-03-29",
+      "ast": {
+        "field": "after",
+        "at": 1774738800000
+      },
+      "normalized": "after:2026-03-29",
+      "errors": []
+    },
+    {
+      "note": "DST ends in Zurich",
+      "input": "after:2026-10-25",
+      "ast": {
+        "field": "after",
+        "at": 1792879200000
+      },
+      "normalized": "after:2026-10-25",
+      "errors": []
+    },
+    {
+      "input": "after:2026-10-01",
+      "timezone": "UTC",
+      "ast": {
+        "field": "after",
+        "at": 1790812800000
+      },
+      "normalized": "after:2026-10-01",
+      "errors": []
+    },
+    {
+      "input": "after:2026-10-01",
+      "timezone": "America/New_York",
+      "ast": {
+        "field": "after",
+        "at": 1790827200000
+      },
+      "normalized": "after:2026-10-01",
+      "errors": []
+    },
+    {
+      "input": "before:2026-07-01",
+      "timezone": "Asia/Tokyo",
+      "ast": {
+        "field": "before",
+        "at": 1782831600000
+      },
+      "normalized": "before:2026-07-01",
+      "errors": []
+    },
+    {
+      "input": "after:2026-10-04",
+      "timezone": "Australia/Lord_Howe",
+      "ast": {
+        "field": "after",
+        "at": 1791034200000
+      },
+      "normalized": "after:2026-10-04",
+      "errors": []
+    },
+    {
+      "input": "after:2026-10-01",
+      "timezone": "Mars/Olympus",
+      "ast": {
+        "text": "after:2026-10-01",
+        "phrase": false
+      },
+      "normalized": "after:2026-10-01",
+      "errors": ["unknown time zone: Mars/Olympus"]
+    },
+    {
+      "input": "after:2025-12-31 before:2026-01-01",
+      "timezone": "Pacific/Kiritimati",
+      "ast": {
+        "and": [
+          {
+            "field": "after",
+            "at": 1767088800000
+          },
+          {
+            "field": "before",
+            "at": 1767175200000
+          }
+        ]
+      },
+      "normalized": "after:2025-12-31 before:2026-01-01",
+      "errors": []
+    },
+    {
+      "note": "midnight does not exist (DST gap): first instant after it",
+      "input": "after:2026-09-06",
+      "timezone": "America/Santiago",
+      "ast": {
+        "field": "after",
+        "at": 1788667200000
+      },
+      "normalized": "after:2026-09-06",
+      "errors": []
+    },
+    {
+      "note": "DST ends at midnight",
+      "input": "after:2026-04-05",
+      "timezone": "America/Santiago",
+      "ast": {
+        "field": "after",
+        "at": 1775361600000
+      },
+      "normalized": "after:2026-04-05",
+      "errors": []
+    },
+    {
+      "note": "midnight DST gap",
+      "input": "after:2026-03-08",
+      "timezone": "America/Havana",
+      "ast": {
+        "field": "after",
+        "at": 1772946000000
+      },
+      "normalized": "after:2026-03-08",
+      "errors": []
+    },
+    {
+      "note": "zone names are case-insensitive",
+      "input": "after:2026-10-01",
+      "timezone": "europe/zurich",
+      "ast": {
+        "field": "after",
+        "at": 1790805600000
+      },
+      "normalized": "after:2026-10-01",
+      "errors": []
+    },
+    {
+      "input": "after:2026-10-01 before:2026-10-20",
+      "ast": {
+        "and": [
+          {
+            "field": "after",
+            "at": 1790805600000
+          },
+          {
+            "field": "before",
+            "at": 1792447200000
+          }
+        ]
+      },
+      "normalized": "after:2026-10-01 before:2026-10-20",
+      "errors": []
+    },
+    {
+      "input": "older_than:2w",
+      "ast": {
+        "field": "older_than",
+        "days": 14
+      },
+      "normalized": "older_than:14d",
+      "errors": []
+    },
+    {
+      "input": "newer_than:3d",
+      "ast": {
+        "field": "newer_than",
+        "days": 3
+      },
+      "normalized": "newer_than:3d",
+      "errors": []
+    },
+    {
+      "input": "newer_than:1y",
+      "ast": {
+        "field": "newer_than",
+        "days": 365
+      },
+      "normalized": "newer_than:365d",
+      "errors": []
+    },
+    {
+      "input": "older_than:1m",
+      "ast": {
+        "field": "older_than",
+        "days": 30
+      },
+      "normalized": "older_than:30d",
+      "errors": []
+    },
+    {
+      "input": "older_than:2W",
+      "ast": {
+        "field": "older_than",
+        "days": 14
+      },
+      "normalized": "older_than:14d",
+      "errors": []
+    },
+    {
+      "input": "older_than:0d",
+      "ast": {
+        "field": "older_than",
+        "days": 0
+      },
+      "normalized": "older_than:0d",
+      "errors": []
+    },
+    {
+      "input": "older_than:+5d",
+      "ast": {
+        "field": "older_than",
+        "days": 5
+      },
+      "normalized": "older_than:5d",
+      "errors": []
+    },
+    {
+      "input": "older_than:5",
+      "ast": {
+        "text": "older_than:5",
+        "phrase": false
+      },
+      "normalized": "older_than:5",
+      "errors": ["invalid relative date: 5"]
+    },
+    {
+      "input": "older_than:d",
+      "ast": {
+        "text": "older_than:d",
+        "phrase": false
+      },
+      "normalized": "older_than:d",
+      "errors": ["invalid relative date: d"]
+    },
+    {
+      "input": "older_than:-1d",
+      "ast": {
+        "text": "older_than:-1d",
+        "phrase": false
+      },
+      "normalized": "older_than:-1d",
+      "errors": ["invalid relative date: -1d"]
+    },
+    {
+      "input": "older_than:3é",
+      "ast": {
+        "text": "older_than:3é",
+        "phrase": false
+      },
+      "normalized": "older_than:3é",
+      "errors": ["invalid relative date: 3é"]
+    },
+    {
+      "input": "older_than:x",
+      "ast": {
+        "text": "older_than:x",
+        "phrase": false
+      },
+      "normalized": "older_than:x",
+      "errors": ["invalid relative date: x"]
+    },
+    {
+      "input": "older_than:\" 3d \"",
+      "ast": {
+        "field": "older_than",
+        "days": 3
+      },
+      "normalized": "older_than:3d",
+      "errors": []
+    },
+    {
+      "input": "older_than:4294967295d",
+      "ast": {
+        "field": "older_than",
+        "days": 4294967295
+      },
+      "normalized": "older_than:4294967295d",
+      "errors": []
+    },
+    {
+      "input": "older_than:4294967296d",
+      "ast": {
+        "text": "older_than:4294967296d",
+        "phrase": false
+      },
+      "normalized": "older_than:4294967296d",
+      "errors": ["invalid relative date: 4294967296d"]
+    },
+    {
+      "input": "older_than:613566757w",
+      "ast": {
+        "text": "older_than:613566757w",
+        "phrase": false
+      },
+      "normalized": "older_than:613566757w",
+      "errors": ["invalid relative date: 613566757w"]
+    },
+    {
+      "input": "older_than:613566756w",
+      "ast": {
+        "field": "older_than",
+        "days": 4294967292
+      },
+      "normalized": "older_than:4294967292d",
+      "errors": []
+    },
+    {
+      "input": "-spam",
+      "ast": {
+        "not": {
+          "text": "spam",
+          "phrase": false
+        }
+      },
+      "normalized": "-spam",
+      "errors": []
+    },
+    {
+      "input": "-from:a@b.c",
+      "ast": {
+        "not": {
+          "field": "from",
+          "value": "a@b.c"
+        }
+      },
+      "normalized": "-from:a@b.c",
+      "errors": []
+    },
+    {
+      "input": "-is:read",
+      "ast": {
+        "not": {
+          "field": "is",
+          "value": "read"
+        }
+      },
+      "normalized": "-is:read",
+      "errors": []
+    },
+    {
+      "input": "-(a b)",
+      "ast": {
+        "not": {
+          "and": [
+            {
+              "text": "a",
+              "phrase": false
+            },
+            {
+              "text": "b",
+              "phrase": false
+            }
+          ]
+        }
+      },
+      "normalized": "-(a b)",
+      "errors": []
+    },
+    {
+      "input": "-(a OR b)",
+      "ast": {
+        "not": {
+          "or": [
+            {
+              "text": "a",
+              "phrase": false
+            },
+            {
+              "text": "b",
+              "phrase": false
+            }
+          ]
+        }
+      },
+      "normalized": "-(a OR b)",
+      "errors": []
+    },
+    {
+      "input": "a -b",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "not": {
+              "text": "b",
+              "phrase": false
+            }
+          }
+        ]
+      },
+      "normalized": "a -b",
+      "errors": []
+    },
+    {
+      "input": "-a -b",
+      "ast": {
+        "and": [
+          {
+            "not": {
+              "text": "a",
+              "phrase": false
+            }
+          },
+          {
+            "not": {
+              "text": "b",
+              "phrase": false
+            }
+          }
+        ]
+      },
+      "normalized": "-a -b",
+      "errors": []
+    },
+    {
+      "input": "- a",
+      "ast": {
+        "and": [
+          {
+            "text": "-",
+            "phrase": false
+          },
+          {
+            "text": "a",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "\"-\" a",
+      "errors": []
+    },
+    {
+      "input": "-)",
+      "ast": {
+        "text": "-",
+        "phrase": false
+      },
+      "normalized": "\"-\"",
+      "errors": ["unmatched ')' at 1"]
+    },
+    {
+      "input": "a -",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "-",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a \"-\"",
+      "errors": []
+    },
+    {
+      "input": "a OR b",
+      "ast": {
+        "or": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a OR b",
+      "errors": []
+    },
+    {
+      "input": "a OR b c",
+      "ast": {
+        "or": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "and": [
+              {
+                "text": "b",
+                "phrase": false
+              },
+              {
+                "text": "c",
+                "phrase": false
+              }
+            ]
+          }
+        ]
+      },
+      "normalized": "a OR (b c)",
+      "errors": []
+    },
+    {
+      "input": "a b OR c",
+      "ast": {
+        "or": [
+          {
+            "and": [
+              {
+                "text": "a",
+                "phrase": false
+              },
+              {
+                "text": "b",
+                "phrase": false
+              }
+            ]
+          },
+          {
+            "text": "c",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "(a b) OR c",
+      "errors": []
+    },
+    {
+      "input": "a OR b OR c",
+      "ast": {
+        "or": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          },
+          {
+            "text": "c",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a OR b OR c",
+      "errors": []
+    },
+    {
+      "input": "a or b",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "or",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a or b",
+      "errors": []
+    },
+    {
+      "input": "a OR",
+      "ast": {
+        "or": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "OR",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a OR \"OR\"",
+      "errors": ["OR needs a term on both sides"]
+    },
+    {
+      "input": "OR a",
+      "ast": {
+        "and": [
+          {
+            "text": "OR",
+            "phrase": false
+          },
+          {
+            "text": "a",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "\"OR\" a",
+      "errors": ["OR needs a term on both sides"]
+    },
+    {
+      "input": "OR",
+      "ast": {
+        "text": "OR",
+        "phrase": false
+      },
+      "normalized": "\"OR\"",
+      "errors": ["OR needs a term on both sides"]
+    },
+    {
+      "input": "a OR OR b",
+      "ast": {
+        "or": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "and": [
+              {
+                "text": "OR",
+                "phrase": false
+              },
+              {
+                "text": "b",
+                "phrase": false
+              }
+            ]
+          }
+        ]
+      },
+      "normalized": "a OR (\"OR\" b)",
+      "errors": ["OR needs a term on both sides"]
+    },
+    {
+      "input": "aORb",
+      "ast": {
+        "text": "aORb",
+        "phrase": false
+      },
+      "normalized": "aORb",
+      "errors": []
+    },
+    {
+      "input": "a OR) b",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "OR",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a \"OR\" b",
+      "errors": ["unmatched ')' at 4"]
+    },
+    {
+      "input": "a ORb",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "ORb",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a ORb",
+      "errors": []
+    },
+    {
+      "input": "(a OR b)",
+      "ast": {
+        "or": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a OR b",
+      "errors": []
+    },
+    {
+      "input": "a OR (b c)",
+      "ast": {
+        "or": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "and": [
+              {
+                "text": "b",
+                "phrase": false
+              },
+              {
+                "text": "c",
+                "phrase": false
+              }
+            ]
+          }
+        ]
+      },
+      "normalized": "a OR (b c)",
+      "errors": []
+    },
+    {
+      "input": "x OR(y)",
+      "ast": {
+        "and": [
+          {
+            "text": "x",
+            "phrase": false
+          },
+          {
+            "text": "OR",
+            "phrase": false
+          },
+          {
+            "text": "y",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "x \"OR\" y",
+      "errors": []
+    },
+    {
+      "input": "a\tOR\nb",
+      "ast": {
+        "or": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a OR b",
+      "errors": []
+    },
+    {
+      "input": "(a b)",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a b",
+      "errors": []
+    },
+    {
+      "input": "(from:a OR from:b) is:unread",
+      "ast": {
+        "and": [
+          {
+            "or": [
+              {
+                "field": "from",
+                "value": "a"
+              },
+              {
+                "field": "from",
+                "value": "b"
+              }
+            ]
+          },
+          {
+            "field": "is",
+            "value": "unread"
+          }
+        ]
+      },
+      "normalized": "(from:a OR from:b) is:unread",
+      "errors": []
+    },
+    {
+      "input": "((a))",
+      "ast": {
+        "text": "a",
+        "phrase": false
+      },
+      "normalized": "a",
+      "errors": []
+    },
+    {
+      "input": "(a (b OR c))",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "or": [
+              {
+                "text": "b",
+                "phrase": false
+              },
+              {
+                "text": "c",
+                "phrase": false
+              }
+            ]
+          }
+        ]
+      },
+      "normalized": "a (b OR c)",
+      "errors": []
+    },
+    {
+      "input": "()",
+      "ast": {
+        "and": []
+      },
+      "normalized": "",
+      "errors": []
+    },
+    {
+      "input": "( )",
+      "ast": {
+        "and": []
+      },
+      "normalized": "",
+      "errors": []
+    },
+    {
+      "input": "(a",
+      "ast": {
+        "text": "a",
+        "phrase": false
+      },
+      "normalized": "a",
+      "errors": ["unmatched '(' at 0"]
+    },
+    {
+      "input": "a)",
+      "ast": {
+        "text": "a",
+        "phrase": false
+      },
+      "normalized": "a",
+      "errors": ["unmatched ')' at 1"]
+    },
+    {
+      "input": "a) b",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a b",
+      "errors": ["unmatched ')' at 1"]
+    },
+    {
+      "input": "a) b) c",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          },
+          {
+            "text": "c",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a b c",
+      "errors": ["unmatched ')' at 1", "unmatched ')' at 4"]
+    },
+    {
+      "input": ")a",
+      "ast": {
+        "text": "a",
+        "phrase": false
+      },
+      "normalized": "a",
+      "errors": ["unmatched ')' at 0"]
+    },
+    {
+      "input": "))",
+      "ast": {
+        "and": []
+      },
+      "normalized": "",
+      "errors": ["unmatched ')' at 0", "unmatched ')' at 1"]
+    },
+    {
+      "input": "a(b)",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a b",
+      "errors": []
+    },
+    {
+      "input": "(a)(b)",
+      "ast": {
+        "and": [
+          {
+            "text": "a",
+            "phrase": false
+          },
+          {
+            "text": "b",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "a b",
+      "errors": []
+    },
+    {
+      "input": "-(-a)",
+      "ast": {
+        "not": {
+          "not": {
+            "text": "a",
+            "phrase": false
+          }
+        }
+      },
+      "normalized": "--a",
+      "errors": []
+    },
+    {
+      "input": "(((((((((((((((((((((((((((((((((x)))))))))))))))))))))))))))))))))",
+      "ast": {
+        "text": "x",
+        "phrase": false
+      },
+      "normalized": "x",
+      "errors": ["groups nested too deeply at 32", "unmatched ')' at 66"]
+    },
+    {
+      "input": "((((((((((((((((((((((((((((((((x))))))))))))))))))))))))))))))))",
+      "ast": {
+        "text": "x",
+        "phrase": false
+      },
+      "normalized": "x",
+      "errors": []
+    },
+    {
+      "input": "(((",
+      "ast": {
+        "and": []
+      },
+      "normalized": "",
+      "errors": ["unmatched '(' at 2", "unmatched '(' at 1", "unmatched '(' at 0"]
+    },
+    {
+      "input": "from:boss@example.com is:unread after:2026-10-01 -label:Done \"quarterly report\"",
+      "ast": {
+        "and": [
+          {
+            "field": "from",
+            "value": "boss@example.com"
+          },
+          {
+            "field": "is",
+            "value": "unread"
+          },
+          {
+            "field": "after",
+            "at": 1790805600000
+          },
+          {
+            "not": {
+              "field": "label",
+              "value": "Done"
+            }
+          },
+          {
+            "text": "quarterly report",
+            "phrase": true
+          }
+        ]
+      },
+      "normalized": "from:boss@example.com is:unread after:2026-10-01 -label:Done \"quarterly report\"",
+      "errors": []
+    },
+    {
+      "input": "has:attachment filename:pdf OR filename:docx",
+      "ast": {
+        "or": [
+          {
+            "and": [
+              {
+                "field": "has",
+                "value": "attachment"
+              },
+              {
+                "field": "filename",
+                "value": "pdf"
+              }
+            ]
+          },
+          {
+            "field": "filename",
+            "value": "docx"
+          }
+        ]
+      },
+      "normalized": "(has:attachment filename:pdf) OR filename:docx",
+      "errors": []
+    },
+    {
+      "input": "in:inbox -is:starred older_than:30d",
+      "ast": {
+        "and": [
+          {
+            "field": "in",
+            "value": "inbox"
+          },
+          {
+            "not": {
+              "field": "is",
+              "value": "starred"
+            }
+          },
+          {
+            "field": "older_than",
+            "days": 30
+          }
+        ]
+      },
+      "normalized": "in:inbox -is:starred older_than:30d",
+      "errors": []
+    },
+    {
+      "input": "category:newsletters list:digest.example.org",
+      "ast": {
+        "and": [
+          {
+            "field": "category",
+            "value": "newsletters"
+          },
+          {
+            "field": "list",
+            "value": "digest.example.org"
+          }
+        ]
+      },
+      "normalized": "category:newsletters list:digest.example.org",
+      "errors": []
+    },
+    {
+      "input": "(is:unread OR is:starred) -in:trash subject:(budget)",
+      "ast": {
+        "and": [
+          {
+            "or": [
+              {
+                "field": "is",
+                "value": "unread"
+              },
+              {
+                "field": "is",
+                "value": "starred"
+              }
+            ]
+          },
+          {
+            "not": {
+              "field": "in",
+              "value": "trash"
+            }
+          },
+          {
+            "text": "subject:",
+            "phrase": false
+          },
+          {
+            "text": "budget",
+            "phrase": false
+          }
+        ]
+      },
+      "normalized": "(is:unread OR is:starred) -in:trash subject: budget",
+      "errors": ["missing value for subject:"]
+    }
+  ]
+}

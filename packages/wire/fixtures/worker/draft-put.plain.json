@@ -1,0 +1,23 @@
+{
+  "description": "ARCHITECTURE \u00a77.3 wire value; must round-trip unchanged (crates/core::wire::worker, and packages/wire/src/worker.ts once it exists).",
+  "type": "DraftPut",
+  "value": {
+    "baseVersion": 4,
+    "draft": {
+      "accountId": "jd7f2k9m4n8p1q3r5s6t7v8w9x0y1z2a",
+      "identityEmail": "sam@example.org",
+      "to": [],
+      "cc": [],
+      "bcc": [
+        {
+          "email": "kim@example.net"
+        }
+      ],
+      "subject": "",
+      "html": null,
+      "text": "",
+      "attachments": []
+    },
+    "deviceId": "dev-web-1"
+  }
+}

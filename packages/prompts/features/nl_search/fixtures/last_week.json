@@ -1,0 +1,13 @@
+{
+  "vars": {
+    "query": "unread mail from Mia last week with attachments",
+    "today": "2026-10-14",
+    "timezone": "Europe/Zurich",
+    "labels": "Work\nTravel",
+    "splits": "VIP\nTeam"
+  },
+  "expect": {
+    "schemaValid": true,
+    "mustMention": ["from:", "has:attachment"]
+  }
+}

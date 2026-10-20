@@ -1,0 +1,11 @@
+{
+  "vars": {
+    "text": "Hi Lee, I just wanted to quickly check in with you to see whether it might perhaps be possible to move our design review to Thursday afternoon, if that works for you.",
+    "style": "shorter",
+    "voice": null
+  },
+  "expect": {
+    "schemaValid": true,
+    "mustMention": ["Thursday"]
+  }
+}

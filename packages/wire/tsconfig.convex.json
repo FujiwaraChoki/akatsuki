@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "@akatsuki/wire/convex: type-checks the re-export of the Convex sources under Convex's own rules",
+  "extends": "@akatsuki/config/tsconfig.convex.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["src/convex.ts", "test/convex.test.ts"]
+}

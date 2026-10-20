@@ -1,0 +1,41 @@
+{
+  "name": "@akatsuki/prompts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Akatsuki prompt pack: plain files (Markdown templates, JSON Schemas) shared by TypeScript and Rust, plus a small typed loader.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "files": [
+    "src",
+    "shared",
+    "features",
+    "manifest.json",
+    "pack.json",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./fs": {
+      "types": "./src/fs.ts",
+      "default": "./src/fs.ts"
+    },
+    "./pack.json": "./pack.json",
+    "./manifest.json": "./manifest.json"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@akatsuki/config": "workspace:*",
+    "@types/node": "26.6.5",
+    "ajv": "8.20.0",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

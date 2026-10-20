@@ -1,0 +1,21 @@
+# LF everywhere: the prompt pack, fixtures and generated files are compared byte for byte by
+# TypeScript and Rust (ARCHITECTURE §12.4, DECISIONS D-341). Git detects binary files itself;
+# the explicit entries below are belt and braces.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.wav binary
+*.webm binary
+*.mp3 binary
+*.m4a binary
+
+# Fixtures that must keep their CRLF line endings byte for byte (RFC 5322 mail, CRLF stream tests).
+*.eml -text
+packages/wire/fixtures/aasp/*-crlf.txt -text

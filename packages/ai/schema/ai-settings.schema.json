@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "profiles": {
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9-]+$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "akatsuki",
+              "openrouter",
+              "anthropic",
+              "openai",
+              "google",
+              "gateway",
+              "ollama",
+              "openai_compatible"
+            ]
+          },
+          "baseUrl": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "models": {
+            "type": "object",
+            "properties": {
+              "fast": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "default": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "heavy": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "transcription": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "additionalProperties": false
+          },
+          "keyOnDevices": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        },
+        "required": ["profileId", "label", "kind", "models", "keyOnDevices"],
+        "additionalProperties": false
+      }
+    },
+    "routes": {
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "feature": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "summarize",
+                  "instant_reply",
+                  "compose",
+                  "rewrite",
+                  "extract_actions",
+                  "triage",
+                  "nl_search",
+                  "voice_profile",
+                  "dictation"
+                ]
+              },
+              {
+                "type": "string",
+                "const": "default"
+              }
+            ]
+          },
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": ["feature", "profileId", "enabled"],
+        "additionalProperties": false
+      }
+    },
+    "consent": {
+      "type": "object",
+      "properties": {
+        "grantedAt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "autoTriage": {
+          "type": "boolean"
+        },
+        "syncVoiceProfile": {
+          "type": "boolean"
+        }
+      },
+      "required": ["autoTriage", "syncVoiceProfile"],
+      "additionalProperties": false
+    },
+    "voiceProfile": {
+      "type": "string",
+      "maxLength": 2048
+    },
+    "updatedAt": {
+      "type": "number"
+    },
+    "_id": {
+      "type": "string"
+    },
+    "_creationTime": {
+      "type": "number"
+    }
+  },
+  "required": ["profiles", "routes", "consent"],
+  "additionalProperties": false,
+  "$id": "https://akatsuki.vc/schema/ai-settings.schema.json",
+  "title": "Akatsuki AI settings (Convex aiSettings, §12.2)"
+}

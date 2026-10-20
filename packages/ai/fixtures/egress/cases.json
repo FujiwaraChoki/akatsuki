@@ -1,0 +1,155 @@
+{
+  "about": "Egress label and UI copy per profile and feature (ARCHITECTURE §12.2, D-128, D-340). Run by packages/ai (egressFor / egressText) and crates/ai (egress / egress_text); the text must be byte-identical.",
+  "cases": [
+    {
+      "profile": { "kind": "akatsuki" },
+      "feature": "summarize",
+      "egress": "akatsuki",
+      "text": "Sent to Akatsuki for processing, not stored"
+    },
+    {
+      "profile": { "kind": "akatsuki" },
+      "feature": "triage",
+      "egress": "akatsuki",
+      "text": "Sent to Akatsuki for processing, not stored"
+    },
+    {
+      "profile": { "kind": "akatsuki" },
+      "feature": "default",
+      "egress": "akatsuki",
+      "text": "Sent to Akatsuki for processing, not stored"
+    },
+    {
+      "profile": { "kind": "akatsuki" },
+      "feature": "dictation",
+      "egress": "akatsuki_openai",
+      "text": "Sent to OpenAI through Akatsuki; may be kept up to 30 days for abuse monitoring"
+    },
+    {
+      "profile": { "kind": "ollama" },
+      "feature": "triage",
+      "egress": "device",
+      "text": "Stays on this device"
+    },
+    {
+      "profile": { "kind": "ollama", "baseUrl": "http://localhost:11434" },
+      "feature": "summarize",
+      "egress": "device",
+      "text": "Stays on this device"
+    },
+    {
+      "profile": { "kind": "ollama", "baseUrl": "http://127.0.0.1:11434" },
+      "feature": "default",
+      "egress": "device",
+      "text": "Stays on this device"
+    },
+    {
+      "profile": { "kind": "openai_compatible", "baseUrl": "http://LOCALHOST:1234/v1" },
+      "feature": "rewrite",
+      "egress": "device",
+      "text": "Stays on this device"
+    },
+    {
+      "profile": { "kind": "openai_compatible", "baseUrl": "http://[::1]:8080/v1" },
+      "feature": "dictation",
+      "egress": "device",
+      "text": "Stays on this device"
+    },
+    {
+      "profile": { "kind": "openai_compatible", "baseUrl": "http://192.168.1.20:8080/v1" },
+      "feature": "dictation",
+      "egress": "network",
+      "text": "Stays on your local network (192.168.1.20:8080)"
+    },
+    {
+      "profile": { "kind": "openai_compatible", "baseUrl": "http://whisper.local:9000/v1" },
+      "feature": "dictation",
+      "egress": "network",
+      "text": "Stays on your local network (whisper.local:9000)"
+    },
+    {
+      "profile": { "kind": "ollama", "baseUrl": "http://10.0.0.5:11434" },
+      "feature": "triage",
+      "egress": "network",
+      "text": "Stays on your local network (10.0.0.5:11434)"
+    },
+    {
+      "profile": { "kind": "openai_compatible", "baseUrl": "http://172.16.0.1/v1" },
+      "feature": "summarize",
+      "egress": "network",
+      "text": "Stays on your local network (172.16.0.1)"
+    },
+    {
+      "profile": { "kind": "ollama", "baseUrl": "https://ollama.example.com" },
+      "feature": "summarize",
+      "egress": "provider",
+      "text": "Leaves this device: the thread you run this on, sent to ollama.example.com"
+    },
+    {
+      "profile": { "kind": "openai_compatible", "baseUrl": "https://llm.example.com:8443/v1" },
+      "feature": "rewrite",
+      "egress": "provider",
+      "text": "Leaves this device: the text you rewrite, sent to llm.example.com:8443"
+    },
+    {
+      "profile": { "kind": "openai_compatible", "baseUrl": "https://10.attacker.example/v1" },
+      "feature": "instant_reply",
+      "egress": "provider",
+      "text": "Leaves this device: the thread you run this on, sent to 10.attacker.example"
+    },
+    {
+      "profile": { "kind": "anthropic" },
+      "feature": "summarize",
+      "egress": "provider",
+      "text": "Leaves this device: the thread you run this on, sent to api.anthropic.com"
+    },
+    {
+      "profile": { "kind": "anthropic" },
+      "feature": "extract_actions",
+      "egress": "provider",
+      "text": "Leaves this device: the thread you run this on, sent to api.anthropic.com"
+    },
+    {
+      "profile": { "kind": "openai" },
+      "feature": "dictation",
+      "egress": "provider",
+      "text": "Leaves this device: your recording, sent to api.openai.com"
+    },
+    {
+      "profile": { "kind": "openai", "baseUrl": "https://eu.api.openai.com/v1" },
+      "feature": "instant_reply",
+      "egress": "provider",
+      "text": "Leaves this device: the thread you run this on, sent to eu.api.openai.com"
+    },
+    {
+      "profile": { "kind": "openrouter" },
+      "feature": "triage",
+      "egress": "provider",
+      "text": "Leaves this device: the headers and snippets of new mail, sent to openrouter.ai"
+    },
+    {
+      "profile": { "kind": "openrouter" },
+      "feature": "compose",
+      "egress": "provider",
+      "text": "Leaves this device: your instruction, your draft and the thread you reply to, sent to openrouter.ai"
+    },
+    {
+      "profile": { "kind": "openrouter" },
+      "feature": "default",
+      "egress": "provider",
+      "text": "Leaves this device: the mail you run AI on, sent to openrouter.ai"
+    },
+    {
+      "profile": { "kind": "google" },
+      "feature": "nl_search",
+      "egress": "provider",
+      "text": "Leaves this device: your search and your label and split names, sent to generativelanguage.googleapis.com"
+    },
+    {
+      "profile": { "kind": "gateway" },
+      "feature": "voice_profile",
+      "egress": "provider",
+      "text": "Leaves this device: samples of your sent mail, sent to ai-gateway.vercel.sh"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "description": "ARCHITECTURE §7.3 wire value (D-395); must round-trip unchanged (crates/core::wire::worker and packages/wire/src/worker.ts).",
+  "type": "ConnectComplete",
+  "value": {
+    "grant": "q3hX1m9yZ0f4rT7vN2kL8sB5wC6dE1gH3jK4pQ0uA9o"
+  }
+}

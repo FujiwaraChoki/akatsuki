@@ -1,0 +1,16 @@
+/* The landing site's only colour literals: additions to @akatsuki/tokens that the apps do not use yet
+   (proposed for packages/tokens in docs/DECISIONS.md, D-431). test/tokens.test.ts checks every value
+   here against packages/tokens/tokens.json, so they cannot drift from the shared palette.
+   --dawn       emissive marks (the red-dot logo, horizon, hero period, selected-row bar). It is the
+                light-theme accent in both themes: 5.8:1 on white, 3.4:1 on the dark background,
+                enough for a graphic and for large type. The dark theme's --accent (#800000) stays a fill.
+   --on-accent  text on --accent fills.
+   --night-*    the inverted "where your mail lives" band: the dark-theme background and foreground,
+                lifted one step when the page itself is dark. */
+:root {
+  --dawn: #c1272d;
+  --on-accent: #ffffff;
+  --night-bg: #0a0a0a;
+  --night-bg-lifted: #131313;
+  --night-fg: #ededed;
+}

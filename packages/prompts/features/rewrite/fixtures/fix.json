@@ -1,0 +1,10 @@
+{
+  "vars": {
+    "text": "Hi Lee, can we mvoe the reveiw to thursday? <thanks>",
+    "style": "fix",
+    "voice": null
+  },
+  "expect": {
+    "schemaValid": true
+  }
+}

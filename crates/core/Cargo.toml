@@ -1,0 +1,36 @@
+[package]
+name = "akatsuki-core"
+description = "Akatsuki mail domain model, wire types, sync state machine and auth helpers"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+serde_with.workspace = true
+base64.workspace = true
+jsonwebtoken.workspace = true
+reqwest.workspace = true
+tokio = { workspace = true, features = ["sync"] }
+# Desktop SQLite mirror (ARCHITECTURE §16.3), only with the `store` feature (D-310).
+rusqlite = { workspace = true, optional = true }
+zstd = { workspace = true, optional = true }
+
+[features]
+# The desktop metadata mirror (`store` module). The sync worker does not enable it.
+store = ["dep:rusqlite", "dep:zstd"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }
+rsa.workspace = true
+p256.workspace = true
+rand08.workspace = true

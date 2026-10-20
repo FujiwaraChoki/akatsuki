@@ -1,0 +1,400 @@
+# Akatsuki CI. Every gate a reviewer relies on runs here; no job needs a secret, a real provider or a deploy
+# key (tests mock every provider, ARCHITECTURE §1.7 / BRIEF "Quality bar"). Third-party actions are pinned
+# by commit SHA (the tag is in the trailing comment; Dependabot keeps them current, .github/dependabot.yml).
+#
+# Jobs
+#   detect      which optional workspaces exist yet (web, mobile) and which apps have Playwright suites
+#   typescript  biome, typecheck, tests, build of every workspace, Expo export
+#   generated   generators re-run; the tree must not change (tokens, shortcuts, prompt pack, AI schema)
+#   fixtures    shared TS/Rust fixtures through both implementations (`make fixtures`)
+#   convex      local Convex backend: push schema + functions, convex/_generated must be committed
+#   rust        fmt, clippy -D warnings, tests (every crate except the GPUI desktop app)
+#   desktop     GPUI desktop app on Ubuntu with its system libraries: clippy, tests, build, smoke run
+#   deny        cargo deny (licences, bans, sources and advisories; accepted advisories are listed in deny.toml)
+#   images      Docker builds of akatsuki-sync and akatsuki-api (no push), run with the production compose
+#   e2e         Playwright smoke suites of apps that have a `test:e2e` script
+#   infra       actionlint, shellcheck, nginx -t on the vhosts, compose validation, key generator tests,
+#               deploy script dry run, no tracked .env files
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "26.7"
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CARGO_NET_RETRY: "10"
+  RUST_BACKTRACE: short
+  TURBO_TELEMETRY_DISABLED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+  EXPO_NO_TELEMETRY: "1"
+  DO_NOT_TRACK: "1"
+
+jobs:
+  detect:
+    name: Detect workspaces
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      mobile: ${{ steps.detect.outputs.mobile }}
+      e2e: ${{ steps.detect.outputs.e2e }}
+      has_e2e: ${{ steps.detect.outputs.has_e2e }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: detect
+        name: Inspect apps/*/package.json
+        run: |
+          node --input-type=module <<'EOF' >> "$GITHUB_OUTPUT"
+          import { existsSync, readFileSync } from "node:fs";
+          const pkg = (app) => {
+            const p = `apps/${app}/package.json`;
+            return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null;
+          };
+          const e2e = ["web", "landing", "mobile"].filter((a) => pkg(a)?.scripts?.["test:e2e"]);
+          console.log(`mobile=${pkg("mobile") ? "true" : "false"}`);
+          console.log(`e2e=${JSON.stringify(e2e)}`);
+          console.log(`has_e2e=${e2e.length > 0 ? "true" : "false"}`);
+          EOF
+          cat "$GITHUB_OUTPUT"
+
+  typescript:
+    name: TypeScript (lint, typecheck, tests, build)
+    needs: detect
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `pnpm lint` = `biome check .` over the whole tree (one root biome.json, D-352).
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      # Every workspace's build: packages, apps/api bundle, apps/web (Vite), apps/landing (Next static export).
+      - run: pnpm build
+      - name: Expo export (apps/mobile, iOS and Android bundles, no credentials)
+        if: needs.detect.outputs.mobile == 'true'
+        run: pnpm --filter ./apps/mobile exec expo export --platform ios --platform android --output-dir "$RUNNER_TEMP/mobile-export"
+
+  generated:
+    name: Generated files are committed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # tokens -> CSS/TS + crates/tokens/src/generated.rs; shortcuts -> crates/shortcuts/src/generated.rs;
+      # prompt pack -> pack.json + render goldens; packages/ai -> schema/ai-settings.schema.json.
+      - run: pnpm tokens:build
+      - run: pnpm shortcuts:build
+      - run: pnpm --filter @akatsuki/prompts build
+      - run: pnpm --filter @akatsuki/ai build
+      - name: The tree is unchanged
+        run: |
+          status="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$status" ]; then
+            echo "::error::Generated files are stale. Run the generators locally and commit the result."
+            echo "$status"
+            git --no-pager diff --stat
+            exit 1
+          fi
+
+  fixtures:
+    name: Shared fixtures (TypeScript and Rust)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      # rust-toolchain.toml pins the compiler; rustup installs it on first use.
+      - run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: fixtures
+      - run: pnpm install --frozen-lockfile
+      - run: make fixtures
+
+  convex:
+    name: Convex push to a local backend (schema, functions, _generated)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The dev harness (D-058): pinned self-hosted backend, local-only admin key and deployment env, written
+      # to the runner's .env.local (gitignored, discarded with the runner).
+      - run: node scripts/convex-dev.mjs up
+      - run: pnpm convex:dev:deploy
+      - name: convex/_generated is committed
+        run: |
+          status="$(git status --porcelain --untracked-files=all -- convex/_generated)"
+          if [ -n "$status" ]; then
+            echo "::error::convex/_generated is stale. Run 'make convex-deploy' locally and commit it."
+            echo "$status"
+            exit 1
+          fi
+      - if: always()
+        run: node scripts/convex-dev.mjs down
+
+  rust:
+    name: Rust (fmt, clippy, tests)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: rust
+      - run: cargo fmt --all --check
+      # Every third-party version is an exact pin (D-396): no caret or tilde ranges in any manifest.
+      - run: python3 scripts/check-exact-pins.py
+      # Base and Compose images are pinned by digest next to their tag (D-409).
+      - run: python3 scripts/check-image-pins.py
+      # The GPUI desktop app needs X11/Wayland libraries; it has its own job below.
+      - run: cargo clippy --workspace --exclude akatsuki-desktop --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --exclude akatsuki-desktop --locked
+      # The local end-to-end harness binary (akatsuki-fake-mail) and the providers' fake servers (D-382).
+      - run: cargo clippy -p akatsuki-sync --features e2e-fakes --all-targets --locked -- -D warnings
+
+  desktop:
+    name: Desktop (GPUI) on Ubuntu
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: GPUI system packages (docs/DEV-RUST.md)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang pkg-config \
+            libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libfontconfig-dev libfreetype-dev libvulkan1 mesa-vulkan-drivers xvfb
+      - run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: desktop
+      - run: cargo clippy -p akatsuki-desktop --all-targets --locked -- -D warnings
+      - run: cargo test -p akatsuki-desktop --locked
+      - run: cargo build -p akatsuki-desktop --release --locked
+      # Opens the window under Xvfb with Mesa's software Vulkan (lavapipe) and quits after 3 s. A headless
+      # runner is not a real GPU, so this is reported but does not block.
+      - name: Smoke run (Xvfb, lavapipe)
+        continue-on-error: true
+        env:
+          AKATSUKI_EXIT_AFTER_MS: "3000"
+        run: timeout 60 xvfb-run -a target/release/akatsuki-desktop
+
+  deny:
+    name: cargo deny
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Permissive licences only (deny.toml); OpenSSL banned; crates.io as the only source; advisories other than
+      # the accepted ones in deny.toml (each with its reason, D-396) fail the build.
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          command: check
+
+  images:
+    name: Docker images (build, no push) + production compose smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # Contexts are the repository root, filtered by each Dockerfile's <Dockerfile>.dockerignore allow-list.
+      - name: Build akatsuki-sync
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/sync/Dockerfile
+          tags: akatsuki-sync:ci
+          load: true
+          push: false
+          cache-from: type=gha,scope=akatsuki-sync
+          cache-to: type=gha,scope=akatsuki-sync,mode=max
+      - name: Build akatsuki-api
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          tags: akatsuki-api:ci
+          load: true
+          push: false
+          cache-from: type=gha,scope=akatsuki-api
+          cache-to: type=gha,scope=akatsuki-api,mode=max
+      - name: No secrets or package managers in the images
+        run: |
+          for img in akatsuki-sync:ci akatsuki-api:ci; do
+            docker image inspect "$img" --format '{{.Config.User}} {{json .Config.Healthcheck.Test}}'
+            id="$(docker create "$img")"
+            if docker export "$id" | tar -t | grep -E '(^|/)\.env($|\.)|\.pem$|(^|/)usr/local/bin/(npm|npx|corepack)$'; then
+              echo "::error::$img contains an env file, a key or a package manager"; exit 1
+            fi
+            docker rm "$id" >/dev/null
+          done
+      # Run both images exactly as production does: infra/hetzner/docker-compose.yml with read-only roots,
+      # non-root users, the bind-backed spool volume and the loopback ports 47310/47311. The env files hold
+      # freshly generated throwaway service keys and a placeholder Convex URL (nothing is contacted).
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Production compose up
+        run: |
+          keys="$RUNNER_TEMP/keys"
+          node infra/scripts/gen-service-keys.mjs --out "$keys" --with-worker-secrets
+          sudo install -d -m 0755 /opt/akatsuki
+          sudo install -d -m 0711 /opt/akatsuki/data
+          sudo install -d -m 0700 -o 65532 -g 65532 /opt/akatsuki/data/sync-spool
+          common="CONVEX_URL=https://ci-placeholder.convex.cloud
+          CONVEX_SITE_URL=https://ci-placeholder.convex.site
+          CORS_ORIGINS=https://app.akatsuki.vc"
+          { echo "$common"; cat "$keys/sync.env.part"; } | sudo tee /opt/akatsuki/sync.env >/dev/null
+          { echo "$common"; echo "AKATSUKI_BILLING=off"; cat "$keys/api.env.part"; } | sudo tee /opt/akatsuki/api.env >/dev/null
+          sudo chmod 0600 /opt/akatsuki/sync.env /opt/akatsuki/api.env
+          printf 'AKATSUKI_SYNC_IMAGE=akatsuki-sync:ci\nAKATSUKI_API_IMAGE=akatsuki-api:ci\n' > "$RUNNER_TEMP/release.env"
+          compose=(docker compose -p akatsuki --env-file "$RUNNER_TEMP/release.env" -f infra/hetzner/docker-compose.yml)
+          "${compose[@]}" config --quiet
+          "${compose[@]}" up -d --wait --wait-timeout 120
+          curl -fsS http://127.0.0.1:47310/healthz
+          curl -fsS http://127.0.0.1:47311/healthz
+          # The worker can write its spool; the root filesystem is read-only.
+          docker inspect -f '{{.HostConfig.ReadonlyRootfs}} {{.Config.User}}' akatsuki-sync akatsuki-api
+      - name: Compose logs
+        if: always()
+        run: docker compose -p akatsuki -f infra/hetzner/docker-compose.yml logs --no-color --tail 100 || true
+
+  e2e:
+    name: Playwright smoke (${{ matrix.app }})
+    needs: detect
+    if: needs.detect.outputs.has_e2e == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.detect.outputs.e2e) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter "./apps/${{ matrix.app }}" exec playwright install --with-deps chromium
+      - run: pnpm exec turbo run build --filter "./apps/${{ matrix.app }}"
+      - run: pnpm --filter "./apps/${{ matrix.app }}" run test:e2e
+        env:
+          CI: "true"
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-${{ matrix.app }}
+          path: |
+            apps/${{ matrix.app }}/playwright-report/
+            apps/${{ matrix.app }}/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  infra:
+    name: Infra (actionlint, shellcheck, nginx -t, compose, key generator, deploy dry run)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      ACTIONLINT_VERSION: "1.7.12"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: No .env files are tracked (only .env.example and *.env.example)
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -Ev '(^|/)\.env\.example$'; then
+            echo "::error::an .env file is tracked"; exit 1
+          fi
+          if git ls-files | grep -E '(^|/)[^/]+\.env$'; then
+            echo "::error::an env file is tracked"; exit 1
+          fi
+      - name: actionlint
+        run: |
+          tarball="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+          curl -fsSLO "$base/$tarball"
+          curl -fsSL "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt" | grep " $tarball\$" | sha256sum -c -
+          tar -xzf "$tarball" actionlint
+          ./actionlint -color
+      - name: shellcheck
+        run: shellcheck -x scripts/deploy-hetzner.sh infra/hetzner/nginx/test-config.sh
+      - name: nginx -t (Ubuntu 24.04 nginx 1.24, as on the server)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nginx
+          nginx -v
+          sudo infra/hetzner/nginx/test-config.sh /usr/sbin/nginx
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Key generator tests
+        run: node --test infra/scripts/gen-service-keys.test.mjs
+      - name: Self-host compose validates
+        run: |
+          d="$RUNNER_TEMP/selfhost"
+          mkdir -p "$d"
+          cp infra/selfhost/docker-compose.yml infra/selfhost/web.nginx.conf "$d/"
+          : > "$d/sync.env"; : > "$d/api.env"
+          sed 's/^AKATSUKI_CONVEX_INSTANCE_SECRET=$/AKATSUKI_CONVEX_INSTANCE_SECRET=ci/' infra/selfhost/selfhost.env.example > "$d/vars"
+          docker compose --env-file "$d/vars" -f "$d/docker-compose.yml" \
+            --profile ai --profile web --profile dashboard config --quiet
+      - name: Deploy script dry run (contacts nothing)
+        run: scripts/deploy-hetzner.sh --tag ci

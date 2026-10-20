@@ -1,0 +1,11 @@
+{
+  "valid": true,
+  "settings": {
+    "profiles": [],
+    "routes": [],
+    "consent": {
+      "autoTriage": false,
+      "syncVoiceProfile": false
+    }
+  }
+}

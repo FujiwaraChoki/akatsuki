@@ -1,0 +1,37 @@
+{
+  "feature": "dictation",
+  "settings": {
+    "profiles": [
+      {
+        "profileId": "0b6f2c1e-4444-4a5b-9c0d-000000000004",
+        "label": "OpenAI",
+        "kind": "openai",
+        "models": {
+          "transcription": "gpt-4o-mini-transcribe"
+        },
+        "keyOnDevices": ["dev-laptop"]
+      }
+    ],
+    "routes": [
+      {
+        "feature": "default",
+        "profileId": "0b6f2c1e-4444-4a5b-9c0d-000000000004",
+        "enabled": true
+      }
+    ],
+    "consent": {
+      "grantedAt": 1792483200000,
+      "version": 1,
+      "autoTriage": true,
+      "syncVoiceProfile": false
+    }
+  },
+  "expect": {
+    "status": "ok",
+    "tier": "transcription",
+    "profileId": "0b6f2c1e-4444-4a5b-9c0d-000000000004",
+    "model": "gpt-4o-mini-transcribe",
+    "managed": false,
+    "egress": "provider"
+  }
+}

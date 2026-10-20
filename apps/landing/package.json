@@ -1,0 +1,36 @@
+{
+  "name": "@akatsuki/landing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "akatsuki.vc: marketing, pricing, download, legal (\"First Light\"). Next.js App Router, static export, no client framework.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3100",
+    "build": "next build && node scripts/finish.mjs",
+    "start": "node scripts/serve.mjs",
+    "fonts": "bash scripts/build-fonts.sh",
+    "typecheck": "next typegen && tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@akatsuki/shortcuts": "workspace:*",
+    "@akatsuki/tokens": "workspace:*",
+    "marked": "18.0.14",
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@akatsuki/config": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

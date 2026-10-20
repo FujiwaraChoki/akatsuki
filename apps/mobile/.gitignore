@@ -1,0 +1,12 @@
+# Continuous Native Generation output (`expo prebuild`): generated from app.config.ts, never committed.
+/android
+/ios
+/dist
+/.expo
+expo-env.d.ts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+credentials.json

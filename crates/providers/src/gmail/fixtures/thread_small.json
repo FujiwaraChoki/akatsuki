@@ -1,0 +1,26 @@
+{
+  "id": "18c2b00000000003",
+  "historyId": "4822001",
+  "messages": [
+    {
+      "id": "18c2b00000000003",
+      "threadId": "18c2b00000000003",
+      "labelIds": ["CATEGORY_UPDATES", "INBOX"],
+      "snippet": "Your receipt from Example Store",
+      "sizeEstimate": 10240,
+      "historyId": "4822001",
+      "internalDate": "1790100000000",
+      "payload": {
+        "mimeType": "multipart/alternative",
+        "headers": [
+          {"name": "From", "value": "Example Store <receipts@store.example>"},
+          {"name": "To", "value": "ada@example.com"},
+          {"name": "Subject", "value": "Your receipt"},
+          {"name": "Date", "value": "Wed, 23 Sep 2026 03:46:40 +0000"},
+          {"name": "Message-ID", "value": "<r-1@store.example>"},
+          {"name": "Precedence", "value": "bulk"}
+        ]
+      }
+    }
+  ]
+}

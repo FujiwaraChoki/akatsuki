@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "features": {
+    "summarize": "default",
+    "instant_reply": "default",
+    "compose": "default",
+    "rewrite": "default",
+    "extract_actions": "default",
+    "voice_profile": "default",
+    "triage": "fast",
+    "nl_search": "fast",
+    "dictation": "transcription"
+  },
+  "tiers": {
+    "fast": {
+      "akatsuki": "anthropic/claude-haiku-5.5",
+      "openrouter": "anthropic/claude-haiku-5.5",
+      "anthropic": "claude-haiku-5-5",
+      "gateway": "anthropic/claude-haiku-5.5"
+    },
+    "default": {
+      "akatsuki": "anthropic/claude-sonnet-5.5",
+      "openrouter": "anthropic/claude-sonnet-5.5",
+      "anthropic": "claude-sonnet-5-5",
+      "gateway": "anthropic/claude-sonnet-5.5"
+    },
+    "heavy": {
+      "akatsuki": "anthropic/claude-opus-5.5",
+      "openrouter": "anthropic/claude-opus-5.5",
+      "anthropic": "claude-opus-5-5",
+      "gateway": "anthropic/claude-opus-5.5"
+    },
+    "transcription": { "akatsuki": "gpt-4o-transcribe", "openai": "gpt-4o-transcribe" }
+  },
+  "escalation": {
+    "heavy": {
+      "openrouter": ["anthropic/claude-opus-5.5", "anthropic/claude-fable-5.1"],
+      "anthropic": ["claude-opus-5-5", "claude-fable-5-1"],
+      "gateway": ["anthropic/claude-opus-5.5", "anthropic/claude-fable-5.1"]
+    }
+  },
+  "pricing": {
+    "anthropic/claude-haiku-5.5": { "inputPerMTokMicros": 100000, "outputPerMTokMicros": 500000 },
+    "anthropic/claude-sonnet-5.5": { "inputPerMTokMicros": 2000000, "outputPerMTokMicros": 10000000 },
+    "anthropic/claude-opus-5.5": { "inputPerMTokMicros": 4000000, "outputPerMTokMicros": 20000000 },
+    "anthropic/claude-fable-5.1": { "inputPerMTokMicros": 10000000, "outputPerMTokMicros": 50000000 },
+    "gpt-4o-transcribe": { "perAudioMinuteMicros": 6000 }
+  }
+}

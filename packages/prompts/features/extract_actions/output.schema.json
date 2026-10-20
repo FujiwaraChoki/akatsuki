@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["actions"],
+  "properties": {
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "title", "due", "quote"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["todo", "deadline", "meeting", "payment", "reply"]
+          },
+          "title": {
+            "type": "string"
+          },
+          "due": {
+            "type": ["string", "null"]
+          },
+          "quote": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

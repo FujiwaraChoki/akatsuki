@@ -1,0 +1,31 @@
+{
+  "about": "The one whitespace set of the transcript and triage renderers (shared/transcript.md, D-342): Unicode White_Space plus U+FEFF. packages/ai and crates/ai check their predicate against this list for every code point.",
+  "codePoints": [
+    "U+0009",
+    "U+000A",
+    "U+000B",
+    "U+000C",
+    "U+000D",
+    "U+0020",
+    "U+0085",
+    "U+00A0",
+    "U+1680",
+    "U+2000",
+    "U+2001",
+    "U+2002",
+    "U+2003",
+    "U+2004",
+    "U+2005",
+    "U+2006",
+    "U+2007",
+    "U+2008",
+    "U+2009",
+    "U+200A",
+    "U+2028",
+    "U+2029",
+    "U+202F",
+    "U+205F",
+    "U+3000",
+    "U+FEFF"
+  ]
+}

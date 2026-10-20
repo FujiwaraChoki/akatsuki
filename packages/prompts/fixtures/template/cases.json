@@ -1,0 +1,31 @@
+{
+  "about": "The {{var}} template rule (README \"Templates\", ARCHITECTURE §12.4, D-341). Run by renderTemplate in packages/prompts and render_template in crates/ai. A placeholder is {{ + an ASCII letter + ASCII letters, digits or _ + }}, matched left to right without overlap; after removing every placeholder the template must not contain {{ or }}. error: stray (invalid template), missing (no value), type (value is not a string or null).",
+  "cases": [
+    { "template": "{{{x}}}", "vars": { "x": "v" }, "expected": "{v}" },
+    { "template": "{{{x}}", "vars": { "x": "v" }, "expected": "{v" },
+    { "template": "{{x}}}", "vars": { "x": "v" }, "expected": "v}" },
+    { "template": "{{a}}}{{b}}", "vars": { "a": "A", "b": "B" }, "expected": "A}B" },
+    { "template": "{{x}}{", "vars": { "x": "v" }, "expected": "v{" },
+    { "template": "{}", "vars": {}, "expected": "{}" },
+    { "template": "{ {x} }", "vars": {}, "expected": "{ {x} }" },
+    { "template": "a {{x}} b", "vars": { "x": "<b>&</b>" }, "expected": "a &lt;b&gt;&&lt;/b&gt; b" },
+    { "template": "{{x}}|{{y}}|{{x}}", "vars": { "x": "1", "y": null }, "expected": "1||1" },
+    { "template": "{{x_1}} {{X}}", "vars": { "x_1": "a", "X": "b" }, "expected": "a b" },
+    { "template": "{{x}}", "vars": { "x": "{{y}}" }, "expected": "{{y}}" },
+    { "template": "é{{x}}ü", "vars": { "x": "ß😀" }, "expected": "éß😀ü" },
+    { "template": "line\n{{x}}\r\n", "vars": { "x": "v" }, "expected": "line\nv\r\n" },
+    { "template": "{{{{x}}}}", "vars": { "x": "v" }, "error": "stray" },
+    { "template": "}{{a}}}", "vars": { "a": "A" }, "error": "stray" },
+    { "template": "{{ x }}", "vars": { "x": "v" }, "error": "stray" },
+    { "template": "{{x", "vars": { "x": "v" }, "error": "stray" },
+    { "template": "x}}", "vars": {}, "error": "stray" },
+    { "template": "a }} b", "vars": {}, "error": "stray" },
+    { "template": "{{1x}}", "vars": {}, "error": "stray" },
+    { "template": "{{_x}}", "vars": { "_x": "v" }, "error": "stray" },
+    { "template": "{{x-y}}", "vars": { "x-y": "v" }, "error": "stray" },
+    { "template": "{{é}}", "vars": { "é": "v" }, "error": "stray" },
+    { "template": "{{x}}", "vars": {}, "error": "missing" },
+    { "template": "{{x}}", "vars": { "x": 1 }, "error": "type" },
+    { "template": "{{x}}", "vars": { "x": ["a"] }, "error": "type" }
+  ]
+}

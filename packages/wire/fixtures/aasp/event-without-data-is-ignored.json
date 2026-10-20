@@ -1,0 +1,18 @@
+{
+  "description": "Expected result of parsing aasp/event-without-data-is-ignored.txt (whole, and fed one byte at a time): the valid events in order and the number of rejected frames (unknown event name or data that is not JSON). Run by crates/core::wire::aasp and the TypeScript AASP reader.",
+  "events": [
+    {
+      "event": "done",
+      "data": {
+        "text": "x",
+        "object": null,
+        "usage": {
+          "inputTokens": 1,
+          "outputTokens": 1
+        },
+        "finishReason": "length"
+      }
+    }
+  ],
+  "rejected": 0
+}

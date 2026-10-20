@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "category", "needsReply"],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "important",
+              "personal",
+              "updates",
+              "newsletters",
+              "promotions",
+              "receipts",
+              "calendar",
+              "notifications",
+              "other"
+            ]
+          },
+          "needsReply": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "history": [
+    {"id": "4821050", "messages": [{"id": "m-gone-3", "threadId": "t-3"}],
+     "messagesDeleted": [{"message": {"id": "m-gone-3", "threadId": "t-3", "labelIds": ["TRASH"]}}]},
+    {"id": "4821060", "messages": [{"id": "m-new-4", "threadId": "t-4"}],
+     "messagesAdded": [{"message": {"id": "m-new-4", "threadId": "t-4", "labelIds": ["INBOX", "Label_99"]}}]}
+  ],
+  "historyId": "4821100"
+}

@@ -1,0 +1,8 @@
+event: nope
+data: {}
+
+data: {"text":"no event line"}
+
+event: delta
+data: {"text":"kept"}
+

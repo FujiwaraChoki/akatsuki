@@ -1,0 +1,19 @@
+{
+  "description": "ARCHITECTURE \u00a77.3 wire value; must round-trip unchanged (crates/core::wire::worker, and packages/wire/src/worker.ts once it exists).",
+  "type": "ImapConnect",
+  "value": {
+    "email": "sam@example.org",
+    "username": "sam",
+    "password": "not-a-real-password",
+    "imap": {
+      "host": "imap.example.org",
+      "port": 993,
+      "tls": "implicit"
+    },
+    "smtp": {
+      "host": "smtp.example.org",
+      "port": 587,
+      "tls": "starttls"
+    }
+  }
+}

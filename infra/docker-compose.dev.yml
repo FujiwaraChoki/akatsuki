@@ -1,0 +1,51 @@
+# Local dev/test harness: self-hosted Convex backend + dashboard (https://docs.convex.dev/self-hosting).
+# Production uses Convex Cloud; this stack is only for running and testing without cloud credentials.
+# Start/stop/reset and the admin-key steps are documented in docs/DEV.md.
+#
+# Images are pinned to one upstream revision (precompiled-2026-10-10-72ce13c). The native fallback
+# (`make convex-native`) runs the same revision's convex-local-backend binary on the same ports.
+name: akatsuki-dev
+
+services:
+  convex-backend:
+    image: ghcr.io/convex/convex-backend:72ce13c379fe6dbdfc305bc8ad699c5663c68c2a@sha256:294944b33dc55e8f68b2feda11c5e7b195f7778b9ad2951f1bea2744ad392e5a
+    container_name: akatsuki-convex-backend
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      # Bound to loopback only. 3410 = deployment API (CONVEX_SELF_HOSTED_URL), 3411 = HTTP actions (*.convex.site twin).
+      - "127.0.0.1:${AKATSUKI_CONVEX_PORT:-3410}:3210"
+      - "127.0.0.1:${AKATSUKI_CONVEX_SITE_PORT:-3411}:3211"
+    volumes:
+      - akatsuki-convex-data:/convex/data
+    environment:
+      - INSTANCE_NAME=${AKATSUKI_CONVEX_INSTANCE_NAME:-akatsuki-dev}
+      - INSTANCE_SECRET
+      - CONVEX_CLOUD_ORIGIN=http://127.0.0.1:${AKATSUKI_CONVEX_PORT:-3410}
+      - CONVEX_SITE_ORIGIN=http://127.0.0.1:${AKATSUKI_CONVEX_SITE_PORT:-3411}
+      - DISABLE_BEACON=true
+      - DISABLE_METRICS_ENDPOINT=true
+      - DOCUMENT_RETENTION_DELAY=172800
+      - REDACT_LOGS_TO_CLIENT=false
+      - RUST_LOG=${RUST_LOG:-info}
+    healthcheck:
+      test: curl -f http://localhost:3210/version
+      interval: 5s
+      start_period: 10s
+
+  convex-dashboard:
+    image: ghcr.io/convex/convex-dashboard:72ce13c379fe6dbdfc305bc8ad699c5663c68c2a@sha256:f3f0cb6810d228e8ad30af75bf8b12289a7af2da5818aee9690a3ea797dcb530
+    container_name: akatsuki-convex-dashboard
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      - "127.0.0.1:${AKATSUKI_CONVEX_DASHBOARD_PORT:-6891}:6791"
+    environment:
+      - NEXT_PUBLIC_DEPLOYMENT_URL=http://127.0.0.1:${AKATSUKI_CONVEX_PORT:-3410}
+    depends_on:
+      convex-backend:
+        condition: service_healthy
+
+volumes:
+  akatsuki-convex-data:
+    name: akatsuki-convex-data

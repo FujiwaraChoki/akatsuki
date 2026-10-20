@@ -1,0 +1,27 @@
+{
+  "input": [
+    {
+      "threadId": "t_ws",
+      "from": {
+        "name": "\ufeff Shop\u0085",
+        "email": "news@shop.example"
+      },
+      "to": [
+        {
+          "email": "sam@example.org"
+        }
+      ],
+      "subject": "Sale\u0085ends\ufefftonight\u3000 now",
+      "snippet": "\u2028Up to\u00a0\u00a050%\u200aoff\ufeff",
+      "listId": " \u0085news.shop.example\ufeff",
+      "isBulk": true,
+      "hasAttachments": false
+    }
+  ],
+  "expected": {
+    "text": "key: 1\nfrom: Shop <news@shop.example>\nto: sam@example.org\nsubject: Sale ends tonight now\nlist-id: news.shop.example\nbulk: yes\nattachments: no\nsnippet: Up to 50% off",
+    "keys": {
+      "1": "t_ws"
+    }
+  }
+}

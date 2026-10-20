@@ -1,0 +1,22 @@
+{
+  "valid": false,
+  "settings": {
+    "profiles": [
+      {
+        "profileId": "0b6f2c1e-2222-4a5b-9c0d-000000000002",
+        "label": "My OpenRouter",
+        "kind": "openrouter",
+        "models": {},
+        "keyOnDevices": ["dev-laptop"],
+        "apiKey": "sk-not-allowed"
+      }
+    ],
+    "routes": [],
+    "consent": {
+      "grantedAt": 1792483200000,
+      "version": 1,
+      "autoTriage": true,
+      "syncVoiceProfile": false
+    }
+  }
+}

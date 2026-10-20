@@ -1,0 +1,22 @@
+# Build context for apps/api/Dockerfile (BuildKit reads <Dockerfile>.dockerignore). Never send secrets.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+.git
+**/node_modules
+**/dist
+**/.turbo
+**/.next
+**/.expo
+**/coverage
+target
+.convex-dev
+.cargo
+crates
+apps/desktop
+apps/sync
+apps/web
+apps/landing
+apps/mobile
+docs

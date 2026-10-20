@@ -1,0 +1,8 @@
+{
+  "vars": {
+    "items": "key: 1\nfrom: Mia Example <mia@example.com>\nto: sam@example.org\nsubject: Offsite head count\nbulk: no\nattachments: no\nsnippet: Could you confirm the head count by Friday?\n\nkey: 2\nfrom: Shop <news@shop.example>\nto: sam@example.org\nsubject: Autumn sale: 30% off\nlist-id: news.shop.example\nbulk: yes\nattachments: no\nsnippet: Our autumn sale ends Sunday."
+  },
+  "expect": {
+    "schemaValid": true
+  }
+}

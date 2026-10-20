@@ -1,0 +1,9 @@
+{
+  "description": "ARCHITECTURE \u00a77.3 wire value; must round-trip unchanged (crates/core::wire::worker, and packages/wire/src/worker.ts once it exists).",
+  "type": "SendAccepted",
+  "value": {
+    "sendId": "n37abc2def3ghi4jkl5mno6pqr7stu8v",
+    "sendAt": 1792540810000,
+    "state": "scheduled"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "input": {
+    "timezone": "Europe/Zurich",
+    "messages": [
+      {
+        "from": {
+          "name": "Sam Placeholder",
+          "email": "sam@example.org"
+        },
+        "to": [
+          {
+            "name": "Mia Example",
+            "email": "mia@example.com"
+          }
+        ],
+        "cc": [],
+        "date": 1792483320000,
+        "text": "Thanks Mia, I will check.\r\n\r\n"
+      },
+      {
+        "from": {
+          "name": "Mia Example",
+          "email": "mia@example.com"
+        },
+        "to": [
+          {
+            "email": "sam@example.org"
+          }
+        ],
+        "cc": [
+          {
+            "name": "  ",
+            "email": "lee@example.net"
+          },
+          {
+            "name": "Lee Two",
+            "email": "lee2@example.net"
+          }
+        ],
+        "date": 1792480440000,
+        "text": "Hi Sam,\r\nCan you confirm by Friday?"
+      }
+    ]
+  },
+  "expected": "From: Mia Example <mia@example.com>\nDate: 2026-10-20T09:14:00+02:00\nTo: sam@example.org\nCc: lee@example.net, Lee Two <lee2@example.net>\n\nHi Sam,\nCan you confirm by Friday?\n---\nFrom: Sam Placeholder <sam@example.org>\nDate: 2026-10-20T10:02:00+02:00\nTo: Mia Example <mia@example.com>\n\nThanks Mia, I will check."
+}

@@ -1,0 +1,77 @@
+# Publishes akatsuki-sync and akatsuki-api to GHCR for a version tag (v*).
+#
+# DISABLED BY DEFAULT: the job runs only when the repository variable AKATSUKI_PUBLISH_IMAGES is "true"
+# (Settings -> Secrets and variables -> Actions -> Variables). Until the owner turns it on, the Hetzner deploy
+# builds the images on the server from source (scripts/deploy-hetzner.sh, docs/DEPLOY.md). No secret besides
+# the workflow's own GITHUB_TOKEN is used. Images are public or private according to the GHCR package
+# settings; the licence is ASAL-1.0 (LICENSE): open source, free for personal use, and commercial use needs
+# permission.
+name: release-images
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to build (tag or branch)
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-images-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.image }}
+    if: vars.AKATSUKI_PUBLISH_IMAGES == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - image: akatsuki-sync
+            dockerfile: apps/sync/Dockerfile
+          - image: akatsuki-api
+            dockerfile: apps/api/Dockerfile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+          labels: |
+            org.opencontainers.image.licenses=LicenseRef-ASAL-1.0
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max

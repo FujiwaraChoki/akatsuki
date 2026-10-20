@@ -1,0 +1,12 @@
+# Keeps the SHA-pinned GitHub Actions current (the trailing tag comments are updated with them).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

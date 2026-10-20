@@ -1,0 +1,12 @@
+event: meta
+data: {"feature":"summarize","model":"anthropic/claude-sonnet-5.5","promptVersion":1}
+
+event: partial
+data: {"object":{"tldr":"Lunch"}}
+
+event: partial
+data: {"object":{"tldr":"Lunch moved","bullets":[]}}
+
+event: done
+data: {"text":null,"object":{"tldr":"Lunch moved","bullets":["Noon"]},"usage":{"inputTokens":120,"outputTokens":30},"finishReason":"stop"}
+

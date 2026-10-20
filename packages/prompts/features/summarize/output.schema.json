@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tldr", "bullets", "asks", "deadlines"],
+  "properties": {
+    "tldr": {
+      "type": "string"
+    },
+    "bullets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "asks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "deadlines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "due"],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "due": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    }
+  }
+}

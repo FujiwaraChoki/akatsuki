@@ -1,0 +1,6 @@
+: hello
+:
+event: error
+data: {"code":"provider_unavailable",
+data: "message":"down","retryable":true}
+

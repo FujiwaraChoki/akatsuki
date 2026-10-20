@@ -1,0 +1,5 @@
+# Output of infra/scripts/gen-service-keys.mjs: private keys, never committed.
+/secrets/
+# Real env files next to the compose files (only the *.example files are tracked).
+/selfhost/*.env
+/hetzner/*.env

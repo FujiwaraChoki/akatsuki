@@ -1,0 +1,10 @@
+{
+  "description": "What every OpenRouter chat request carries, managed or BYO, on every client (D-121, §12.3, §12.6). `provider` is OPENROUTER_PRIVACY in packages/ai/src/providers.ts and OPENROUTER_PRIVACY in crates/ai/src/client.rs. `reasoning` is sent only when the feature's meta.effort is set; it is absent otherwise.",
+  "provider": { "zdr": true, "data_collection": "deny", "allow_fallbacks": true, "require_parameters": true },
+  "cases": [
+    { "effort": "low", "reasoning": { "effort": "low", "exclude": true } },
+    { "effort": "medium", "reasoning": { "effort": "medium", "exclude": true } },
+    { "effort": "high", "reasoning": { "effort": "high", "exclude": true } },
+    { "effort": null, "reasoning": null }
+  ]
+}

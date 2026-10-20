@@ -1,0 +1,6 @@
+event:delta
+data:{"text":"a"}
+
+event: delta
+data:  {"text":"b"}
+

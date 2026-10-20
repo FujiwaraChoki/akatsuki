@@ -1,0 +1,30 @@
+{
+  "description": "ARCHITECTURE §7.3 wire value with non-ASCII text before the quote: quoted.htmlStart/textStart are UTF-8 byte offsets (D-251). Must round-trip unchanged (crates/core::wire::worker, packages/wire/src/worker.ts); packages/wire/test checks that utf8OffsetToUtf16 cuts at the quote.",
+  "type": "MessageBody",
+  "value": {
+    "messageId": "k17abc2def3ghi4jkl5mno6pqr7stu9w",
+    "providerMessageId": "18c2f0a1b2c3d4f6",
+    "sanitizerVersion": 3,
+    "html": "<div class=\"akatsuki-body\"><p>Grüße aus Zürich, 東京 und Köln 😀</p><p>Bis Montag — Ada</p><div data-akatsuki-quote>Am Mo., 19. Okt. schrieb Sam Ünal:</div></div>",
+    "text": "Grüße aus Zürich, 東京 und Köln 😀\nBis Montag — Ada\n\nAm Mo., 19. Okt. schrieb Sam Ünal:\n> Café um 10?",
+    "quoted": {
+      "htmlStart": 101,
+      "textStart": 63
+    },
+    "attachments": [],
+    "remoteImageCount": 0,
+    "trackersRemoved": 0,
+    "headers": {
+      "to": [
+        {
+          "name": "Ada Lovelace-Ünal",
+          "email": "ada@example.com"
+        }
+      ],
+      "cc": [],
+      "replyTo": [],
+      "listUnsubscribe": null,
+      "auth": null
+    }
+  }
+}

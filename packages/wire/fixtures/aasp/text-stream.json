@@ -1,0 +1,44 @@
+{
+  "description": "Expected result of parsing aasp/text-stream.txt (whole, and fed one byte at a time): the valid events in order and the number of rejected frames (unknown event name or data that is not JSON). Run by crates/core::wire::aasp and the TypeScript AASP reader.",
+  "events": [
+    {
+      "event": "meta",
+      "data": {
+        "feature": "rewrite",
+        "model": "claude-sonnet-5-5",
+        "promptVersion": 2
+      }
+    },
+    {
+      "event": "delta",
+      "data": {
+        "text": "Hi Lee,"
+      }
+    },
+    {
+      "event": "delta",
+      "data": {
+        "text": " Thursday works.\nBest, Sam"
+      }
+    },
+    {
+      "event": "delta",
+      "data": {
+        "text": "ünïcode ✓ 日本"
+      }
+    },
+    {
+      "event": "done",
+      "data": {
+        "text": "Hi Lee, Thursday works.\nBest, Samünïcode ✓ 日本",
+        "object": null,
+        "usage": {
+          "inputTokens": 40,
+          "outputTokens": 12
+        },
+        "finishReason": "stop"
+      }
+    }
+  ],
+  "rejected": 0
+}

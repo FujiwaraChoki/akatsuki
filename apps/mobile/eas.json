@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/expo/eas-cli/main/packages/eas-json/schema/eas.schema.json",
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "base": {
+      "node": "26.7.0",
+      "pnpm": "12.11.2",
+      "env": {
+        "EXPO_PUBLIC_SYNC_URL": "https://sync.akatsuki.vc",
+        "EXPO_PUBLIC_API_URL": "https://api.akatsuki.vc"
+      }
+    },
+    "development": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "ios": { "simulator": false },
+      "android": { "buildType": "apk" }
+    },
+    "development-simulator": {
+      "extends": "development",
+      "ios": { "simulator": true }
+    },
+    "preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "environment": "preview",
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "extends": "base",
+      "environment": "production",
+      "autoIncrement": false,
+      "android": { "buildType": "app-bundle" }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

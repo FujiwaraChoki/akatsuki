@@ -1,0 +1,35 @@
+{
+  "feature": "dictation",
+  "settings": {
+    "profiles": [
+      {
+        "profileId": "0b6f2c1e-1111-4a5b-9c0d-000000000001",
+        "label": "Akatsuki AI",
+        "kind": "akatsuki",
+        "models": {},
+        "keyOnDevices": []
+      }
+    ],
+    "routes": [
+      {
+        "feature": "default",
+        "profileId": "0b6f2c1e-1111-4a5b-9c0d-000000000001",
+        "enabled": true
+      }
+    ],
+    "consent": {
+      "grantedAt": 1792483200000,
+      "version": 1,
+      "autoTriage": true,
+      "syncVoiceProfile": false
+    }
+  },
+  "expect": {
+    "status": "ok",
+    "tier": "transcription",
+    "profileId": "0b6f2c1e-1111-4a5b-9c0d-000000000001",
+    "model": "gpt-4o-transcribe",
+    "managed": true,
+    "egress": "akatsuki_openai"
+  }
+}

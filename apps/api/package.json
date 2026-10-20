@@ -1,0 +1,35 @@
+{
+  "name": "@akatsuki/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Akatsuki API service (api.akatsuki.vc): stateless managed AI, transcription and Stripe webhook on Hono/Node.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/main.ts",
+    "start": "node dist/server.mjs",
+    "build": "node scripts/bundle.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "4.0.97",
+    "@akatsuki/ai": "workspace:*",
+    "@akatsuki/prompts": "workspace:*",
+    "@hono/node-server": "2.1.5",
+    "ai": "7.0.145",
+    "convex": "1.47.0",
+    "hono": "4.13.13",
+    "jose": "6.2.12",
+    "stripe": "23.0.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@akatsuki/config": "workspace:*",
+    "@types/node": "26.6.5",
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

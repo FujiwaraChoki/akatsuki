@@ -1,0 +1,190 @@
+# Akatsuki self-host stack (personal, non-commercial use under LICENSE, ASAL-1.0). Guide: infra/selfhost/README.md.
+#
+# Runs the self-hosted Convex backend (FSL-1.1-Apache-2.0, https://docs.convex.dev/self-hosting) in place of
+# Convex Cloud, plus the sync worker; apps/api (managed AI with your own key) and a static web client are
+# optional profiles. Every port binds to 127.0.0.1: put your own TLS reverse proxy in front (see README).
+#
+#   cp infra/selfhost/selfhost.env.example infra/selfhost/.env           # domains and ports (no secrets)
+#   cp infra/sync.env.example infra/selfhost/sync.env                     # worker secrets, mode 0600
+#   docker compose -f infra/selfhost/docker-compose.yml up -d --wait
+#   docker compose -f infra/selfhost/docker-compose.yml --profile ai --profile web up -d --wait
+name: akatsuki-selfhost
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  networks: [akatsuki-net]
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  convex-backend:
+    # Same upstream revision as the dev harness (infra/docker-compose.dev.yml, D-058).
+    image: ghcr.io/convex/convex-backend:72ce13c379fe6dbdfc305bc8ad699c5663c68c2a@sha256:294944b33dc55e8f68b2feda11c5e7b195f7778b9ad2951f1bea2744ad392e5a
+    container_name: akatsuki-selfhost-convex-backend
+    restart: unless-stopped
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    networks: [akatsuki-net]
+    ports:
+      - "127.0.0.1:${AKATSUKI_CONVEX_PORT:-3210}:3210"
+      - "127.0.0.1:${AKATSUKI_CONVEX_SITE_PORT:-3211}:3211"
+    volumes:
+      - akatsuki-convex-data:/convex/data
+    environment:
+      INSTANCE_NAME: ${AKATSUKI_CONVEX_INSTANCE_NAME:-akatsuki-selfhost}
+      # Generate once with `openssl rand -hex 32` and keep it in infra/selfhost/.env (gitignored).
+      INSTANCE_SECRET: ${AKATSUKI_CONVEX_INSTANCE_SECRET:?set AKATSUKI_CONVEX_INSTANCE_SECRET in infra/selfhost/.env}
+      # The public URLs your reverse proxy serves. CONVEX_SITE_ORIGIN is the Better Auth issuer (`iss`)
+      # that the worker and apps/api verify, so it must be exactly the URL clients use.
+      CONVEX_CLOUD_ORIGIN: ${AKATSUKI_CONVEX_URL:?set AKATSUKI_CONVEX_URL}
+      CONVEX_SITE_ORIGIN: ${AKATSUKI_CONVEX_SITE_URL:?set AKATSUKI_CONVEX_SITE_URL}
+      DISABLE_BEACON: "true"
+      DISABLE_METRICS_ENDPOINT: "true"
+      DOCUMENT_RETENTION_DELAY: "172800"
+      REDACT_LOGS_TO_CLIENT: "true"
+      RUST_LOG: ${RUST_LOG:-info}
+    healthcheck:
+      test: curl -f http://localhost:3210/version
+      interval: 10s
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  convex-dashboard:
+    image: ghcr.io/convex/convex-dashboard:72ce13c379fe6dbdfc305bc8ad699c5663c68c2a@sha256:f3f0cb6810d228e8ad30af75bf8b12289a7af2da5818aee9690a3ea797dcb530
+    container_name: akatsuki-selfhost-convex-dashboard
+    profiles: [dashboard]
+    restart: unless-stopped
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    networks: [akatsuki-net]
+    ports:
+      - "127.0.0.1:${AKATSUKI_CONVEX_DASHBOARD_PORT:-6791}:6791"
+    environment:
+      NEXT_PUBLIC_DEPLOYMENT_URL: ${AKATSUKI_CONVEX_URL:?set AKATSUKI_CONVEX_URL}
+    depends_on:
+      convex-backend:
+        condition: service_healthy
+
+  akatsuki-sync:
+    <<: *hardening
+    image: ${AKATSUKI_SYNC_IMAGE:-akatsuki-sync:local}
+    build:
+      context: ../..
+      dockerfile: apps/sync/Dockerfile
+    container_name: akatsuki-selfhost-sync
+    user: "65532:65532"
+    env_file:
+      - sync.env
+    environment:
+      BIND_ADDR: 0.0.0.0:8787
+      # The worker talks to Convex over the Docker network; CONVEX_SITE_URL (the issuer) stays public.
+      CONVEX_URL: http://convex-backend:3210
+      CONVEX_SITE_URL: ${AKATSUKI_CONVEX_SITE_URL:?set AKATSUKI_CONVEX_SITE_URL}
+      PUBLIC_BASE_URL: ${AKATSUKI_SYNC_URL:?set AKATSUKI_SYNC_URL}
+      API_INTERNAL_URL: http://akatsuki-api:8787
+      SPOOL_DIR: /var/lib/akatsuki-sync/spool
+      # Self-hosters usually have no public Pub/Sub or Graph webhooks: poll unless you set them up.
+      SYNC_PUSH: ${AKATSUKI_SYNC_PUSH:-off}
+    ports:
+      - "127.0.0.1:${AKATSUKI_SYNC_PORT:-8787}:8787"
+    volumes:
+      - akatsuki-sync-spool:/var/lib/akatsuki-sync/spool
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/akatsuki-sync", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 45s
+    depends_on:
+      convex-backend:
+        condition: service_healthy
+      akatsuki-sync-spool-init:
+        condition: service_completed_successfully
+
+  # One-shot: makes the spool volume writable by the worker's non-root user, then exits.
+  akatsuki-sync-spool-init:
+    image: ${AKATSUKI_SYNC_IMAGE_INIT:-busybox:1.37.0-musl@sha256:5cec3fc171c87218698e85a52af7087de727372aae264a787b8112901a5b0092}
+    container_name: akatsuki-selfhost-spool-init
+    restart: "no"
+    network_mode: none
+    user: "0:0"
+    command: ["sh", "-c", "chown 65532:65532 /spool && chmod 0700 /spool"]
+    volumes:
+      - akatsuki-sync-spool:/spool
+
+  akatsuki-api:
+    <<: *hardening
+    image: ${AKATSUKI_API_IMAGE:-akatsuki-api:local}
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    container_name: akatsuki-selfhost-api
+    profiles: [ai]
+    user: "1000:1000"
+    init: true
+    env_file:
+      - api.env
+    environment:
+      BIND_ADDR: 0.0.0.0:8787
+      NODE_ENV: production
+      CONVEX_URL: http://convex-backend:3210
+      CONVEX_SITE_URL: ${AKATSUKI_CONVEX_SITE_URL:?set AKATSUKI_CONVEX_SITE_URL}
+      # No billing on a self-hosted install: everyone is entitled (§13.3).
+      AKATSUKI_BILLING: "off"
+    ports:
+      - "127.0.0.1:${AKATSUKI_API_PORT:-8788}:8787"
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8787/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      convex-backend:
+        condition: service_healthy
+
+  # Static web client: serves a build of apps/web made with your VITE_* URLs (README, "Web client").
+  akatsuki-web:
+    <<: *hardening
+    image: nginxinc/nginx-unprivileged:1.30.6-alpine3.24@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
+    container_name: akatsuki-selfhost-web
+    profiles: [web]
+    ports:
+      - "127.0.0.1:${AKATSUKI_WEB_PORT:-8780}:8080"
+    volumes:
+      - ${AKATSUKI_WEB_DIST:-../../apps/web/dist}:/usr/share/nginx/html:ro
+      - ./web.nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    tmpfs:
+      - /tmp:size=16m,mode=1777,noexec,nosuid,nodev
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+networks:
+  akatsuki-net:
+    name: akatsuki-selfhost-net
+    driver: bridge
+
+volumes:
+  akatsuki-convex-data:
+    name: akatsuki-selfhost-convex-data
+  akatsuki-sync-spool:
+    name: akatsuki-selfhost-sync-spool

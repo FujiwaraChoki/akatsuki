@@ -1,0 +1,45 @@
+{
+  "input": {
+    "timezone": "Asia/Kolkata",
+    "maxInputChars": 220,
+    "messages": [
+      {
+        "from": {
+          "email": "old@example.com"
+        },
+        "to": [
+          {
+            "email": "b@example.com"
+          }
+        ],
+        "date": 1000,
+        "text": "old message that will be dropped first"
+      },
+      {
+        "from": {
+          "email": "mid@example.com"
+        },
+        "to": [
+          {
+            "email": "b@example.com"
+          }
+        ],
+        "date": 2000,
+        "text": "middle message"
+      },
+      {
+        "from": {
+          "email": "new@example.com"
+        },
+        "to": [
+          {
+            "email": "b@example.com"
+          }
+        ],
+        "date": 3000,
+        "text": "newest message"
+      }
+    ]
+  },
+  "expected": "From: mid@example.com\nDate: 1970-01-01T05:30:02+05:30\nTo: b@example.com\n\nmiddle message\n---\nFrom: new@example.com\nDate: 1970-01-01T05:30:03+05:30\nTo: b@example.com\n\nnewest message"
+}

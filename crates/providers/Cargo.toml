@@ -1,0 +1,55 @@
+[package]
+name = "akatsuki-providers"
+description = "Mail provider traits (Gmail, Microsoft Graph, IMAP/SMTP) for Akatsuki"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+akatsuki-core.workspace = true
+akatsuki-search.workspace = true
+async-trait.workspace = true
+bytes.workspace = true
+futures.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+akatsuki-mime.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["sync", "time"] }
+base64.workspace = true
+url.workspace = true
+uuid.workspace = true
+tracing.workspace = true
+
+# IMAP + SMTP adapter (src/imap).
+async-imap.workspace = true
+imap-proto.workspace = true
+tokio-rustls.workspace = true
+webpki-roots.workspace = true
+roxmltree.workspace = true
+jiff.workspace = true
+# Only with the `fake-servers` feature (the in-process fake IMAP/SMTP servers outside tests).
+rcgen = { workspace = true, optional = true }
+mail-parser = { workspace = true, optional = true }
+
+[features]
+# Exposes `imap::fake` (scripted IMAP and SMTP servers on loopback) to other crates, for the local
+# end-to-end harness (`akatsuki-fake-mail` in apps/sync, D-382). Never enabled in release images.
+fake-servers = ["dep:rcgen", "dep:mail-parser"]
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
+wiremock.workspace = true
+pretty_assertions.workspace = true
+# IMAP fake servers (src/imap/fake).
+rcgen.workspace = true
+mail-parser.workspace = true

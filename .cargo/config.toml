@@ -1,0 +1,19 @@
+# Cargo configuration shared by every engineer and CI.
+
+[alias]
+# cargo lint: the exact gate CI runs.
+lint = "clippy --workspace --all-targets -- -D warnings"
+# cargo t: run the whole test suite.
+t = "test --workspace"
+# cargo sync: run the sync worker locally.
+sync = "run -p akatsuki-sync --"
+# cargo desktop: run the desktop app.
+desktop = "run -p akatsuki-desktop"
+
+[env]
+# Lets crates find shared plain-file packages (packages/prompts, packages/ai) at run time
+# in development. Release builds embed what they need or read an explicit path from config.
+AKATSUKI_REPO_ROOT = { value = "", relative = true }
+
+[term]
+color = "auto"

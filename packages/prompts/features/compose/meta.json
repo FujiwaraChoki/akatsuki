@@ -1,0 +1,10 @@
+{
+  "id": "compose",
+  "version": 1,
+  "tier": "default",
+  "mode": "text",
+  "stream": true,
+  "maxInputChars": 120000,
+  "maxOutputTokens": 2000,
+  "effort": "medium"
+}

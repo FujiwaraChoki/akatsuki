@@ -1,0 +1,10 @@
+{
+  "id": "summarize",
+  "version": 1,
+  "tier": "default",
+  "mode": "object",
+  "stream": true,
+  "maxInputChars": 120000,
+  "maxOutputTokens": 1200,
+  "effort": "low"
+}

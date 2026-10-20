@@ -1,0 +1,6 @@
+event: delta
+data: {"text":
+
+event: delta
+data: {"text":"after"}
+

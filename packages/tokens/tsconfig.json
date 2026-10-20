@@ -1,0 +1,9 @@
+{
+  "extends": "@akatsuki/config/tsconfig.node.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  },
+  "include": ["src", "scripts", "test", "vitest.config.ts"]
+}

@@ -1,0 +1,7 @@
+{
+  "description": "ARCHITECTURE \u00a77.3 wire value; must round-trip unchanged (crates/core::wire::worker, and packages/wire/src/worker.ts once it exists).",
+  "type": "ConnectStart",
+  "value": {
+    "returnTo": "https://app.akatsuki.vc/"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@akatsuki/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Akatsuki design tokens: one JSON -> CSS variables, TypeScript constants, Rust constants.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "files": [
+    "dist",
+    "fonts",
+    "tokens.json"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/tokens.ts",
+      "react-native": "./dist/tokens.ts",
+      "default": "./dist/tokens.js"
+    },
+    "./tokens.css": "./dist/tokens.css",
+    "./fonts.css": "./dist/fonts.css",
+    "./tokens.json": "./tokens.json",
+    "./fonts/*": "./fonts/*"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@akatsuki/config": "workspace:*",
+    "@types/node": "26.6.5",
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

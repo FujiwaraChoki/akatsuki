@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["text", "style", "voice"],
+  "properties": {
+    "text": {
+      "type": "string",
+      "maxLength": 40000,
+      "minLength": 1
+    },
+    "style": {
+      "type": "string",
+      "enum": ["shorter", "friendlier", "formal", "fix"]
+    },
+    "voice": {
+      "type": ["string", "null"],
+      "maxLength": 2048
+    }
+  }
+}

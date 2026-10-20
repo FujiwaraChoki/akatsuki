@@ -1,0 +1,25 @@
+{
+  "valid": false,
+  "settings": {
+    "profiles": [
+      {
+        "profileId": "0b6f2c1e-3333-4a5b-9c0d-000000000003",
+        "label": "Local",
+        "kind": "ollama",
+        "baseUrl": "http://user:pass@localhost:11434",
+        "models": {
+          "default": "llama4:8b",
+          "fast": "qwen3:4b"
+        },
+        "keyOnDevices": []
+      }
+    ],
+    "routes": [],
+    "consent": {
+      "grantedAt": 1792483200000,
+      "version": 1,
+      "autoTriage": true,
+      "syncVoiceProfile": false
+    }
+  }
+}

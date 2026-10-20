@@ -1,0 +1,8 @@
+{
+  "vars": {
+    "samples": "Sample 1:\nHey Lee,\nThursday works. See you then!\n– S\n\nSample 2:\nHi Mia,\nThanks, all good on my side. I will send the numbers tomorrow.\n– S"
+  },
+  "expect": {
+    "schemaValid": true
+  }
+}

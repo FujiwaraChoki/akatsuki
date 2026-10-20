@@ -1,0 +1,17 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "env": ["VITE_*"],
+      "outputs": ["dist/**"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "env": ["AKATSUKI_E2E_LOCAL", "AKATSUKI_WEB_E2E_PORT"],
+      "cache": false,
+      "outputs": []
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "extends": "@akatsuki/config/tsconfig.react.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowJs": false,
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": [
+    "next-env.d.ts",
+    "src",
+    "e2e",
+    "test",
+    "*.config.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "out"]
+}

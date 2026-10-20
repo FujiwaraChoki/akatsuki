@@ -1,0 +1,79 @@
+{
+  "description": "UTF-8 byte offsets (worker/Rust) to UTF-16 indices (JavaScript string positions), D-251. `utf16Index` is utf8OffsetToUtf16(text, byteOffset); `errors` must throw a RangeError whose message contains `error`. Run by packages/wire/test/offsets.test.ts.",
+  "cases": [
+    {
+      "name": "ascii",
+      "text": "Hello, world",
+      "byteOffset": 7,
+      "utf16Index": 7
+    },
+    {
+      "name": "start",
+      "text": "Grüße",
+      "byteOffset": 0,
+      "utf16Index": 0
+    },
+    {
+      "name": "end of string",
+      "text": "Grüße",
+      "byteOffset": 7,
+      "utf16Index": 5
+    },
+    {
+      "name": "after two-byte characters",
+      "text": "Grüße, Ada",
+      "byteOffset": 9,
+      "utf16Index": 7
+    },
+    {
+      "name": "after three-byte characters",
+      "text": "東京で会いましょう",
+      "byteOffset": 6,
+      "utf16Index": 2
+    },
+    {
+      "name": "after a four-byte character (surrogate pair)",
+      "text": "😀 smile",
+      "byteOffset": 5,
+      "utf16Index": 3
+    },
+    {
+      "name": "mixed",
+      "text": "Zürich 東京 😀 — On Mon, Ada wrote:",
+      "byteOffset": 24,
+      "utf16Index": 15
+    },
+    {
+      "name": "combining mark stays with its base",
+      "text": "éclair",
+      "byteOffset": 3,
+      "utf16Index": 2
+    }
+  ],
+  "errors": [
+    {
+      "name": "inside a two-byte character",
+      "text": "Grüße",
+      "byteOffset": 3,
+      "error": "inside a character"
+    },
+    {
+      "name": "inside a four-byte character",
+      "text": "😀",
+      "byteOffset": 2,
+      "error": "inside a character"
+    },
+    {
+      "name": "past the end",
+      "text": "abc",
+      "byteOffset": 4,
+      "error": "past the end"
+    },
+    {
+      "name": "negative",
+      "text": "abc",
+      "byteOffset": -1,
+      "error": "bad byte offset"
+    }
+  ]
+}

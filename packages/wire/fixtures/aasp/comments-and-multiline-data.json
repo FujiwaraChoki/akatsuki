@@ -1,0 +1,14 @@
+{
+  "description": "Expected result of parsing aasp/comments-and-multiline-data.txt (whole, and fed one byte at a time): the valid events in order and the number of rejected frames (unknown event name or data that is not JSON). Run by crates/core::wire::aasp and the TypeScript AASP reader.",
+  "events": [
+    {
+      "event": "error",
+      "data": {
+        "code": "provider_unavailable",
+        "message": "down",
+        "retryable": true
+      }
+    }
+  ],
+  "rejected": 0
+}

@@ -1,0 +1,227 @@
+{
+  "description": "The §15 error-code registry (packages/wire/src/errors.ts ERROR_CODES, in order): code, HTTP status (null = never sent over HTTP on its own; Rust maps those to 400), retryable, clientOnly (raised on the client before any request, D-121). Run by packages/wire/test/errors.test.ts. Also run by crates/core::wire (registry_fixture_matches), which covers every code.",
+  "codes": [
+    {
+      "code": "unauthenticated",
+      "http": 401,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "not_found",
+      "http": 404,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "not_entitled",
+      "http": 402,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "invalid_argument",
+      "http": 400,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "invalid_action",
+      "http": 400,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "invalid_vars",
+      "http": 422,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "payload_too_large",
+      "http": 413,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "rate_limited",
+      "http": 429,
+      "retryable": true,
+      "clientOnly": false
+    },
+    {
+      "code": "ai_budget_exhausted",
+      "http": 429,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "ai_model_required",
+      "http": null,
+      "retryable": false,
+      "clientOnly": true
+    },
+    {
+      "code": "consent_required",
+      "http": null,
+      "retryable": false,
+      "clientOnly": true
+    },
+    {
+      "code": "ai_off",
+      "http": null,
+      "retryable": false,
+      "clientOnly": true
+    },
+    {
+      "code": "key_missing",
+      "http": null,
+      "retryable": false,
+      "clientOnly": true
+    },
+    {
+      "code": "prompt_version_mismatch",
+      "http": 409,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "already_connected",
+      "http": 409,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "already_subscribed",
+      "http": 409,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "draft_version_conflict",
+      "http": 409,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "lease_lost",
+      "http": 409,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "version_conflict",
+      "http": 409,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "imap_auth_failed",
+      "http": 422,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "smtp_auth_failed",
+      "http": 422,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "tls_failed",
+      "http": 422,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "unreachable",
+      "http": 422,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "reauth_required",
+      "http": 409,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "reauth_timeout",
+      "http": null,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "provider_transient",
+      "http": 502,
+      "retryable": true,
+      "clientOnly": false
+    },
+    {
+      "code": "provider_rate_limited",
+      "http": 503,
+      "retryable": true,
+      "clientOnly": false
+    },
+    {
+      "code": "provider_invalid",
+      "http": 422,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "provider_conflict",
+      "http": 422,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "provider_quota",
+      "http": 507,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "provider_unavailable",
+      "http": 503,
+      "retryable": true,
+      "clientOnly": false
+    },
+    {
+      "code": "unsupported",
+      "http": 400,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "draft_deleted",
+      "http": null,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "stale_schedule",
+      "http": null,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "send_unconfirmed",
+      "http": null,
+      "retryable": false,
+      "clientOnly": false
+    },
+    {
+      "code": "internal",
+      "http": 500,
+      "retryable": true,
+      "clientOnly": false
+    },
+    {
+      "code": "not_implemented",
+      "http": 501,
+      "retryable": false,
+      "clientOnly": false
+    }
+  ]
+}

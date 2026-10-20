@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["query", "explanation"],
+  "properties": {
+    "query": {
+      "type": "string"
+    },
+    "explanation": {
+      "type": "string"
+    }
+  }
+}

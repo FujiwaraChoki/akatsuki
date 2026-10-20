@@ -1,0 +1,1030 @@
+{
+  "description": "applyOps (ARCHITECTURE §5.1): visible = applyOps(synced, actions, applyContextFor(provider, exclusiveLabelIds)). `effect` is diffKeys(sortDedupe(synced), visible.keys) (ops.effect, undo). `inverses`: undo vectors (§5.2, D-250); `effect` is the diff one `action` causes from sortDedupe(synced), `inverse` is inverseAction(action, effect, provider !== \"gmail\") (null = nothing to undo, mode \"noop\"), and `restored` is applyOps(synced, [action, inverse]) (or the state after `action` when `inverse` is null). Run by packages/mail-model (test/fixtures.test.ts) and crates/core::model::apply_ops.",
+  "cases": [
+    {
+      "name": "no ops sorts and dedupes",
+      "provider": "gmail",
+      "synced": ["sys:inbox", "l:bbbbbbbb", "l:aaaaaaaa", "l:aaaaaaaa"],
+      "actions": [],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["l:aaaaaaaa", "l:bbbbbbbb", "sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      }
+    },
+    {
+      "name": "archive on gmail",
+      "provider": "gmail",
+      "synced": ["sys:unread", "sys:inbox"],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": [],
+          "remove": ["sys:inbox"]
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:unread"],
+        "deleted": false
+      },
+      "effect": {
+        "added": [],
+        "removed": ["sys:inbox"]
+      }
+    },
+    {
+      "name": "mark read",
+      "provider": "gmail",
+      "synced": ["sys:inbox", "sys:unread"],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": [],
+          "remove": ["sys:unread"]
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": [],
+        "removed": ["sys:unread"]
+      }
+    },
+    {
+      "name": "star then unstar",
+      "provider": "gmail",
+      "synced": ["sys:inbox"],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": ["sys:starred"],
+          "remove": []
+        },
+        {
+          "kind": "modify",
+          "add": [],
+          "remove": ["sys:starred"]
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      }
+    },
+    {
+      "name": "add and remove the same key: remove first, then add",
+      "provider": "gmail",
+      "synced": ["sys:inbox"],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": ["l:aaaaaaaa"],
+          "remove": ["l:aaaaaaaa"]
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["l:aaaaaaaa", "sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["l:aaaaaaaa"],
+        "removed": []
+      }
+    },
+    {
+      "name": "remove a key that is not there",
+      "provider": "gmail",
+      "synced": ["sys:inbox"],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": [],
+          "remove": ["sys:spam"]
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      }
+    },
+    {
+      "name": "duplicate adds",
+      "provider": "gmail",
+      "synced": [],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": ["sys:starred", "sys:starred"],
+          "remove": []
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:starred"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:starred"],
+        "removed": []
+      }
+    },
+    {
+      "name": "trash on gmail keeps user labels",
+      "provider": "gmail",
+      "synced": ["l:workwork", "sys:inbox", "sys:snoozed", "sys:unread"],
+      "actions": [
+        {
+          "kind": "trash"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["l:workwork", "sys:trash", "sys:unread"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:trash"],
+        "removed": ["sys:inbox", "sys:snoozed"]
+      }
+    },
+    {
+      "name": "trash from spam on gmail",
+      "provider": "gmail",
+      "synced": ["sys:spam"],
+      "actions": [
+        {
+          "kind": "trash"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:trash"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:trash"],
+        "removed": ["sys:spam"]
+      }
+    },
+    {
+      "name": "trash on graph clears folders",
+      "provider": "graph",
+      "exclusiveLabelIds": ["archive1"],
+      "synced": ["l:archive1", "sys:starred"],
+      "actions": [
+        {
+          "kind": "trash"
+        }
+      ],
+      "expected": {
+        "keys": ["sys:starred", "sys:trash"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:trash"],
+        "removed": ["l:archive1"]
+      }
+    },
+    {
+      "name": "trash on imap clears sent and drafts folders",
+      "provider": "imap",
+      "synced": ["sys:sent", "sys:drafts", "l:tagtagta"],
+      "actions": [
+        {
+          "kind": "trash"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["l:tagtagta", "sys:trash"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:trash"],
+        "removed": ["sys:drafts", "sys:sent"]
+      }
+    },
+    {
+      "name": "untrash returns to inbox",
+      "provider": "gmail",
+      "synced": ["sys:trash"],
+      "actions": [
+        {
+          "kind": "untrash"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:inbox"],
+        "removed": ["sys:trash"]
+      }
+    },
+    {
+      "name": "untrash on graph",
+      "provider": "graph",
+      "synced": ["sys:trash", "sys:unread"],
+      "actions": [
+        {
+          "kind": "untrash"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:inbox", "sys:unread"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:inbox"],
+        "removed": ["sys:trash"]
+      }
+    },
+    {
+      "name": "move on imap replaces the folder",
+      "provider": "imap",
+      "exclusiveLabelIds": ["archive1"],
+      "synced": ["sys:inbox", "sys:unread"],
+      "actions": [
+        {
+          "kind": "move",
+          "to": "l:archive1"
+        }
+      ],
+      "expected": {
+        "keys": ["l:archive1", "sys:unread"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["l:archive1"],
+        "removed": ["sys:inbox"]
+      }
+    },
+    {
+      "name": "move between user folders",
+      "provider": "graph",
+      "exclusiveLabelIds": ["folder01", "folder02"],
+      "synced": ["l:folder01", "l:category"],
+      "actions": [
+        {
+          "kind": "move",
+          "to": "l:folder02"
+        }
+      ],
+      "expected": {
+        "keys": ["l:category", "l:folder02"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["l:folder02"],
+        "removed": ["l:folder01"]
+      }
+    },
+    {
+      "name": "move on gmail only adds (no folder keys)",
+      "provider": "gmail",
+      "synced": ["sys:inbox"],
+      "actions": [
+        {
+          "kind": "move",
+          "to": "l:archive1"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["l:archive1", "sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["l:archive1"],
+        "removed": []
+      }
+    },
+    {
+      "name": "delete forever hides the thread",
+      "provider": "gmail",
+      "synced": ["sys:inbox", "sys:unread"],
+      "actions": [
+        {
+          "kind": "delete_forever"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": [],
+        "deleted": true
+      },
+      "effect": {
+        "added": [],
+        "removed": ["sys:inbox", "sys:unread"]
+      }
+    },
+    {
+      "name": "actions after delete forever keep it deleted",
+      "provider": "gmail",
+      "synced": ["sys:inbox"],
+      "actions": [
+        {
+          "kind": "delete_forever"
+        },
+        {
+          "kind": "modify",
+          "add": ["sys:starred"],
+          "remove": []
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:starred"],
+        "deleted": true
+      },
+      "effect": {
+        "added": ["sys:starred"],
+        "removed": ["sys:inbox"]
+      }
+    },
+    {
+      "name": "unsubscribe changes nothing",
+      "provider": "gmail",
+      "synced": ["sys:inbox", "sys:unread"],
+      "actions": [
+        {
+          "kind": "unsubscribe",
+          "method": "one_click_post"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:inbox", "sys:unread"],
+        "deleted": false
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      }
+    },
+    {
+      "name": "unsubscribe by mailto",
+      "provider": "imap",
+      "synced": ["sys:inbox"],
+      "actions": [
+        {
+          "kind": "unsubscribe",
+          "method": "mailto"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      }
+    },
+    {
+      "name": "snooze: leave inbox, add snoozed",
+      "provider": "gmail",
+      "synced": ["sys:inbox", "sys:unread"],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": ["sys:snoozed"],
+          "remove": ["sys:inbox"]
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:snoozed", "sys:unread"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:snoozed"],
+        "removed": ["sys:inbox"]
+      }
+    },
+    {
+      "name": "archive, then undo",
+      "provider": "gmail",
+      "synced": ["sys:inbox"],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": [],
+          "remove": ["sys:inbox"]
+        },
+        {
+          "kind": "modify",
+          "add": ["sys:inbox"],
+          "remove": []
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      }
+    },
+    {
+      "name": "trash then untrash on graph",
+      "provider": "graph",
+      "exclusiveLabelIds": ["archive1"],
+      "synced": ["l:archive1"],
+      "actions": [
+        {
+          "kind": "trash"
+        },
+        {
+          "kind": "untrash"
+        }
+      ],
+      "expected": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:inbox"],
+        "removed": ["l:archive1"]
+      }
+    },
+    {
+      "name": "report spam on gmail",
+      "provider": "gmail",
+      "synced": ["sys:inbox", "sys:unread"],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": ["sys:spam"],
+          "remove": ["sys:inbox"]
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["sys:spam", "sys:unread"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["sys:spam"],
+        "removed": ["sys:inbox"]
+      }
+    },
+    {
+      "name": "many ops in order",
+      "provider": "gmail",
+      "synced": ["sys:inbox", "sys:unread"],
+      "actions": [
+        {
+          "kind": "modify",
+          "add": [],
+          "remove": ["sys:unread"]
+        },
+        {
+          "kind": "modify",
+          "add": ["l:aaaaaaaa"],
+          "remove": []
+        },
+        {
+          "kind": "modify",
+          "add": [],
+          "remove": ["sys:inbox"]
+        },
+        {
+          "kind": "trash"
+        }
+      ],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": ["l:aaaaaaaa", "sys:trash"],
+        "deleted": false
+      },
+      "effect": {
+        "added": ["l:aaaaaaaa", "sys:trash"],
+        "removed": ["sys:inbox", "sys:unread"]
+      }
+    },
+    {
+      "name": "empty synced, empty actions",
+      "provider": "gmail",
+      "synced": [],
+      "actions": [],
+      "exclusiveLabelIds": [],
+      "expected": {
+        "keys": [],
+        "deleted": false
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      }
+    }
+  ],
+  "inverses": [
+    {
+      "name": "archive on gmail is undone by re-adding inbox",
+      "provider": "gmail",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox", "sys:unread"],
+      "action": {
+        "kind": "modify",
+        "add": [],
+        "remove": ["sys:inbox"]
+      },
+      "effect": {
+        "added": [],
+        "removed": ["sys:inbox"]
+      },
+      "inverse": {
+        "kind": "modify",
+        "add": ["sys:inbox"],
+        "remove": []
+      },
+      "restored": {
+        "keys": ["sys:inbox", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "label add on gmail",
+      "provider": "gmail",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox"],
+      "action": {
+        "kind": "modify",
+        "add": ["l:aaaaaaaa"],
+        "remove": []
+      },
+      "effect": {
+        "added": ["l:aaaaaaaa"],
+        "removed": []
+      },
+      "inverse": {
+        "kind": "modify",
+        "add": [],
+        "remove": ["l:aaaaaaaa"]
+      },
+      "restored": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "mark read on graph swaps the effect",
+      "provider": "graph",
+      "exclusiveLabelIds": ["archive1"],
+      "synced": ["sys:inbox", "sys:unread"],
+      "action": {
+        "kind": "modify",
+        "add": [],
+        "remove": ["sys:unread"]
+      },
+      "effect": {
+        "added": [],
+        "removed": ["sys:unread"]
+      },
+      "inverse": {
+        "kind": "modify",
+        "add": ["sys:unread"],
+        "remove": []
+      },
+      "restored": {
+        "keys": ["sys:inbox", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "star on imap swaps the effect",
+      "provider": "imap",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox"],
+      "action": {
+        "kind": "modify",
+        "add": ["sys:starred"],
+        "remove": []
+      },
+      "effect": {
+        "added": ["sys:starred"],
+        "removed": []
+      },
+      "inverse": {
+        "kind": "modify",
+        "add": [],
+        "remove": ["sys:starred"]
+      },
+      "restored": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "trash on gmail restores inbox and snoozed",
+      "provider": "gmail",
+      "exclusiveLabelIds": [],
+      "synced": ["l:workwork", "sys:inbox", "sys:snoozed", "sys:unread"],
+      "action": {
+        "kind": "trash"
+      },
+      "effect": {
+        "added": ["sys:trash"],
+        "removed": ["sys:inbox", "sys:snoozed"]
+      },
+      "inverse": {
+        "kind": "modify",
+        "add": ["sys:inbox", "sys:snoozed"],
+        "remove": ["sys:trash"]
+      },
+      "restored": {
+        "keys": ["l:workwork", "sys:inbox", "sys:snoozed", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "untrash on gmail",
+      "provider": "gmail",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:trash", "sys:unread"],
+      "action": {
+        "kind": "untrash"
+      },
+      "effect": {
+        "added": ["sys:inbox"],
+        "removed": ["sys:trash"]
+      },
+      "inverse": {
+        "kind": "modify",
+        "add": ["sys:trash"],
+        "remove": ["sys:inbox"]
+      },
+      "restored": {
+        "keys": ["sys:trash", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "snooze on gmail",
+      "provider": "gmail",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox"],
+      "action": {
+        "kind": "modify",
+        "add": ["sys:snoozed"],
+        "remove": ["sys:inbox"]
+      },
+      "effect": {
+        "added": ["sys:snoozed"],
+        "removed": ["sys:inbox"]
+      },
+      "inverse": {
+        "kind": "modify",
+        "add": ["sys:inbox"],
+        "remove": ["sys:snoozed"]
+      },
+      "restored": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "spam on gmail",
+      "provider": "gmail",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox", "sys:unread"],
+      "action": {
+        "kind": "modify",
+        "add": ["sys:spam"],
+        "remove": ["sys:inbox"]
+      },
+      "effect": {
+        "added": ["sys:spam"],
+        "removed": ["sys:inbox"]
+      },
+      "inverse": {
+        "kind": "modify",
+        "add": ["sys:inbox"],
+        "remove": ["sys:spam"]
+      },
+      "restored": {
+        "keys": ["sys:inbox", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "archive on imap moves back to the inbox",
+      "provider": "imap",
+      "exclusiveLabelIds": ["archive1"],
+      "synced": ["sys:inbox", "sys:unread"],
+      "action": {
+        "kind": "move",
+        "to": "l:archive1"
+      },
+      "effect": {
+        "added": ["l:archive1"],
+        "removed": ["sys:inbox"]
+      },
+      "inverse": {
+        "kind": "move",
+        "to": "sys:inbox"
+      },
+      "restored": {
+        "keys": ["sys:inbox", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "move between user folders on graph moves back",
+      "provider": "graph",
+      "exclusiveLabelIds": ["folder01", "folder02"],
+      "synced": ["l:category", "l:folder01"],
+      "action": {
+        "kind": "move",
+        "to": "l:folder02"
+      },
+      "effect": {
+        "added": ["l:folder02"],
+        "removed": ["l:folder01"]
+      },
+      "inverse": {
+        "kind": "move",
+        "to": "l:folder01"
+      },
+      "restored": {
+        "keys": ["l:category", "l:folder01"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "trash on graph moves back to the archive folder",
+      "provider": "graph",
+      "exclusiveLabelIds": ["archive1"],
+      "synced": ["l:archive1", "sys:starred"],
+      "action": {
+        "kind": "trash"
+      },
+      "effect": {
+        "added": ["sys:trash"],
+        "removed": ["l:archive1"]
+      },
+      "inverse": {
+        "kind": "move",
+        "to": "l:archive1"
+      },
+      "restored": {
+        "keys": ["l:archive1", "sys:starred"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "trash on graph from the inbox keeps flags",
+      "provider": "graph",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox", "sys:starred", "sys:unread"],
+      "action": {
+        "kind": "trash"
+      },
+      "effect": {
+        "added": ["sys:trash"],
+        "removed": ["sys:inbox"]
+      },
+      "inverse": {
+        "kind": "move",
+        "to": "sys:inbox"
+      },
+      "restored": {
+        "keys": ["sys:inbox", "sys:starred", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "trash on imap from two folders moves back to the first",
+      "provider": "imap",
+      "exclusiveLabelIds": [],
+      "synced": ["l:tagtagta", "sys:drafts", "sys:sent"],
+      "action": {
+        "kind": "trash"
+      },
+      "effect": {
+        "added": ["sys:trash"],
+        "removed": ["sys:drafts", "sys:sent"]
+      },
+      "inverse": {
+        "kind": "move",
+        "to": "sys:drafts"
+      },
+      "restored": {
+        "keys": ["l:tagtagta", "sys:drafts"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "untrash on graph moves back to trash",
+      "provider": "graph",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:trash", "sys:unread"],
+      "action": {
+        "kind": "untrash"
+      },
+      "effect": {
+        "added": ["sys:inbox"],
+        "removed": ["sys:trash"]
+      },
+      "inverse": {
+        "kind": "move",
+        "to": "sys:trash"
+      },
+      "restored": {
+        "keys": ["sys:trash", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "snooze on imap moves back to the inbox",
+      "provider": "imap",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox", "sys:unread"],
+      "action": {
+        "kind": "move",
+        "to": "sys:snoozed"
+      },
+      "effect": {
+        "added": ["sys:snoozed"],
+        "removed": ["sys:inbox"]
+      },
+      "inverse": {
+        "kind": "move",
+        "to": "sys:inbox"
+      },
+      "restored": {
+        "keys": ["sys:inbox", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "spam on graph moves back to the inbox",
+      "provider": "graph",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox"],
+      "action": {
+        "kind": "move",
+        "to": "sys:spam"
+      },
+      "effect": {
+        "added": ["sys:spam"],
+        "removed": ["sys:inbox"]
+      },
+      "inverse": {
+        "kind": "move",
+        "to": "sys:inbox"
+      },
+      "restored": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "move on graph from no folder falls back to the inbox",
+      "provider": "graph",
+      "exclusiveLabelIds": ["folder01"],
+      "synced": ["sys:unread"],
+      "action": {
+        "kind": "move",
+        "to": "l:folder01"
+      },
+      "effect": {
+        "added": ["l:folder01"],
+        "removed": []
+      },
+      "inverse": {
+        "kind": "move",
+        "to": "sys:inbox"
+      },
+      "restored": {
+        "keys": ["sys:inbox", "sys:unread"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "move to the current folder is a noop",
+      "provider": "graph",
+      "exclusiveLabelIds": ["folder01"],
+      "synced": ["l:folder01"],
+      "action": {
+        "kind": "move",
+        "to": "l:folder01"
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      },
+      "inverse": null,
+      "restored": {
+        "keys": ["l:folder01"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "remove a key that is not there is a noop",
+      "provider": "gmail",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox"],
+      "action": {
+        "kind": "modify",
+        "add": [],
+        "remove": ["sys:spam"]
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      },
+      "inverse": null,
+      "restored": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "unsubscribe has no inverse",
+      "provider": "gmail",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox"],
+      "action": {
+        "kind": "unsubscribe",
+        "method": "one_click_post"
+      },
+      "effect": {
+        "added": [],
+        "removed": []
+      },
+      "inverse": null,
+      "restored": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      }
+    },
+    {
+      "name": "delete forever has no inverse",
+      "provider": "imap",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox", "sys:unread"],
+      "action": {
+        "kind": "delete_forever"
+      },
+      "effect": {
+        "added": [],
+        "removed": ["sys:inbox", "sys:unread"]
+      },
+      "inverse": null,
+      "restored": {
+        "keys": [],
+        "deleted": true
+      }
+    },
+    {
+      "name": "move on gmail (no folder keys) swaps the effect",
+      "provider": "gmail",
+      "exclusiveLabelIds": [],
+      "synced": ["sys:inbox"],
+      "action": {
+        "kind": "move",
+        "to": "l:archive1"
+      },
+      "effect": {
+        "added": ["l:archive1"],
+        "removed": []
+      },
+      "inverse": {
+        "kind": "modify",
+        "add": [],
+        "remove": ["l:archive1"]
+      },
+      "restored": {
+        "keys": ["sys:inbox"],
+        "deleted": false
+      }
+    }
+  ]
+}

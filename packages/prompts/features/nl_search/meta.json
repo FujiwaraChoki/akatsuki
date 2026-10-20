@@ -1,0 +1,10 @@
+{
+  "id": "nl_search",
+  "version": 1,
+  "tier": "fast",
+  "mode": "object",
+  "stream": false,
+  "maxInputChars": 8000,
+  "maxOutputTokens": 400,
+  "effort": "low"
+}

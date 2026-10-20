@@ -1,0 +1,57 @@
+{
+  "input": [
+    {
+      "threadId": "t_offsite",
+      "from": {
+        "name": "Mia Example",
+        "email": "mia@example.com"
+      },
+      "to": [
+        {
+          "email": "sam@example.org"
+        }
+      ],
+      "subject": "Offsite  head count",
+      "snippet": "Could you confirm\nthe head count by Friday?",
+      "isBulk": false,
+      "hasAttachments": false
+    },
+    {
+      "threadId": "t_sale",
+      "from": {
+        "name": "Shop",
+        "email": "news@shop.example"
+      },
+      "to": [
+        {
+          "email": "sam@example.org"
+        },
+        {
+          "name": "Team",
+          "email": "team@example.org"
+        }
+      ],
+      "subject": "Autumn sale: 30% off",
+      "snippet": "Our autumn sale ends Sunday.",
+      "listId": "news.shop.example",
+      "isBulk": true,
+      "hasAttachments": true
+    },
+    {
+      "threadId": "t_nofrom",
+      "to": [],
+      "subject": "",
+      "snippet": "",
+      "isBulk": false,
+      "hasAttachments": false
+    }
+  ],
+  "expected": {
+    "text": "key: 1\nfrom: Mia Example <mia@example.com>\nto: sam@example.org\nsubject: Offsite head count\nbulk: no\nattachments: no\nsnippet: Could you confirm the head count by Friday?\n\nkey: 2\nfrom: Shop <news@shop.example>\nto: sam@example.org, Team <team@example.org>\nsubject: Autumn sale: 30% off\nlist-id: news.shop.example\nbulk: yes\nattachments: yes\nsnippet: Our autumn sale ends Sunday.\n\nkey: 3\nfrom: \nto: \nsubject: \nbulk: no\nattachments: no\nsnippet: ",
+    "keys": {
+      "1": "t_offsite",
+      "2": "t_sale",
+      "3": "t_nofrom"
+    }
+  }
+}

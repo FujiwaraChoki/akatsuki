@@ -1,0 +1,22 @@
+{
+  "feature": "summarize",
+  "settings": {
+    "profiles": [],
+    "routes": [
+      {
+        "feature": "default",
+        "profileId": "gone",
+        "enabled": true
+      }
+    ],
+    "consent": {
+      "grantedAt": 1792483200000,
+      "version": 1,
+      "autoTriage": true,
+      "syncVoiceProfile": false
+    }
+  },
+  "expect": {
+    "status": "off"
+  }
+}

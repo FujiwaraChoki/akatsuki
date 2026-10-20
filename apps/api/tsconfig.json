@@ -1,0 +1,10 @@
+{
+  "extends": "@akatsuki/config/tsconfig.node.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "erasableSyntaxOnly": true
+  },
+  "include": ["src", "scripts", "test"]
+}

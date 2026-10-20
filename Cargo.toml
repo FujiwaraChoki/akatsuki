@@ -1,0 +1,162 @@
+# Akatsuki Rust workspace.
+#
+# Crate names follow docs/ARCHITECTURE.md §1.7: every package is prefixed `akatsuki-` so that
+# `crates/core` never clashes with Rust's built-in `core` crate.
+#
+# All third-party versions are pinned here (exact `=` pins for the versions the contract fixes in
+# ARCHITECTURE §0, caret pins locked through Cargo.lock for the rest). Member crates use
+# `dep.workspace = true` and never pick their own versions.
+
+[workspace]
+resolver = "3"
+members = [
+    "crates/core",
+    "crates/providers",
+    "crates/mime",
+    "crates/search",
+    "crates/convex-api",
+    "crates/ai",
+    "crates/tokens",
+    "crates/shortcuts",
+    "apps/sync",
+    "apps/desktop",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+license-file = "LICENSE"
+authors = ["Sami Hindi <sami@samihindi.com>"]
+repository = "https://github.com/FujiwaraChoki/akatsuki"
+homepage = "https://akatsuki.vc"
+publish = false
+
+[workspace.dependencies]
+# Internal crates.
+akatsuki-core = { path = "crates/core" }
+akatsuki-providers = { path = "crates/providers" }
+akatsuki-mime = { path = "crates/mime" }
+akatsuki-search = { path = "crates/search" }
+akatsuki-convex-api = { path = "crates/convex-api" }
+akatsuki-ai = { path = "crates/ai" }
+akatsuki-tokens = { path = "crates/tokens" }
+akatsuki-shortcuts = { path = "crates/shortcuts" }
+
+# Every version below is an exact pin (=), the version in Cargo.lock (D-396). Those fixed by the
+# contract (ARCHITECTURE §0) are marked where they appear.
+convex = { version = "=0.10.4", default-features = false, features = ["rustls-tls-webpki-roots"] }
+mail-parser = { version = "=0.11.9", features = ["full_encoding"] }
+ammonia = "=4.2.4"
+# Same version ammonia uses, for tokenizing its well-formed output.
+html5ever = "=0.40.1"
+jsonwebtoken = { version = "=11.1.0", default-features = false, features = ["use_pem", "rust_crypto"] }
+chacha20poly1305 = "=0.11.0"
+axum = { version = "=0.8.9", features = ["macros"] }
+rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled", "cache"] }
+gpui = "=0.2.2"
+# gpui 0.2.2 depends on xattr 0.2, which uses libc::ENOATTR; libc 0.2.190+ removed it on Linux.
+# Pinned like ref/Siberia until gpui moves on.
+libc = "=0.2.189"
+
+# Desktop app (apps/desktop) and its SQLite mirror (crates/core feature `store`), D-310.
+# keyring is fixed by the contract (ARCHITECTURE §0): exact pin.
+keyring = "=4.2.0"
+zstd = "=0.13.3"
+dirs = "=5.0.1"
+unicode-segmentation = "=1.13.3"
+
+# Runtime and plumbing.
+tokio = { version = "=1.54.0", features = ["macros", "rt-multi-thread", "signal", "net", "time", "sync", "io-util"] }
+tokio-stream = "=0.1.19"
+futures = "=0.3.34"
+async-trait = "=0.1.92"
+bytes = "=1.12.1"
+pin-project-lite = "=0.2.17"
+async-stream = "=0.3.6"
+
+# Serialization and errors.
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+thiserror = "=2.0.21"
+anyhow = "=1.0.104"
+serde_with = { version = "=3.24.0", default-features = false, features = ["macros", "std"] }
+
+# HTTP.
+reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "http2", "json", "stream", "charset"] }
+http = "=1.5.0"
+tower = { version = "=0.5.3", features = ["util"] }
+tower-http = { version = "=0.7.1", features = ["cors", "trace", "limit", "timeout", "catch-panic", "set-header"] }
+url = "=2.5.8"
+
+# Mail.
+mail-builder = { version = "=1.0.0", default-features = false }
+
+# IMAP + SMTP (crates/providers::imap). async-imap is fixed by ARCHITECTURE §0; imap-proto must
+# match the version async-imap parses with. TLS is rustls on aws-lc-rs, roots from webpki-roots.
+async-imap = { version = "=0.12.0", default-features = false, features = ["runtime-tokio"] }
+imap-proto = "=0.17.0"
+tokio-rustls = { version = "=0.26.6", default-features = false, features = ["aws_lc_rs", "tls12", "logging"] }
+webpki-roots = "=1.0.10"
+# Mozilla ISPDB / autoconfig XML (IMAP provider discovery).
+roxmltree = "=0.20.0"
+# Test-only: self-signed certificates for the in-process fake IMAP/SMTP servers.
+rcgen = { version = "=0.14.10", default-features = false, features = ["aws_lc_rs", "pem"] }
+
+# Search and time.
+jiff = { version = "=0.2.38", features = ["tzdb-bundle-always"] }
+
+# AI.
+jsonschema = { version = "=0.59.0", default-features = false }
+
+# Crypto and encoding.
+sha2 = "=0.10.9"
+hmac = "=0.12.1"
+base64 = "=0.23.1"
+hex = "=0.4.3"
+hkdf = "=0.12.4"
+getrandom = "=0.3.4"
+percent-encoding = "=2.3.2"
+uuid = { version = "=1.28.0", features = ["v4", "v7", "serde"] }
+
+# Observability.
+tracing = "=0.1.44"
+tracing-subscriber = { version = "=0.3.23", features = ["env-filter", "json", "fmt"] }
+
+# Test-only.
+rsa = "=0.9.10"
+p256 = { version = "=0.13.2", features = ["ecdsa", "pkcs8", "pem"] }
+rand08 = { package = "rand", version = "=0.8.8" }
+wiremock = "=0.6.5"
+tempfile = "=3.27.0"
+pretty_assertions = "=1.4.1"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+unused_must_use = "deny"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unreachable_pub = "allow"
+missing_debug_implementations = "allow"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+print_stderr = "allow"
+large_enum_variant = "allow"
+needless_pass_by_value = "allow"
+module_name_repetitions = "allow"
+
+[profile.dev]
+# Keep debug builds of the heavy GPUI dependency tree fast to run.
+opt-level = 0
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 1
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+strip = "debuginfo"

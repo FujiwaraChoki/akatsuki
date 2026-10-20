@@ -1,0 +1,19 @@
+# Allow-list build context for apps/sync/Dockerfile (BuildKit reads <Dockerfile>.dockerignore).
+# Everything is excluded unless listed below; in particular .env, .env.* and any other secret
+# file can never be sent to the Docker daemon.
+*
+!Cargo.toml
+!Cargo.lock
+!rust-toolchain.toml
+!.cargo/config.toml
+!LICENSE
+!crates/
+!apps/sync/
+!apps/desktop/Cargo.toml
+!apps/desktop/src/
+# Re-exclude anything secret-looking that could sit inside an allowed directory.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/target/

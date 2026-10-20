@@ -1,0 +1,4 @@
+dist-mock/
+dist-local/
+test-results/
+playwright-report/

@@ -1,0 +1,18 @@
+{
+  "description": "Expected result of parsing aasp/field-without-space.txt (whole, and fed one byte at a time): the valid events in order and the number of rejected frames (unknown event name or data that is not JSON). Run by crates/core::wire::aasp and the TypeScript AASP reader.",
+  "events": [
+    {
+      "event": "delta",
+      "data": {
+        "text": "a"
+      }
+    },
+    {
+      "event": "delta",
+      "data": {
+        "text": "b"
+      }
+    }
+  ],
+  "rejected": 0
+}

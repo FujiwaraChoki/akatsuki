@@ -1,0 +1,42 @@
+{
+  "input": {
+    "timezone": "UTC",
+    "messages": [
+      {
+        "from": {
+          "name": "\ufeffMia Example\u0085",
+          "email": "mia@example.com"
+        },
+        "to": [
+          {
+            "name": "\u3000",
+            "email": "sam@example.org"
+          }
+        ],
+        "cc": [],
+        "date": 1792483200000,
+        "text": "Line one\u0085still one line\ufeffword\r\nLine two \u00a0\u2028\ufeff\u0085 \t\n"
+      },
+      {
+        "from": {
+          "name": null,
+          "email": "lee@example.net"
+        },
+        "to": [
+          {
+            "email": "mia@example.com"
+          }
+        ],
+        "cc": [
+          {
+            "name": "\u2003Lee\u2003Two\u0085",
+            "email": "lee2@example.net"
+          }
+        ],
+        "date": 1792483260000,
+        "text": "\ufeff\u0085"
+      }
+    ]
+  },
+  "expected": "From: Mia Example <mia@example.com>\nDate: 2026-10-20T08:00:00+00:00\nTo: sam@example.org\n\nLine one\u0085still one line\ufeffword\nLine two\n---\nFrom: lee@example.net\nDate: 2026-10-20T08:01:00+00:00\nTo: mia@example.com\nCc: Lee\u2003Two <lee2@example.net>\n\n"
+}

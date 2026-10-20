@@ -1,0 +1,47 @@
+{
+  "name": "@akatsuki/convex",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Akatsuki Convex backend: schema, Better Auth, mail API, ops outbox, timers, billing.",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./package.entry.ts",
+      "default": "./package.entry.ts"
+    },
+    "./api": "./_generated/api.js",
+    "./server": "./_generated/server.js",
+    "./dataModel": {
+      "types": "./_generated/dataModel.d.ts"
+    },
+    "./validators": "./lib/validators.ts",
+    "./rows": "./lib/rows.ts"
+  },
+  "scripts": {
+    "codegen": "convex codegen",
+    "dev": "convex dev --env-file ../.env.local",
+    "deploy:local": "convex deploy --env-file ../.env.local -y",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@akatsuki/mail-model": "workspace:*",
+    "@better-auth/expo": "1.6.33",
+    "@convex-dev/better-auth": "0.12.5",
+    "@convex-dev/rate-limiter": "0.4.2",
+    "aws4fetch": "1.0.20",
+    "better-auth": "1.6.33",
+    "convex": "1.47.0",
+    "convex-helpers": "0.1.128"
+  },
+  "devDependencies": {
+    "@akatsuki/config": "workspace:*",
+    "@edge-runtime/vm": "5.0.0",
+    "@types/node": "26.6.5",
+    "convex-test": "0.0.62",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "history": [
+    {"id": "4821001", "messages": [{"id": "m-new-1", "threadId": "t-1"}],
+     "messagesAdded": [{"message": {"id": "m-new-1", "threadId": "t-1", "labelIds": ["UNREAD", "INBOX", "CATEGORY_PERSONAL"]}}]},
+    {"id": "4821002", "messages": [{"id": "m-old-2", "threadId": "t-2"}],
+     "labelsRemoved": [{"message": {"id": "m-old-2", "threadId": "t-2", "labelIds": ["IMPORTANT"]}, "labelIds": ["INBOX"]}]},
+    {"id": "4821003", "messages": [{"id": "m-new-1", "threadId": "t-1"}],
+     "labelsAdded": [{"message": {"id": "m-new-1", "threadId": "t-1", "labelIds": ["INBOX", "Label_1"]}, "labelIds": ["Label_1"]}]}
+  ],
+  "nextPageToken": "page-2",
+  "historyId": "4821100"
+}

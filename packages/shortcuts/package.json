@@ -1,0 +1,31 @@
+{
+  "name": "@akatsuki/shortcuts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Akatsuki key map: one JSON read by TypeScript (web, mobile) and Rust (desktop, generated constants).",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "files": [
+    "src",
+    "shortcuts.json"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./shortcuts.json": "./shortcuts.json"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@akatsuki/config": "workspace:*",
+    "@types/node": "26.6.5",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

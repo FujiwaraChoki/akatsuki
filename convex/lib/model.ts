@@ -1,0 +1,41 @@
+// Pure mail-domain logic used inside Convex mutations: label keys (§1.4), applyOps (§5.1), undo inverses
+// (§5.2), rule matching (§3.4), thread keys and aggregates (§3.3, §4.4).
+//
+// The single TypeScript home of this logic is `@akatsuki/mail-model` (ARCHITECTURE §1.7, D-250). This module
+// only re-exports it under the names Convex code already uses, so the shared fixtures cover Convex too.
+export {
+  type Addr as AddrLike,
+  type ApplyContext,
+  applyAction,
+  applyContextFor,
+  applyOps,
+  CAPS,
+  condMatches,
+  diffKeys,
+  domainOf,
+  type Effect,
+  inverseAction,
+  isFolderProvider,
+  isLabelKey,
+  isSplitKey,
+  type MessageFacts,
+  matchRule,
+  type ParsedLabelKey,
+  parseLabelKey,
+  type Rule as RuleLike,
+  type RuleCond as RuleCondLike,
+  type RuleFacts,
+  SYS,
+  SYS_ROLES,
+  type SysRole,
+  sortDedupe,
+  splitKey,
+  type ThreadAction as ThreadActionLike,
+  type ThreadAggregates,
+  threadAggregates,
+  threadKeysFromMessages,
+  threadSearchText,
+  truncate,
+  userKey,
+  type Visible,
+} from "@akatsuki/mail-model";

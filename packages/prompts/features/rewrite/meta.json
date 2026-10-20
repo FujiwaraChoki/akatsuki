@@ -1,0 +1,10 @@
+{
+  "id": "rewrite",
+  "version": 1,
+  "tier": "default",
+  "mode": "text",
+  "stream": true,
+  "maxInputChars": 40000,
+  "maxOutputTokens": 2000,
+  "effort": "low"
+}

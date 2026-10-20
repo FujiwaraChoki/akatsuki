@@ -1,0 +1,91 @@
+# cargo-deny configuration. Run: cargo deny check (all four checks must pass; CI runs the same).
+#
+# Akatsuki is open source, free for personal use, under a custom licence (LICENSE, ASAL-1.0)
+# that reserves commercial use. Only permissive dependency licences are compatible with that: no GPL, LGPL,
+# AGPL, SSPL or other copyleft. Weak file-level copyleft (MPL-2.0) is accepted only as a named
+# exception for unmodified upstream crates, listed below with the reason.
+
+[graph]
+all-features = false
+no-default-features = false
+
+[licenses]
+version = 2
+confidence-threshold = 0.93
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "0BSD",
+    "BSL-1.0",
+    "CC0-1.0",
+    "Unlicense",
+    "Unicode-3.0",
+    "CDLA-Permissive-2.0",
+    "NCSA",
+]
+
+# MPL-2.0 is weak, file-level copyleft: it applies to the MPL files themselves, which we use
+# unmodified and never copy into our code, so it does not reach Akatsuki's own licence. Each crate
+# is listed with why it is in the tree; anything new needs a review and an entry here.
+exceptions = [
+    # cssparser + dtoa-short: CSS parsing inside ammonia, the contract's HTML sanitizer (§14.3).
+    { crate = "cssparser", allow = ["MPL-2.0"] },
+    { crate = "dtoa-short", allow = ["MPL-2.0"] },
+    # imbl + imbl-sized-chunks: persistent collections inside the official Rust `convex` client.
+    { crate = "imbl", allow = ["MPL-2.0"] },
+    { crate = "imbl-sized-chunks", allow = ["MPL-2.0"] },
+    # option-ext: tiny helper used by `dirs` (config paths) in the GPUI dependency tree.
+    { crate = "option-ext", allow = ["MPL-2.0"] },
+    # dwrote: DirectWrite font bindings, Windows builds of GPUI only.
+    { crate = "dwrote", allow = ["MPL-2.0"] },
+    # cbindgen: build-time code generator in the GPUI tree (macOS); nothing of it ships.
+    { crate = "cbindgen", allow = ["MPL-2.0"] },
+]
+
+# Our own crates are `publish = false` and carry the custom licence file.
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+deny = [
+    # OpenSSL: we use rustls everywhere.
+    { name = "openssl-sys" },
+    { name = "native-tls" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+[advisories]
+version = 2
+yanked = "warn"
+# Accepted advisories, each with its reason (D-396). Anything not listed fails `cargo deny check`, so a new
+# advisory still breaks the build. Review this list whenever GPUI or jsonwebtoken is bumped.
+ignore = [
+    # rsa (Marvin timing attack) comes in through jsonwebtoken's rust_crypto backend. Akatsuki only verifies
+    # RS256 signatures with public keys (Better Auth JWKS, Google push JWTs); it never decrypts or signs with an
+    # RSA private key, which is what the attack needs.
+    { id = "RUSTSEC-2023-0071", reason = "RSA used for public-key signature verification only; no private-key operation" },
+    # Unmaintained crates reached only through gpui 0.2.2 (akatsuki-desktop). They go when GPUI moves off them.
+    { id = "RUSTSEC-2025-0052", reason = "async-std: GPUI-transitive (desktop) until GPUI updates" },
+    { id = "RUSTSEC-2024-0384", reason = "instant: GPUI-transitive (desktop, non-Linux targets) until GPUI updates" },
+    { id = "RUSTSEC-2024-0436", reason = "paste: GPUI-transitive (desktop) until GPUI updates" },
+    { id = "RUSTSEC-2026-0173", reason = "proc-macro-error2: GPUI-transitive via stacksafe (desktop) until GPUI updates" },
+    { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile: GPUI-transitive (desktop) until GPUI updates" },
+    { id = "RUSTSEC-2026-0206", reason = "rustybuzz: GPUI-transitive (desktop text shaping) until GPUI updates" },
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser: GPUI-transitive (desktop fonts) until GPUI updates" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names: GPUI-transitive (desktop D-Bus) until GPUI updates" },
+    { id = "RUSTSEC-2026-0370", reason = "zvariant: GPUI-transitive (desktop D-Bus) until GPUI updates" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: GPUI-transitive (desktop D-Bus) until GPUI updates" },
+]

@@ -1,0 +1,79 @@
+From: "Mallory" <mallory@evil.example>
+To: Ada <ada@example.com>
+Subject: =?UTF-8?B?SGVsbG8g8J+RiyBBZGE=?=
+Date: Mon, 19 Oct 2026 10:00:00 +0200
+Message-ID: <hostile-1@evil.example>
+List-Id: Evil News <news.evil.example>
+List-Unsubscribe: <https://evil.example/u?x=1>, <mailto:u@evil.example>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+Authentication-Results: mx.example.com; spf=fail smtp.mailfrom=evil.example; dkim=none; dmarc=fail
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="REL"
+
+--REL
+Content-Type: multipart/alternative; boundary="ALT"
+
+--ALT
+Content-Type: text/plain; charset=utf-8
+
+Hello Ada
+
+On Mon, Ada wrote:
+> quoted
+
+--ALT
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgaHR0cC1lcXVpdj0icmVmcmVzaCIgY29udGVudD0iMDt1cmw9aHR0
+cHM6Ly9ldmlsLmV4YW1wbGUvIj48YmFzZSBocmVmPSJodHRwczovL2V2aWwuZXhhbXBsZS8iPgo8
+bGluayByZWw9InN0eWxlc2hlZXQiIGhyZWY9Imh0dHBzOi8vZXZpbC5leGFtcGxlL3guY3NzIj48
+dGl0bGU+SGk8L3RpdGxlPgo8c3R5bGU+QGltcG9ydCB1cmwoaHR0cHM6Ly9ldmlsLmV4YW1wbGUv
+aS5jc3MpOyBib2R5e2NvbG9yOiMxMTF9IC54e2JhY2tncm91bmQ6dXJsKGh0dHBzOi8vZXZpbC5l
+eGFtcGxlL2JnLmdpZil9IGFbaHJlZl49aHR0cHNde2NvbG9yOnJlZH08L3N0eWxlPgo8c2NyaXB0
+PmRvY3VtZW50LndyaXRlKCc8aW1nIHNyYz1odHRwczovL2V2aWwuZXhhbXBsZS9zPicpPC9zY3Jp
+cHQ+PC9oZWFkPgo8Ym9keSBvbmxvYWQ9InN0ZWFsKCkiPgo8cCBzdHlsZT0iY29sb3I6IHJlZDsg
+cG9zaXRpb246IGZpeGVkOyBiYWNrZ3JvdW5kLWltYWdlOiB1cmwoJ2h0dHBzOi8vZXZpbC5leGFt
+cGxlL3AuZ2lmJykiPkhlbGxvIDxiPkFkYTwvYj48L3A+CjxhIGhyZWY9ImphdmFzY3JpcHQ6YWxl
+cnQoMSkiPmpzPC9hPiA8YSBocmVmPSJKYVZhU2NSaVB0OmFsZXJ0KDEpIj5qczI8L2E+IDxhIGhy
+ZWY9ImphdiYjeDA5O2FzY3JpcHQ6YWxlcnQoMSkiPmpzMzwvYT4KPGEgaHJlZj0iIGphdmFzY3Jp
+cHQ6YWxlcnQoMSkiPmpzNDwvYT4gPGEgaHJlZj0idmJzY3JpcHQ6bXNnYm94KDEpIj52YjwvYT4g
+PGEgaHJlZj0iZGF0YTp0ZXh0L2h0bWw7YmFzZTY0LFBITmpjbWx3ZEQ1aGJHVnlkQ2d4S1R3dmMy
+TnlhWEIwUGc9PSI+ZGF0YTwvYT4KPGEgaHJlZj0iaHR0cHM6Ly9leGFtcGxlLmNvbS9vayIgb25j
+bGljaz0ieCgpIiB0YXJnZXQ9Il9zZWxmIiByZWw9Im9wZW5lciI+b2s8L2E+CjxpbWcgc3JjPSJo
+dHRwczovL2Nkbi5leGFtcGxlLmNvbS9oZXJvLnBuZyIgd2lkdGg9IjYwMCIgYWx0PSJIZXJvIiBz
+cmNzZXQ9Imh0dHBzOi8vZXZpbC5leGFtcGxlLzJ4LnBuZyAyeCIgb25lcnJvcj0ieCgpIj4KPGlt
+ZyBzcmM9Imh0dHBzOi8vdC5leGFtcGxlLmNvbS9vcGVuP2lkPTEiIHdpZHRoPSIxIiBoZWlnaHQ9
+IjEiPgo8aW1nIHNyYz0iaHR0cHM6Ly9pbWcuZXhhbXBsZS5jb20vcC5naWYiIHN0eWxlPSJkaXNw
+bGF5Om5vbmUiPgo8aW1nIHNyYz0iaHR0cHM6Ly9saXN0LnVzMS5saXN0LW1hbmFnZS5jb20vdHJh
+Y2svb3Blbi5waHA/dT0xIj4KPGltZyBzcmM9ImNpZDpsb2dvQGV4YW1wbGUuY29tIiBhbHQ9Ikxv
+Z28iPgo8aW1nIHNyYz0iZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWno0OGMyTnlhWEIw
+UG1Gc1pYSjBLREVwUEM5elkzSnBjSFErUEM5emRtYysiPgo8aW1nIHNyYz0iZGF0YTppbWFnZS9w
+bmc7YmFzZTY0LGlWQk9SdzBLR2dvPSI+CjxpZnJhbWUgc3JjPSJodHRwczovL2V2aWwuZXhhbXBs
+ZS9mcmFtZSI+PC9pZnJhbWU+PG9iamVjdCBkYXRhPSJ4LnN3ZiI+PC9vYmplY3Q+PGVtYmVkIHNy
+Yz0ieC5zd2YiPgo8Zm9ybSBhY3Rpb249Imh0dHBzOi8vZXZpbC5leGFtcGxlL3BoaXNoIj48aW5w
+dXQgbmFtZT0icGFzc3dvcmQiIHR5cGU9InBhc3N3b3JkIj48YnV0dG9uPkxvZyBpbjwvYnV0dG9u
+PjwvZm9ybT4KPHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PGZvcmVpZ25PYmplY3Q+PHA+
+eDwvcD48L2ZvcmVpZ25PYmplY3Q+PC9zdmc+CjxtYXRoPjxtaSB4bGluazpocmVmPSJqYXZhc2Ny
+aXB0OmFsZXJ0KDEpIj54PC9taT48L21hdGg+CjwhLS1baWYgbXNvXT48djpyZWN0IGhyZWY9Imh0
+dHBzOi8vZXZpbC5leGFtcGxlIj48L3Y6cmVjdD48IVtlbmRpZl0tLT4KPGRpdiBjbGFzcz0iZ21h
+aWxfcXVvdGUiPk9uIE1vbiwgQWRhIHdyb3RlOjxibG9ja3F1b3RlIHR5cGU9ImNpdGUiPnF1b3Rl
+ZDxibG9ja3F1b3RlIGNsYXNzPSJnbWFpbF9xdW90ZSI+bmVzdGVkPC9ibG9ja3F1b3RlPjwvYmxv
+Y2txdW90ZT48L2Rpdj4KPC9ib2R5PjwvaHRtbD4=
+
+--ALT--
+
+--REL
+Content-Type: image/png; name="logo.png"
+Content-Transfer-Encoding: base64
+Content-ID: <logo@example.com>
+Content-Disposition: inline; filename="logo.png"
+
+iVBORw0KGgoAAAAAAAAAAAAAAAAAAAAA
+--REL
+Content-Type: application/pdf; name="invoice.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="../../invoice.pdf"
+
+JVBERi0xLjcKZmFrZQo=
+--REL--

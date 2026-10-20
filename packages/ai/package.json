@@ -1,0 +1,48 @@
+{
+  "name": "@akatsuki/ai",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Akatsuki AI layer: AI SDK provider registry, routing table, settings schema, model resolution, transcript renderer and feature functions.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "type": "module",
+  "files": [
+    "src",
+    "routing.json",
+    "schema",
+    "fixtures"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./routing.json": "./routing.json",
+    "./schema/ai-settings.schema.json": "./schema/ai-settings.schema.json"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "4.0.83",
+    "@ai-sdk/gateway": "4.0.118",
+    "@ai-sdk/google": "4.0.100",
+    "@ai-sdk/openai": "4.0.97",
+    "@ai-sdk/openai-compatible": "3.0.73",
+    "@akatsuki/prompts": "workspace:*",
+    "@akatsuki/wire": "workspace:*",
+    "@openrouter/ai-sdk-provider": "3.1.0",
+    "ai": "7.0.145",
+    "ajv": "8.20.0",
+    "ollama-ai-provider-v2": "4.0.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@akatsuki/config": "workspace:*",
+    "@types/node": "26.6.5",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

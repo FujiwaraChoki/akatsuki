@@ -1,0 +1,8 @@
+event: meta
+data: {"feature":"summarize","model":"anthropic/claude-sonnet-5.5","promptVersion":1}
+
+: keep-alive
+
+event: error
+data: {"code":"provider_unavailable","message":"The AI provider is not available right now.","retryable":true}
+

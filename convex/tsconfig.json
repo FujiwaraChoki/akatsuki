@@ -1,0 +1,9 @@
+{
+  "extends": "@akatsuki/config/tsconfig.convex.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["./**/*"],
+  "exclude": ["./_generated", "./node_modules"]
+}

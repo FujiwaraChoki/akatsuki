@@ -1,0 +1,58 @@
+{
+  "description": "ARCHITECTURE \u00a77.3 wire value; must round-trip unchanged (crates/core::wire::worker, and packages/wire/src/worker.ts once it exists).",
+  "type": "MessageBody",
+  "value": {
+    "messageId": "k17abc2def3ghi4jkl5mno6pqr7stu8v",
+    "providerMessageId": "18c2f0a1b2c3d4e5",
+    "sanitizerVersion": 3,
+    "html": "<div class=\"akatsuki-body\"><p>Hi Sam,</p><img data-akatsuki-src=\"https://img.example.com/a.png\"><div data-akatsuki-quote>On Mon, Ada wrote:</div></div>",
+    "text": "Hi Sam,\n\nOn Mon, Ada wrote:\n> earlier",
+    "quoted": {
+      "htmlStart": 96,
+      "textStart": 9
+    },
+    "attachments": [
+      {
+        "partId": "2",
+        "filename": "agenda.pdf",
+        "mimeType": "application/pdf",
+        "size": 48213,
+        "inline": false
+      },
+      {
+        "partId": "1.2",
+        "filename": "logo.png",
+        "mimeType": "image/png",
+        "size": 2048,
+        "inline": true,
+        "contentId": "logo@example.com"
+      }
+    ],
+    "remoteImageCount": 1,
+    "trackersRemoved": 2,
+    "headers": {
+      "to": [
+        {
+          "name": "Sam Example",
+          "email": "sam@example.org"
+        }
+      ],
+      "cc": [],
+      "replyTo": [
+        {
+          "email": "ada@example.com"
+        }
+      ],
+      "listUnsubscribe": {
+        "http": "https://news.example.com/u/1",
+        "mailto": "mailto:unsub@news.example.com",
+        "oneClick": true
+      },
+      "auth": {
+        "spf": "pass",
+        "dkim": "pass",
+        "dmarc": "pass"
+      }
+    }
+  }
+}

@@ -1,0 +1,942 @@
+{
+  "description": "Split and filter rule matching (ARCHITECTURE §3.4): matchRule(rule, facts). facts: fromEmail? (threads.lastFrom.email), participants (emails), labelKeys, triage? ({category, needsReply}), isBulk, listId?, subject, accountId, vip (the sender is a VIP; only true when fromEmail is set). Run by convex/lib/model.ts and crates/core::model::rules.",
+  "cases": [
+    {
+      "name": "from_email exact, case-insensitive",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_email",
+            "eq": "Billing@Mail.Stripe.Example"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "from_email other",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_email",
+            "eq": "other@example.com"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "from_email without sender",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_email",
+            "eq": "sam@example.org"
+          }
+        ]
+      },
+      "facts": {
+        "participants": ["sam@example.org"],
+        "labelKeys": ["sys:inbox"],
+        "isBulk": false,
+        "subject": "",
+        "accountId": "acct0002",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "from_domain subdomain",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_domain",
+            "eq": "stripe.example"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "from_domain exact",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_domain",
+            "eq": "mail.stripe.example"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "from_domain with @ and caps",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_domain",
+            "eq": "@STRIPE.example"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "from_domain suffix is not a subdomain",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_domain",
+            "eq": "tripe.example"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "from_domain without sender",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_domain",
+            "eq": "example.org"
+          }
+        ]
+      },
+      "facts": {
+        "participants": ["sam@example.org"],
+        "labelKeys": ["sys:inbox"],
+        "isBulk": false,
+        "subject": "",
+        "accountId": "acct0002",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "to_email any participant",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "to_email",
+            "eq": "SAM@example.org"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "to_email missing",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "to_email",
+            "eq": "kim@example.net"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "label present",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "label",
+            "key": "l:receipts"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "label absent",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "label",
+            "key": "sys:starred"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "triage category",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "triage",
+            "category": "receipts"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "triage other category",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "triage",
+            "category": "updates"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "triage before triage ran",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "triage",
+            "category": "receipts"
+          }
+        ]
+      },
+      "facts": {
+        "participants": ["sam@example.org"],
+        "labelKeys": ["sys:inbox"],
+        "isBulk": false,
+        "subject": "",
+        "accountId": "acct0002",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "needs_reply false",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "needs_reply",
+            "eq": false
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "needs_reply before triage ran",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "needs_reply",
+            "eq": false
+          }
+        ]
+      },
+      "facts": {
+        "participants": ["sam@example.org"],
+        "labelKeys": ["sys:inbox"],
+        "isBulk": false,
+        "subject": "",
+        "accountId": "acct0002",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "is_bulk true",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "is_bulk",
+            "eq": true
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "is_bulk false",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "is_bulk",
+            "eq": false
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "list_id case-insensitive",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "list_id",
+            "eq": "Billing.Stripe.Example"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "list_id without list",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "list_id",
+            "eq": "x.example"
+          }
+        ]
+      },
+      "facts": {
+        "participants": ["sam@example.org"],
+        "labelKeys": ["sys:inbox"],
+        "isBulk": false,
+        "subject": "",
+        "accountId": "acct0002",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "subject_contains",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "subject_contains",
+            "text": "invoice"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "subject_contains empty text never matches",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "subject_contains",
+            "text": ""
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "subject_contains missing",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "subject_contains",
+            "text": "receipt"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "vip true",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "vip",
+            "eq": true
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "Boss@Example.COM",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "isBulk": false,
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": true
+      },
+      "expected": true
+    },
+    {
+      "name": "vip false for a non-vip",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "vip",
+            "eq": false
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "vip true for a non-vip",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "vip",
+            "eq": true
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "vip false without sender",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "vip",
+            "eq": false
+          }
+        ]
+      },
+      "facts": {
+        "participants": ["sam@example.org"],
+        "labelKeys": ["sys:inbox"],
+        "isBulk": false,
+        "subject": "",
+        "accountId": "acct0002",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "account match",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "account",
+            "accountId": "acct0001"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "account other",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "account",
+            "accountId": "acct0002"
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "all: every condition",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_domain",
+            "eq": "stripe.example"
+          },
+          {
+            "f": "is_bulk",
+            "eq": true
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "all: one fails",
+      "rule": {
+        "match": "all",
+        "conds": [
+          {
+            "f": "from_domain",
+            "eq": "stripe.example"
+          },
+          {
+            "f": "is_bulk",
+            "eq": false
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "any: one holds",
+      "rule": {
+        "match": "any",
+        "conds": [
+          {
+            "f": "from_domain",
+            "eq": "other.example"
+          },
+          {
+            "f": "is_bulk",
+            "eq": true
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": true
+    },
+    {
+      "name": "any: none holds",
+      "rule": {
+        "match": "any",
+        "conds": [
+          {
+            "f": "from_domain",
+            "eq": "other.example"
+          },
+          {
+            "f": "is_bulk",
+            "eq": false
+          }
+        ]
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "all with no conditions never matches",
+      "rule": {
+        "match": "all",
+        "conds": []
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    },
+    {
+      "name": "any with no conditions never matches",
+      "rule": {
+        "match": "any",
+        "conds": []
+      },
+      "facts": {
+        "fromEmail": "billing@mail.stripe.example",
+        "participants": ["billing@mail.stripe.example", "sam@example.org"],
+        "labelKeys": ["sys:inbox", "l:receipts"],
+        "triage": {
+          "category": "receipts",
+          "needsReply": false
+        },
+        "isBulk": true,
+        "listId": "billing.stripe.example",
+        "subject": "Your Invoice #42",
+        "accountId": "acct0001",
+        "vip": false
+      },
+      "expected": false
+    }
+  ]
+}

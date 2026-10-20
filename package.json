@@ -1,0 +1,30 @@
+{
+  "name": "akatsuki",
+  "private": true,
+  "description": "Akatsuki: a fast, keyboard-first email client. Open source, free for personal use (ASAL-1.0); commercial use needs permission.",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=26.0.0 <27",
+    "pnpm": ">=12.11.0 <13"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "turbo run test",
+    "tokens:build": "pnpm --filter @akatsuki/tokens run build",
+    "shortcuts:build": "pnpm --filter @akatsuki/shortcuts run build",
+    "convex:dev:up": "docker compose -f infra/docker-compose.dev.yml up -d --wait",
+    "convex:dev:down": "docker compose -f infra/docker-compose.dev.yml down",
+    "convex:dev:deploy": "pnpm --filter @akatsuki/convex run deploy:local"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "turbo": "2.11.9",
+    "typescript": "6.0.3"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "id": "18c2a7f3e9b0d001",
+  "threadId": "18c2a7f3e9b0d001",
+  "labelIds": ["INBOX"],
+  "snippet": "Hi Ada",
+  "sizeEstimate": 48213,
+  "historyId": "4821850",
+  "internalDate": "1790000000000",
+  "payload": {
+    "partId": "",
+    "mimeType": "multipart/mixed",
+    "filename": "",
+    "headers": [{"name": "Content-Type", "value": "multipart/mixed; boundary=\"000000000000a1b2c3\""}],
+    "body": {"size": 0},
+    "parts": [
+      {
+        "partId": "0",
+        "mimeType": "multipart/alternative",
+        "filename": "",
+        "headers": [{"name": "Content-Type", "value": "multipart/alternative; boundary=\"000000000000d4e5f6\""}],
+        "body": {"size": 0},
+        "parts": [
+          {"partId": "0.0", "mimeType": "text/plain", "filename": "", "headers": [{"name": "Content-Type", "value": "text/plain; charset=\"UTF-8\""}],
+           "body": {"size": 13, "data": "SGksIEFkYSEgUTMgcGxhbg"}},
+          {"partId": "0.1", "mimeType": "text/html", "filename": "", "headers": [{"name": "Content-Type", "value": "text/html; charset=\"UTF-8\""}],
+           "body": {"size": 22, "data": "PHA-SGksIEFkYSE8L3A-PGJyPg"}}
+        ]
+      },
+      {
+        "partId": "1",
+        "mimeType": "application/pdf",
+        "filename": "budget-q3.pdf",
+        "headers": [
+          {"name": "Content-Type", "value": "application/pdf; name=\"budget-q3.pdf\""},
+          {"name": "Content-Disposition", "value": "attachment; filename=\"budget-q3.pdf\""},
+          {"name": "Content-Transfer-Encoding", "value": "base64"}
+        ],
+        "body": {"attachmentId": "ANGjdJ8_synthetic_attachment_id_0001", "size": 31337}
+      },
+      {
+        "partId": "2",
+        "mimeType": "message/rfc822",
+        "filename": "forwarded.eml",
+        "headers": [{"name": "Content-Type", "value": "message/rfc822"}],
+        "body": {"size": 0},
+        "parts": [
+          {"partId": "2.0", "mimeType": "text/plain", "filename": "", "body": {"size": 5, "data": "aW5uZXI"}}
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "18c2a7f3e9b0d001",
+  "historyId": "4821907",
+  "messages": [
+    {
+      "id": "18c2a7f3e9b0d001",
+      "threadId": "18c2a7f3e9b0d001",
+      "labelIds": ["IMPORTANT", "CATEGORY_PERSONAL", "INBOX", "UNREAD", "Label_1", "Label_2"],
+      "snippet": "Hi Ada, here&#39;s the Q3 plan &amp; the budget sheet we discussed. Let me know what you think.",
+      "sizeEstimate": 48213,
+      "historyId": "4821850",
+      "internalDate": "1790000000000",
+      "payload": {
+        "partId": "",
+        "mimeType": "multipart/mixed",
+        "filename": "",
+        "headers": [
+          {"name": "From", "value": "\"Grace Hopper\" <Grace@Example.org>"},
+          {"name": "To", "value": "Ada Lovelace <ada@example.com>, team@example.com"},
+          {"name": "Cc", "value": "=?UTF-8?B?SsO8cmdlbiBNw7xsbGVy?= <juergen@example.net>"},
+          {"name": "Subject", "value": "=?UTF-8?Q?Q3_plan_=E2=80=94_budget?="},
+          {"name": "Date", "value": "Mon, 21 Sep 2026 14:13:20 +0000"},
+          {"name": "Message-ID", "value": "<CAF1q3plan.0001@mail.example.org>"},
+          {"name": "References", "value": "<root.0000@mail.example.org> <prev.0000@mail.example.org>"},
+          {"name": "In-Reply-To", "value": "<prev.0000@mail.example.org>"},
+          {"name": "List-Id", "value": "Planning <planning.lists.example.org>"},
+          {"name": "List-Unsubscribe", "value": "<mailto:unsub@lists.example.org?subject=unsubscribe>, <https://lists.example.org/u/abc123>"},
+          {"name": "List-Unsubscribe-Post", "value": "List-Unsubscribe=One-Click"},
+          {"name": "Authentication-Results", "value": "mx.google.com; dkim=pass header.i=@example.org; spf=pass smtp.mailfrom=example.org; dmarc=pass (p=REJECT) header.from=example.org"},
+          {"name": "Content-Type", "value": "multipart/mixed; boundary=\"000000000000a1b2c3\""}
+        ]
+      }
+    },
+    {
+      "id": "18c2a8104c55d002",
+      "threadId": "18c2a7f3e9b0d001",
+      "labelIds": ["SENT"],
+      "snippet": "Thanks, looks good to me.",
+      "sizeEstimate": 3120,
+      "historyId": "4821907",
+      "internalDate": "1790000600000",
+      "payload": {
+        "partId": "",
+        "mimeType": "text/plain",
+        "filename": "",
+        "headers": [
+          {"name": "From", "value": "Ada Lovelace <ada@example.com>"},
+          {"name": "To", "value": "\"Grace Hopper\" <grace@example.org>"},
+          {"name": "Subject", "value": "Re: Q3 plan — budget"},
+          {"name": "Date", "value": "Mon, 21 Sep 2026 14:23:20 +0000"},
+          {"name": "Message-ID", "value": "<akatsuki.0190a1b2@example.com>"},
+          {"name": "In-Reply-To", "value": "<CAF1q3plan.0001@mail.example.org>"},
+          {"name": "References", "value": "<root.0000@mail.example.org> <prev.0000@mail.example.org> <CAF1q3plan.0001@mail.example.org>"},
+          {"name": "Content-Type", "value": "text/plain; charset=\"UTF-8\""}
+        ]
+      }
+    }
+  ]
+}

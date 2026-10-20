@@ -1,0 +1,16 @@
+[package]
+name = "akatsuki-tokens"
+description = "Akatsuki design tokens as Rust constants (generated from packages/tokens)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+

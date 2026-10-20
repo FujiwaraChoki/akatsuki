@@ -1,0 +1,10 @@
+{
+  "id": "voice_profile",
+  "version": 1,
+  "tier": "default",
+  "mode": "object",
+  "stream": false,
+  "maxInputChars": 60000,
+  "maxOutputTokens": 1000,
+  "effort": "medium"
+}

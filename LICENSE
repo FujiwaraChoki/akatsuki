@@ -1,0 +1,267 @@
+Akatsuki Source-Available License
+Version 1.0 (ASAL-1.0)
+
+Copyright (c) 2026 Sami Hindi. All rights reserved, except as granted below.
+
+Akatsuki is open source, free for personal use. You may read, run and change
+it for personal, non-commercial purposes. Commercial use of any kind,
+including use by any organisation, needs written permission from the
+copyright holder first (sami@samihindi.com). Because it reserves commercial
+use, this licence is not approved by the Open Source Initiative (OSI).
+
+The summary below is for convenience only. The numbered terms that follow it
+are the licence; if the two ever disagree, the numbered terms win.
+
+
+SUMMARY
+-------
+
+  You may
+    - Read and study the source code.
+    - Run Akatsuki for yourself, including self-hosting it on your own
+      machine or server.
+    - Let members of your household and your friends use your self-hosted
+      copy, as long as nobody pays anything for it.
+    - Change the code for your own use.
+    - Publish the source code of your changes (for example a public fork or
+      a pull request), free of charge, under this same licence.
+    - Compile Akatsuki and share the builds with anyone, free of charge,
+      under this same licence (see section 3.4).
+    - Contribute changes back to the project (see section 6).
+
+  You may not
+    - Use Akatsuki in or for a business, or for any commercial purpose.
+    - Sell Akatsuki, or sell access to it.
+    - Offer Akatsuki to others as a hosted or managed service.
+    - Bundle Akatsuki, or any part of it, into a paid product.
+    - Use Akatsuki to provide any service for a fee.
+    - Sublicense Akatsuki, or relicense it under different terms.
+    - Remove or change copyright, licence or attribution notices.
+    - Use the Akatsuki name or logo for your own copy or product.
+
+  Ask first (write to sami@samihindi.com)
+    - Any of the "may not" uses above.
+    - Use by an organisation of any kind, including non-profits, schools and
+      public bodies.
+    - Using a self-hosted copy for business email, including your own
+      freelance or company mail.
+    - Anything you are unsure about.
+
+
+TERMS
+-----
+
+1. Definitions
+
+   1.1 "Licensor" means Sami Hindi, the copyright holder.
+
+   1.2 "Software" means the Akatsuki source code, object code,
+       documentation, design assets and other material that the Licensor
+       publishes under this licence, including any part of it.
+
+   1.3 "You" means the individual person who accepts this licence by
+       copying, modifying or running the Software.
+
+   1.4 "Permitted Circle" means You, the members of Your household, and
+       Your friends, in each case only while they use the Software at no
+       charge and not for any commercial purpose.
+
+   1.5 "Personal Non-Commercial Use" means use by the Permitted Circle for
+       private, personal purposes that do not earn, support or save money
+       for any business, and for which nobody pays or receives anything of
+       value.
+
+   1.6 "Commercial Use" means any use that is not Personal Non-Commercial
+       Use. It includes, without limitation:
+       (a) use in, by or for a business, company, partnership, sole trader
+           or other commercial undertaking, including use to read, send or
+           manage that undertaking's email;
+       (b) selling, renting or licensing the Software or access to it;
+       (c) offering the Software, or a service substantially built on it,
+           to others as a hosted, managed or "software as a service"
+           offering, whether or not a fee is charged;
+       (d) bundling, embedding or distributing the Software, or any part of
+           it, in or with a product or service that is sold or that
+           requires payment;
+       (e) using the Software to provide any service to others for a fee;
+           and
+       (f) use by any organisation, whether or not it is run for profit.
+
+   1.7 "Modification" means any change to, addition to, or work derived
+       from the Software.
+
+   1.8 "Contribution" means any code, documentation, design, issue text or
+       other material that You submit to the Licensor for inclusion in the
+       Software, for example through a pull request, patch, issue or email.
+
+2. Copyright
+
+   The Software is protected by copyright. Copyright (c) 2026 Sami Hindi.
+   All rights not expressly granted in this licence are reserved by the
+   Licensor.
+
+3. Grant of rights
+
+   3.1 Subject to the terms of this licence, the Licensor grants You a
+       worldwide, royalty-free, non-exclusive, non-transferable and
+       non-sublicensable licence to view, copy, modify and run the Software
+       for Personal Non-Commercial Use only.
+
+   3.2 This includes self-hosting the Software on hardware or hosting You
+       control, and letting the rest of Your Permitted Circle use that
+       self-hosted copy, provided nobody is charged for it.
+
+   3.3 You may publish the source code of the Software and of Your
+       Modifications, free of charge, provided that:
+       (a) it is published under this licence and a complete copy of this
+           licence accompanies it;
+       (b) all copyright, licence and attribution notices are kept intact;
+       (c) Your Modifications are clearly marked as changed; and
+       (d) You do not use the Licensor's trademarks, as section 10 sets
+           out.
+
+   3.4 Anyone may compile the Software. You may distribute compiled builds
+       of the Software or of Your Modifications to anyone, including through
+       an app store, package registry or download service, provided that:
+       (a) the builds are distributed free of charge;
+       (b) they are distributed under this licence, with a complete copy of
+           this licence and all copyright, licence and attribution notices
+           intact;
+       (c) the recipients' rights are those of this licence, so their use
+           must also be Personal Non-Commercial Use;
+       (d) builds that contain Modifications are clearly marked as changed;
+           and
+       (e) You do not present the builds as official Akatsuki releases or
+           use the Licensor's trademarks, as section 10 sets out.
+
+4. Commercial use is not granted
+
+   4.1 This licence grants no rights for Commercial Use. All commercial
+       rights in the Software are reserved by the Licensor.
+
+   4.2 Commercial Use of any kind, including using the Software in or for a
+       business, selling it, sublicensing it, offering it as a hosted
+       service, bundling it into a paid product, or using it to provide a
+       service for a fee, requires prior written permission from the
+       Licensor. Permission is only valid if it is in writing and signed
+       or sent by the Licensor.
+
+   4.3 To ask for permission or a commercial licence, contact
+       sami@samihindi.com.
+
+   4.4 Using the official hosted service at akatsuki.vc (Akatsuki Pro) is
+       governed by that service's own terms, not by this licence.
+
+5. Notices
+
+   Every copy of the Software, in whole or in part, must keep this licence
+   and all copyright and attribution notices. You may not remove, hide or
+   change them.
+
+6. Contributions
+
+   6.1 You keep the copyright in Your Contributions.
+
+   6.2 By submitting a Contribution, You grant the Licensor and anyone the
+       Licensor authorises a perpetual, worldwide, non-exclusive,
+       royalty-free, irrevocable licence to use, copy, modify, publish,
+       distribute, sublicense and relicense the Contribution, and works
+       based on it, under any terms the Licensor chooses, including
+       commercial and proprietary terms.
+
+   6.3 You also grant the Licensor a perpetual, worldwide, non-exclusive,
+       royalty-free, irrevocable licence under any patent You can license
+       that is necessarily infringed by Your Contribution, alone or as
+       combined with the Software, to make, use, sell, offer for sale,
+       import and otherwise exploit it.
+
+   6.4 You confirm that:
+       (a) the Contribution is Your original work, or You otherwise have
+           the right to grant these licences;
+       (b) if Your employer or anyone else has rights in the Contribution,
+           You have their permission to make it under these terms; and
+       (c) the Contribution does not include material under terms that
+           conflict with this section, unless You say so clearly when You
+           submit it.
+
+   6.5 To the extent the law allows, You waive, or agree not to assert,
+       any moral rights in the Contribution against the Licensor and those
+       the Licensor authorises.
+
+   6.6 The Licensor has no obligation to accept, use or credit any
+       Contribution.
+
+7. Third-party components
+
+   7.1 The Software uses and may include third-party components. Each one
+       remains under its own licence, which is listed in THIRD_PARTY.md.
+       This licence does not change, limit or replace those licences, and
+       nothing in it restricts rights You have under them.
+
+   7.2 In particular, the Convex backend is licensed under the Functional
+       Source License, Version 1.1, Apache 2.0 Future License
+       (FSL-1.1-Apache-2.0). If You run that backend yourself, You must
+       follow its licence as well as this one.
+
+8. Patents
+
+   If You start legal proceedings alleging that the Software infringes a
+   patent, all rights granted to You under this licence end on the date
+   those proceedings are filed.
+
+9. No warranty and limitation of liability
+
+   9.1 The Software is provided "as is", without warranty of any kind,
+       express or implied, including warranties of merchantability, fitness
+       for a particular purpose, title and non-infringement.
+
+   9.2 To the maximum extent the law allows, the Licensor is not liable for
+       any claim, loss, damage or other liability, including loss of data,
+       email or profit, arising from or in connection with the Software or
+       its use, whether in contract, tort or otherwise.
+
+   9.3 You are responsible for the security of any copy You run, and for
+       the email accounts, credentials and data You connect to it.
+
+10. Trademarks
+
+    10.1 This licence grants no rights in the name "Akatsuki", the Akatsuki
+         logo, the domain akatsuki.vc, or any other name, logo or mark of
+         the Licensor.
+
+    10.2 If You publish a Modification, You must give it a different name
+         and logo. You may state truthfully that it is based on Akatsuki.
+
+11. Termination
+
+    11.1 If You breach this licence, Your rights under it end automatically.
+
+    11.2 If it is Your first breach and You stop the breach and fix it
+         within 30 days of receiving written notice from the Licensor, Your
+         rights are reinstated. A later breach ends them permanently unless
+         the Licensor reinstates them in writing.
+
+    11.3 When Your rights end, You must stop using the Software and delete
+         all copies in Your possession or control.
+
+    11.4 Sections 2, 4, 6, 7, 9, 10 and 11 survive termination. Licences
+         You granted under section 6 are irrevocable and survive in every
+         case.
+
+12. Other terms
+
+    12.1 If any part of this licence is held unenforceable, the rest of it
+         stays in effect, and the unenforceable part applies to the
+         greatest extent the law allows.
+
+    12.2 The Licensor may publish new versions of this licence. Software
+         You received under this version stays under this version unless
+         You choose to accept a later one.
+
+    12.3 No failure or delay by the Licensor in enforcing any term waives
+         that term.
+
+13. Contact
+
+    Permissions, commercial licences and questions about this licence:
+    Sami Hindi, sami@samihindi.com

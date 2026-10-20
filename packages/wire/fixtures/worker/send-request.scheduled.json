@@ -1,0 +1,38 @@
+{
+  "description": "ARCHITECTURE \u00a77.3 wire value; must round-trip unchanged (crates/core::wire::worker, and packages/wire/src/worker.ts once it exists).",
+  "type": "SendRequest",
+  "value": {
+    "clientSendId": "01HZX8B",
+    "clientDraftId": "01HZX79",
+    "baseVersion": 5,
+    "draft": {
+      "accountId": "jd7f2k9m4n8p1q3r5s6t7v8w9x0y1z2a",
+      "identityEmail": "sam@example.org",
+      "to": [
+        {
+          "name": "Ada Example",
+          "email": "ada@example.com"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "subject": "Re: Offsite",
+      "html": "<p>Works for me.</p>",
+      "text": "Works for me.",
+      "inReplyToMessageId": "k17abc2def3ghi4jkl5mno6pqr7stu8v",
+      "attachments": [
+        {
+          "uploadId": "up_01HZX7"
+        },
+        {
+          "fromMessageId": "k17abc2def3ghi4jkl5mno6pqr7stu8v",
+          "partId": "2"
+        }
+      ],
+      "readReceipt": false
+    },
+    "sendAt": 1792540800000,
+    "undoSeconds": 0,
+    "deviceId": "dev-desktop-1"
+  }
+}

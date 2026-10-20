@@ -1,0 +1,8 @@
+# Next.js build output and generated types
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+# Playwright
+test-results/
+playwright-report/

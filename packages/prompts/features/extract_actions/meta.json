@@ -1,0 +1,10 @@
+{
+  "id": "extract_actions",
+  "version": 1,
+  "tier": "default",
+  "mode": "object",
+  "stream": false,
+  "maxInputChars": 120000,
+  "maxOutputTokens": 1200,
+  "effort": "low"
+}

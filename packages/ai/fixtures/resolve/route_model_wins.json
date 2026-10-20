@@ -1,0 +1,117 @@
+{
+  "feature": "compose",
+  "settings": {
+    "profiles": [
+      {
+        "profileId": "0b6f2c1e-1111-4a5b-9c0d-000000000001",
+        "label": "Akatsuki AI",
+        "kind": "akatsuki",
+        "models": {},
+        "keyOnDevices": []
+      },
+      {
+        "profileId": "0b6f2c1e-2222-4a5b-9c0d-000000000002",
+        "label": "My OpenRouter",
+        "kind": "openrouter",
+        "models": {},
+        "keyOnDevices": ["dev-laptop"]
+      },
+      {
+        "profileId": "0b6f2c1e-3333-4a5b-9c0d-000000000003",
+        "label": "Local",
+        "kind": "ollama",
+        "baseUrl": "http://localhost:11434",
+        "models": {
+          "default": "llama4:8b",
+          "fast": "qwen3:4b"
+        },
+        "keyOnDevices": []
+      },
+      {
+        "profileId": "0b6f2c1e-4444-4a5b-9c0d-000000000004",
+        "label": "OpenAI",
+        "kind": "openai",
+        "models": {
+          "transcription": "gpt-4o-mini-transcribe"
+        },
+        "keyOnDevices": ["dev-laptop"]
+      },
+      {
+        "profileId": "0b6f2c1e-5555-4a5b-9c0d-000000000005",
+        "label": "Whisper on LAN",
+        "kind": "openai_compatible",
+        "baseUrl": "http://192.168.1.20:8080/v1",
+        "models": {
+          "transcription": "whisper-large-v3"
+        },
+        "keyOnDevices": []
+      },
+      {
+        "profileId": "0b6f2c1e-6666-4a5b-9c0d-000000000006",
+        "label": "Anthropic",
+        "kind": "anthropic",
+        "models": {},
+        "keyOnDevices": ["dev-desktop"]
+      },
+      {
+        "profileId": "0b6f2c1e-7777-4a5b-9c0d-000000000007",
+        "label": "Gemini",
+        "kind": "google",
+        "models": {},
+        "keyOnDevices": ["dev-desktop"]
+      }
+    ],
+    "routes": [
+      {
+        "feature": "default",
+        "profileId": "0b6f2c1e-2222-4a5b-9c0d-000000000002",
+        "enabled": true
+      },
+      {
+        "feature": "triage",
+        "profileId": "0b6f2c1e-3333-4a5b-9c0d-000000000003",
+        "enabled": true
+      },
+      {
+        "feature": "nl_search",
+        "profileId": "0b6f2c1e-6666-4a5b-9c0d-000000000006",
+        "enabled": true
+      },
+      {
+        "feature": "summarize",
+        "profileId": "0b6f2c1e-1111-4a5b-9c0d-000000000001",
+        "enabled": false
+      },
+      {
+        "feature": "rewrite",
+        "profileId": "0b6f2c1e-7777-4a5b-9c0d-000000000007",
+        "enabled": true
+      },
+      {
+        "feature": "compose",
+        "profileId": "0b6f2c1e-6666-4a5b-9c0d-000000000006",
+        "model": "claude-fable-5-1",
+        "enabled": true
+      },
+      {
+        "feature": "dictation",
+        "profileId": "0b6f2c1e-5555-4a5b-9c0d-000000000005",
+        "enabled": true
+      }
+    ],
+    "consent": {
+      "grantedAt": 1792483200000,
+      "version": 1,
+      "autoTriage": true,
+      "syncVoiceProfile": false
+    }
+  },
+  "expect": {
+    "status": "ok",
+    "tier": "default",
+    "profileId": "0b6f2c1e-6666-4a5b-9c0d-000000000006",
+    "model": "claude-fable-5-1",
+    "managed": false,
+    "egress": "provider"
+  }
+}

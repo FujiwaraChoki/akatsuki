@@ -1,0 +1,14 @@
+{
+  "valid": false,
+  "settings": {
+    "profiles": [],
+    "routes": [],
+    "consent": {
+      "grantedAt": 1792483200000,
+      "version": 1,
+      "autoTriage": true,
+      "syncVoiceProfile": false
+    },
+    "voiceProfile": "Short and friendly."
+  }
+}

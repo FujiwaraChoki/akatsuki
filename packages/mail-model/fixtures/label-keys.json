@@ -1,0 +1,206 @@
+{
+  "description": "Label key grammar (ARCHITECTURE §1.4). `parsed` is parseLabelKey(input) ({kind:'sys',role} | {kind:'user',labelId} | {kind:'split',splitId}) or null when the key is invalid. Run by convex/lib/model.ts and crates/core::model::label_key.",
+  "cases": [
+    {
+      "input": "sys:inbox",
+      "parsed": {
+        "kind": "sys",
+        "role": "inbox"
+      }
+    },
+    {
+      "input": "sys:sent",
+      "parsed": {
+        "kind": "sys",
+        "role": "sent"
+      }
+    },
+    {
+      "input": "sys:drafts",
+      "parsed": {
+        "kind": "sys",
+        "role": "drafts"
+      }
+    },
+    {
+      "input": "sys:trash",
+      "parsed": {
+        "kind": "sys",
+        "role": "trash"
+      }
+    },
+    {
+      "input": "sys:spam",
+      "parsed": {
+        "kind": "sys",
+        "role": "spam"
+      }
+    },
+    {
+      "input": "sys:starred",
+      "parsed": {
+        "kind": "sys",
+        "role": "starred"
+      }
+    },
+    {
+      "input": "sys:important",
+      "parsed": {
+        "kind": "sys",
+        "role": "important"
+      }
+    },
+    {
+      "input": "sys:unread",
+      "parsed": {
+        "kind": "sys",
+        "role": "unread"
+      }
+    },
+    {
+      "input": "sys:snoozed",
+      "parsed": {
+        "kind": "sys",
+        "role": "snoozed"
+      }
+    },
+    {
+      "input": "l:k57abc123",
+      "parsed": {
+        "kind": "user",
+        "labelId": "k57abc123"
+      }
+    },
+    {
+      "input": "l:abcdefgh",
+      "parsed": {
+        "kind": "user",
+        "labelId": "abcdefgh"
+      }
+    },
+    {
+      "input": "l:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parsed": {
+        "kind": "user",
+        "labelId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "input": "split:other",
+      "parsed": {
+        "kind": "split",
+        "splitId": "other"
+      }
+    },
+    {
+      "input": "split:j97x2k4m",
+      "parsed": {
+        "kind": "split",
+        "splitId": "j97x2k4m"
+      }
+    },
+    {
+      "input": "split:99999999",
+      "parsed": {
+        "kind": "split",
+        "splitId": "99999999"
+      }
+    },
+    {
+      "input": "",
+      "parsed": null
+    },
+    {
+      "input": "inbox",
+      "parsed": null
+    },
+    {
+      "input": "sys:",
+      "parsed": null
+    },
+    {
+      "input": "sys:archive",
+      "parsed": null
+    },
+    {
+      "input": "sys:INBOX",
+      "parsed": null
+    },
+    {
+      "input": "sys:inbox ",
+      "parsed": null
+    },
+    {
+      "input": " sys:inbox",
+      "parsed": null
+    },
+    {
+      "input": "SYS:inbox",
+      "parsed": null
+    },
+    {
+      "input": "l:",
+      "parsed": null
+    },
+    {
+      "input": "l:a b",
+      "parsed": null
+    },
+    {
+      "input": "l:a:b",
+      "parsed": null
+    },
+    {
+      "input": "l:short",
+      "parsed": null
+    },
+    {
+      "input": "l:abcdefg",
+      "parsed": null
+    },
+    {
+      "input": "l:ABCDEFGHI",
+      "parsed": null
+    },
+    {
+      "input": "l:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parsed": null
+    },
+    {
+      "input": "l:abcdefgh-",
+      "parsed": null
+    },
+    {
+      "input": "l:abcdéfgh",
+      "parsed": null
+    },
+    {
+      "input": "split:",
+      "parsed": null
+    },
+    {
+      "input": "split:Other",
+      "parsed": null
+    },
+    {
+      "input": "split:OTHER",
+      "parsed": null
+    },
+    {
+      "input": "split:other2",
+      "parsed": null
+    },
+    {
+      "input": "split:abc",
+      "parsed": null
+    },
+    {
+      "input": "x:y",
+      "parsed": null
+    },
+    {
+      "input": "label:abcdefgh",
+      "parsed": null
+    }
+  ]
+}

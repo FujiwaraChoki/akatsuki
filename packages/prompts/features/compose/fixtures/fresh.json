@@ -1,0 +1,13 @@
+{
+  "vars": {
+    "instruction": "Ask Lee if the design review can move to Thursday afternoon.",
+    "transcript": null,
+    "draft": "Hi Lee,",
+    "voice": null,
+    "userName": "Sam Placeholder"
+  },
+  "expect": {
+    "schemaValid": true,
+    "mustMention": ["Thursday"]
+  }
+}

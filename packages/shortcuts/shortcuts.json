@@ -1,0 +1,531 @@
+{
+  "$description": "Akatsuki key map: the only place shortcuts are defined. TS reads it directly; Rust gets crates/shortcuts/src/generated.rs from `pnpm shortcuts:build`. Notation: a combo is modifiers plus one key joined with '+', e.g. 'cmd+shift+l'. A sequence is combos separated by one space, e.g. 'g i'. Modifiers: cmd (macOS Command), ctrl, alt, shift. Printable symbols ('#', '!', '?', '/') match the produced character, so their shift is implicit. Named keys: enter, escape, tab, space, backspace, delete, up, down, left, right. 'keys.default' applies on every platform unless 'keys.mac', 'keys.windows' or 'keys.linux' overrides it. 'gmail' optionally overrides the keys for the Gmail-style keymap (prefs.keymap = 'gmail'). 'keywords' are extra words the command palette matches (synonyms such as 'new email' for Compose).",
+  "version": 1,
+  "scopes": {
+    "global": "Anywhere outside a text field. Shortcuts with a cmd, ctrl or alt modifier also work inside text fields.",
+    "mail": "The thread list and an open thread.",
+    "list": "The thread list only.",
+    "thread": "An open thread only.",
+    "compose": "The composer (a text field).",
+    "search": "The search field (a text field).",
+    "palette": "The command palette (a text field)."
+  },
+  "shortcuts": [
+    {
+      "id": "palette.open",
+      "label": "Open command palette",
+      "group": "General",
+      "scope": "global",
+      "palette": false,
+      "keys": { "default": ["ctrl+k"], "mac": ["cmd+k"] }
+    },
+    {
+      "id": "help.shortcuts",
+      "label": "Show keyboard shortcuts",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["keys", "keyboard", "help", "cheat sheet"],
+      "keys": { "default": ["?"] }
+    },
+    {
+      "id": "compose.new",
+      "label": "Compose",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["new", "write", "email", "message", "mail"],
+      "keys": { "default": ["c"] }
+    },
+    {
+      "id": "search.open",
+      "label": "Search",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["find", "look up"],
+      "keys": { "default": ["/"] }
+    },
+    {
+      "id": "undo",
+      "label": "Undo last action",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["revert", "back"],
+      "keys": { "default": ["z"] }
+    },
+    {
+      "id": "settings.open",
+      "label": "Open settings",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["preferences", "options", "account", "configure"],
+      "keys": { "default": ["ctrl+,"], "mac": ["cmd+,"] }
+    },
+
+    {
+      "id": "go.inbox",
+      "label": "Go to Inbox",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g i"] }
+    },
+    {
+      "id": "go.starred",
+      "label": "Go to Starred",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g s"] }
+    },
+    {
+      "id": "go.sent",
+      "label": "Go to Sent",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g t"] }
+    },
+    {
+      "id": "go.drafts",
+      "label": "Go to Drafts",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g d"] }
+    },
+    {
+      "id": "go.snoozed",
+      "label": "Go to Snoozed",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g h"] }
+    },
+    {
+      "id": "go.reminders",
+      "label": "Go to Reminders",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g r"] }
+    },
+    {
+      "id": "go.all",
+      "label": "Go to All mail",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g a"] }
+    },
+    {
+      "id": "go.spam",
+      "label": "Go to Spam",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g !"] }
+    },
+    {
+      "id": "go.trash",
+      "label": "Go to Trash",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g #"] }
+    },
+    {
+      "id": "go.label",
+      "label": "Go to label",
+      "group": "Navigation",
+      "scope": "global",
+      "palette": true,
+      "keys": { "default": ["g l"] }
+    },
+    {
+      "id": "split.next",
+      "label": "Next split",
+      "group": "Navigation",
+      "scope": "mail",
+      "palette": true,
+      "keys": { "default": ["tab"] }
+    },
+    {
+      "id": "split.prev",
+      "label": "Previous split",
+      "group": "Navigation",
+      "scope": "mail",
+      "palette": true,
+      "keys": { "default": ["shift+tab"] }
+    },
+    {
+      "id": "nav.next",
+      "label": "Next conversation",
+      "group": "Navigation",
+      "scope": "mail",
+      "palette": false,
+      "keys": { "default": ["j", "down"] }
+    },
+    {
+      "id": "nav.prev",
+      "label": "Previous conversation",
+      "group": "Navigation",
+      "scope": "mail",
+      "palette": false,
+      "keys": { "default": ["k", "up"] }
+    },
+    {
+      "id": "nav.open",
+      "label": "Open conversation",
+      "group": "Navigation",
+      "scope": "list",
+      "palette": false,
+      "keys": { "default": ["enter", "o"] }
+    },
+    {
+      "id": "nav.back",
+      "label": "Back",
+      "group": "Navigation",
+      "scope": "mail",
+      "palette": false,
+      "keys": { "default": ["escape"] },
+      "gmail": { "default": ["escape", "u"] }
+    },
+
+    {
+      "id": "select.toggle",
+      "label": "Select conversation",
+      "group": "Selection",
+      "scope": "list",
+      "palette": false,
+      "keys": { "default": ["x"] }
+    },
+    {
+      "id": "select.extendDown",
+      "label": "Extend selection down",
+      "group": "Selection",
+      "scope": "list",
+      "palette": false,
+      "keys": { "default": ["shift+j", "shift+down"] }
+    },
+    {
+      "id": "select.extendUp",
+      "label": "Extend selection up",
+      "group": "Selection",
+      "scope": "list",
+      "palette": false,
+      "keys": { "default": ["shift+k", "shift+up"] }
+    },
+    {
+      "id": "select.all",
+      "label": "Select all visible conversations",
+      "group": "Selection",
+      "scope": "list",
+      "palette": true,
+      "keys": { "default": ["ctrl+a"], "mac": ["cmd+a"] }
+    },
+
+    {
+      "id": "thread.archive",
+      "label": "Archive",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["done", "file", "remove from inbox"],
+      "keys": { "default": ["e"] }
+    },
+    {
+      "id": "thread.moveToInbox",
+      "label": "Move to Inbox",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keys": { "default": ["shift+e"] }
+    },
+    {
+      "id": "thread.snooze",
+      "label": "Snooze",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["later", "postpone", "remind"],
+      "keys": { "default": ["h"] },
+      "gmail": { "default": ["b"] }
+    },
+    {
+      "id": "thread.remind",
+      "label": "Remind me if no reply",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["follow up", "nudge", "no reply"],
+      "keys": { "default": ["shift+h"] }
+    },
+    {
+      "id": "thread.reply",
+      "label": "Reply",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["respond", "answer"],
+      "keys": { "default": ["r"] }
+    },
+    {
+      "id": "thread.replyAll",
+      "label": "Reply all",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keys": { "default": ["a"] }
+    },
+    {
+      "id": "thread.forward",
+      "label": "Forward",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["send on", "share"],
+      "keys": { "default": ["f"] }
+    },
+    {
+      "id": "thread.trash",
+      "label": "Move to Trash",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["delete", "remove", "bin"],
+      "keys": { "default": ["#"] }
+    },
+    {
+      "id": "thread.spam",
+      "label": "Report spam",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["junk"],
+      "keys": { "default": ["!"] }
+    },
+    {
+      "id": "thread.toggleRead",
+      "label": "Mark read or unread",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["unread", "seen", "read"],
+      "keys": { "default": ["u"] },
+      "gmail": { "default": ["shift+u", "shift+i"] }
+    },
+    {
+      "id": "thread.star",
+      "label": "Star or unstar",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["flag", "favorite", "favourite", "important"],
+      "keys": { "default": ["s"] }
+    },
+    {
+      "id": "thread.label",
+      "label": "Add or remove label",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["tag", "category"],
+      "keys": { "default": ["l"] }
+    },
+    {
+      "id": "thread.move",
+      "label": "Move to folder",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["folder", "file"],
+      "keys": { "default": ["v"] }
+    },
+    {
+      "id": "thread.unsubscribe",
+      "label": "Unsubscribe",
+      "group": "Conversation",
+      "scope": "mail",
+      "palette": true,
+      "keywords": ["stop", "newsletter", "opt out"],
+      "keys": { "default": ["ctrl+u"], "mac": ["cmd+u"] }
+    },
+    {
+      "id": "thread.expandAll",
+      "label": "Expand all messages",
+      "group": "Conversation",
+      "scope": "thread",
+      "palette": true,
+      "keys": { "default": ["shift+x"] }
+    },
+    {
+      "id": "thread.openOriginal",
+      "label": "Open original",
+      "group": "Conversation",
+      "scope": "thread",
+      "palette": true,
+      "keywords": ["source", "raw", "headers", "print", "show original"],
+      "keys": { "default": [] }
+    },
+    {
+      "id": "thread.showImages",
+      "label": "Show remote images",
+      "group": "Conversation",
+      "scope": "thread",
+      "palette": true,
+      "keywords": ["pictures", "load images"],
+      "keys": { "default": [] }
+    },
+
+    {
+      "id": "ai.summarize",
+      "label": "Summarize conversation",
+      "group": "AI",
+      "scope": "thread",
+      "palette": true,
+      "keywords": ["summary", "tldr"],
+      "keys": { "default": ["shift+s"] }
+    },
+    {
+      "id": "ai.instantReply",
+      "label": "Suggest replies",
+      "group": "AI",
+      "scope": "thread",
+      "palette": true,
+      "keywords": ["suggest", "quick reply"],
+      "keys": { "default": ["shift+r"] }
+    },
+
+    {
+      "id": "compose.send",
+      "label": "Send",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keys": { "default": ["ctrl+enter"], "mac": ["cmd+enter"] }
+    },
+    {
+      "id": "compose.sendLater",
+      "label": "Send later",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keywords": ["schedule"],
+      "keys": { "default": ["ctrl+shift+l"], "mac": ["cmd+shift+l"] }
+    },
+    {
+      "id": "compose.discard",
+      "label": "Discard draft",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keywords": ["delete draft"],
+      "keys": { "default": ["ctrl+shift+,"], "mac": ["cmd+shift+,"] }
+    },
+    {
+      "id": "compose.close",
+      "label": "Close composer",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": false,
+      "keys": { "default": ["escape"] }
+    },
+    {
+      "id": "compose.snippet",
+      "label": "Insert snippet",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keywords": ["template", "canned"],
+      "keys": { "default": ["ctrl+;"], "mac": ["cmd+;"] }
+    },
+    {
+      "id": "compose.attach",
+      "label": "Attach file",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keywords": ["attachment", "file", "upload"],
+      "keys": { "default": ["ctrl+shift+a"], "mac": ["cmd+shift+a"] }
+    },
+    {
+      "id": "compose.cc",
+      "label": "Add Cc",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keys": { "default": ["ctrl+shift+c"], "mac": ["cmd+shift+c"] }
+    },
+    {
+      "id": "compose.bcc",
+      "label": "Add Bcc",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keys": { "default": ["ctrl+shift+b"], "mac": ["cmd+shift+b"] }
+    },
+    {
+      "id": "compose.aiWrite",
+      "label": "Write with AI",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keywords": ["draft", "ai"],
+      "keys": { "default": ["ctrl+j"], "mac": ["cmd+j"] }
+    },
+
+    {
+      "id": "search.close",
+      "label": "Close search",
+      "group": "Search",
+      "scope": "search",
+      "palette": false,
+      "keys": { "default": ["escape"] }
+    },
+    {
+      "id": "search.submit",
+      "label": "Run search",
+      "group": "Search",
+      "scope": "search",
+      "palette": false,
+      "keys": { "default": ["enter"] }
+    },
+
+    {
+      "id": "palette.close",
+      "label": "Close command palette",
+      "group": "Command palette",
+      "scope": "palette",
+      "palette": false,
+      "keys": { "default": ["escape"] }
+    },
+    {
+      "id": "palette.next",
+      "label": "Next command",
+      "group": "Command palette",
+      "scope": "palette",
+      "palette": false,
+      "keys": { "default": ["down", "ctrl+n"] }
+    },
+    {
+      "id": "palette.prev",
+      "label": "Previous command",
+      "group": "Command palette",
+      "scope": "palette",
+      "palette": false,
+      "keys": { "default": ["up", "ctrl+p"] }
+    },
+    {
+      "id": "palette.run",
+      "label": "Run command",
+      "group": "Command palette",
+      "scope": "palette",
+      "palette": false,
+      "keys": { "default": ["enter"] }
+    }
+  ]
+}

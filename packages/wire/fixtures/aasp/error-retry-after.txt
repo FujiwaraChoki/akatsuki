@@ -1,0 +1,3 @@
+event: error
+data: {"code":"provider_rate_limited","message":"The AI provider is busy. Try again shortly.","retryable":true,"retryAfterMs":2000}
+

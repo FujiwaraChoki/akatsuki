@@ -1,0 +1,26 @@
+{
+  "input": {
+    "timezone": "America/St_Johns",
+    "messages": [
+      {
+        "from": null,
+        "to": [],
+        "date": 1783000000000,
+        "text": "no sender, no recipients"
+      },
+      {
+        "from": {
+          "email": "a@example.com"
+        },
+        "to": [
+          {
+            "email": "b@example.com"
+          }
+        ],
+        "date": 1795000000000,
+        "text": "winter <tag> & co"
+      }
+    ]
+  },
+  "expected": "From: \nDate: 2026-07-02T11:16:40-02:30\nTo: \n\nno sender, no recipients\n---\nFrom: a@example.com\nDate: 2026-11-18T07:36:40-03:30\nTo: b@example.com\n\nwinter <tag> & co"
+}

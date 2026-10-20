@@ -1,0 +1,16 @@
+[package]
+name = "akatsuki-shortcuts"
+description = "Akatsuki keyboard shortcuts as Rust data (generated from packages/shortcuts)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+

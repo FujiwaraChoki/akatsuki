@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["query", "today", "timezone", "labels", "splits"],
+  "properties": {
+    "query": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1
+    },
+    "today": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "timezone": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1
+    },
+    "labels": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "splits": {
+      "type": "string",
+      "maxLength": 2000
+    }
+  }
+}

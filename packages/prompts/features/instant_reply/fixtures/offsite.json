@@ -1,0 +1,10 @@
+{
+  "vars": {
+    "transcript": "From: Mia Example <mia@example.com>\nDate: 2026-10-12T09:14:00+02:00\nTo: Sam Placeholder <sam@example.org>\n\nHi Sam,\n\nThe venue for the offsite is booked for 6 November. Could you confirm the head count by Friday 16 October?\nCatering needs the final number by then. Budget is CHF 4,000.\n\nThanks,\nMia\n---\nFrom: Sam Placeholder <sam@example.org>\nDate: 2026-10-12T11:02:00+02:00\nTo: Mia Example <mia@example.com>\n\nThanks Mia, I will check with the team.\n---\nFrom: Mia Example <mia@example.com>\nDate: 2026-10-14T08:30:00+02:00\nTo: Sam Placeholder <sam@example.org>\n\nQuick reminder about the head count. Also, please send the invoice for the deposit (CHF 800) to accounts@example.com.",
+    "userName": "Sam Placeholder",
+    "voice": null
+  },
+  "expect": {
+    "schemaValid": true
+  }
+}

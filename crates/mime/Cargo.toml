@@ -1,0 +1,29 @@
+[package]
+name = "akatsuki-mime"
+description = "MIME parsing, HTML sanitizing and message composition for Akatsuki"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+akatsuki-core.workspace = true
+mail-parser.workspace = true
+mail-builder.workspace = true
+ammonia.workspace = true
+html5ever.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+hmac.workspace = true
+base64.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true

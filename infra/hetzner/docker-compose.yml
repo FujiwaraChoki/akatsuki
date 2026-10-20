@@ -1,0 +1,111 @@
+# Akatsuki production services on the shared Hetzner host (docs/DEPLOY.md, ARCHITECTURE §14.1, §18).
+#
+# Installed at /opt/akatsuki/docker-compose.yml by scripts/deploy-hetzner.sh, never by hand-editing on the
+# server. The host runs many unrelated services: this file only declares akatsuki-* containers, the
+# akatsuki-net network and the akatsuki-sync-spool volume, so `docker compose` here can never touch them.
+#
+#   docker compose -f /opt/akatsuki/docker-compose.yml up -d --wait
+#
+# Ports (host loopback only; host nginx terminates TLS and proxies to them):
+#   127.0.0.1:47310 -> akatsuki-sync:8787   (sync.akatsuki.vc)
+#   127.0.0.1:47311 -> akatsuki-api:8787    (api.akatsuki.vc)
+# Both must be checked free on the host before the first deploy (`ss -ltnH 'sport = :47310'`); the deploy
+# script refuses to continue when either is taken by something that is not ours.
+#
+# Secrets: /opt/akatsuki/sync.env and /opt/akatsuki/api.env (mode 0600, owner root), never in git. Names
+# are listed in infra/sync.env.example and infra/api.env.example.
+name: akatsuki
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  pids_limit: 512
+  networks: [akatsuki-net]
+  logging:
+    # Both services log content-free JSON lines (ARCHITECTURE §7.1, §8): ids, counts, latencies, codes.
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+      tag: "{{.Name}}"
+
+services:
+  akatsuki-sync:
+    <<: *hardening
+    image: ${AKATSUKI_SYNC_IMAGE:-akatsuki-sync:local}
+    container_name: akatsuki-sync
+    # distroless `nonroot` user; the image has no shell and no package manager.
+    user: "65532:65532"
+    env_file:
+      - /opt/akatsuki/sync.env
+    environment:
+      # Fixed by this file, so a stale env file cannot move the listener or the internal API URL.
+      BIND_ADDR: 0.0.0.0:8787
+      API_INTERNAL_URL: http://akatsuki-api:8787
+      PUBLIC_BASE_URL: https://sync.akatsuki.vc
+      SPOOL_DIR: /var/lib/akatsuki-sync/spool
+    ports:
+      - "127.0.0.1:47310:8787"
+    volumes:
+      # Encrypted upload spool (SPOOL_KEY, 24 h TTL, §7.2 /v1/uploads). The only writable path.
+      - akatsuki-sync-spool:/var/lib/akatsuki-sync/spool
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/akatsuki-sync", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Graceful SIGTERM: the worker drains in-flight requests and releases its account leases (D-044).
+    stop_signal: SIGTERM
+    stop_grace_period: 45s
+    mem_limit: 2g
+    cpus: 4
+
+  akatsuki-api:
+    <<: *hardening
+    image: ${AKATSUKI_API_IMAGE:-akatsuki-api:local}
+    container_name: akatsuki-api
+    user: "1000:1000"
+    # tini as PID 1 so SIGTERM reaches node and zombie processes are reaped.
+    init: true
+    env_file:
+      - /opt/akatsuki/api.env
+    environment:
+      BIND_ADDR: 0.0.0.0:8787
+      NODE_ENV: production
+    ports:
+      - "127.0.0.1:47311:8787"
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    healthcheck:
+      # busybox wget ships in the alpine runtime image.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8787/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    mem_limit: 1g
+    cpus: 2
+
+networks:
+  akatsuki-net:
+    name: akatsuki-net
+    driver: bridge
+
+volumes:
+  akatsuki-sync-spool:
+    name: akatsuki-sync-spool
+    # A named volume backed by a directory the deploy script creates as 65532:65532, mode 0700, so the
+    # non-root worker can write to it (a fresh Docker volume would be owned by root).
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/akatsuki/data/sync-spool

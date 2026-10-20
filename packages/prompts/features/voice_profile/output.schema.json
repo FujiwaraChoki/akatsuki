@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["profile"],
+  "properties": {
+    "profile": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "packVersion": "2026.10.1",
+  "features": {
+    "summarize": { "version": 1 },
+    "instant_reply": { "version": 1 },
+    "compose": { "version": 1 },
+    "rewrite": { "version": 1 },
+    "extract_actions": { "version": 1 },
+    "triage": { "version": 1 },
+    "nl_search": { "version": 1 },
+    "voice_profile": { "version": 1 }
+  }
+}
