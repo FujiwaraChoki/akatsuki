@@ -4,19 +4,22 @@ import { api } from "@akatsuki/convex";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useRef } from "react";
 import { Pressable, View } from "react-native";
-import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeOut, useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { describeOpFailure, errorText } from "../lib/errors";
 import { newClientId } from "../lib/ids";
 import { dismissToast, showToast, useToasts } from "../state/toasts";
 import { useTheme } from "../theme/ThemeProvider";
+import { Icon } from "./Icon";
 import { Txt } from "./ui";
 
 export function ToastHost() {
   const t = useTheme();
   const toasts = useToasts();
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   if (toasts.length === 0) return null;
+  const quick = t.motion.duration.quick;
   return (
     <View
       pointerEvents="box-none"
@@ -24,34 +27,36 @@ export function ToastHost() {
         position: "absolute",
         left: 0,
         right: 0,
-        bottom: insets.bottom + t.space[2],
+        // 12 above the home indicator, or above a screen's toolbar (about 56pt).
+        bottom: insets.bottom + 64,
         alignItems: "center",
         gap: t.space[1],
+        paddingHorizontal: t.space[2],
       }}
     >
       {toasts.map((toast) => (
         <Animated.View
           key={toast.id}
-          entering={FadeInDown.duration(t.motion.duration.fast)}
-          exiting={FadeOutDown.duration(t.motion.duration.fast)}
+          entering={reduced ? FadeIn.duration(80) : FadeInDown.duration(quick)}
+          exiting={FadeOut.duration(80)}
           accessibilityLiveRegion="polite"
           accessibilityRole="alert"
           style={{
             maxWidth: 560,
-            width: "92%",
+            width: "100%",
             flexDirection: "row",
             alignItems: "center",
-            gap: t.space["1_5"],
-            paddingLeft: t.space[2],
-            paddingRight: t.space[1],
-            minHeight: 48,
-            borderRadius: t.radius.lg,
-            backgroundColor: t.mode === "dark" ? t.colors.foreground : t.colors.paperText,
-            borderLeftWidth: toast.tone === "error" ? 3 : 0,
-            borderLeftColor: t.colors.accent,
+            gap: t.space[1],
+            paddingLeft: toast.tone === "error" ? t.space["1_5"] : t.space[2],
+            paddingRight: 6,
+            minHeight: 44,
+            borderRadius: t.radius.full,
+            backgroundColor: t.colors.foreground,
+            boxShadow: t.shadow.pop,
           }}
         >
-          <Txt variant="body" style={{ flex: 1, color: t.colors.background }} numberOfLines={3}>
+          {toast.tone === "error" ? <Icon name="alert-circle" size={16} color={t.colors.background} /> : null}
+          <Txt variant="body" tone="inverse" style={{ flex: 1, fontSize: 14 }} numberOfLines={3}>
             {toast.text}
           </Txt>
           {(toast.actions ?? []).map((a) => (
@@ -62,7 +67,7 @@ export function ToastHost() {
               hitSlop={8}
               style={{ paddingHorizontal: t.space[1], minHeight: 44, justifyContent: "center" }}
             >
-              <Txt variant="label" style={{ color: t.colors.accentOnInverse }}>
+              <Txt variant="bodyStrong" tone="inverse" style={{ fontSize: 14 }}>
                 {a.label}
               </Txt>
             </Pressable>
@@ -74,9 +79,7 @@ export function ToastHost() {
             hitSlop={8}
             style={{ paddingHorizontal: t.space[1], minHeight: 44, justifyContent: "center" }}
           >
-            <Txt variant="body" style={{ color: t.colors.background, opacity: 0.6 }}>
-              ×
-            </Txt>
+            <Icon name="close" size={16} color={t.colors.background} />
           </Pressable>
         </Animated.View>
       ))}

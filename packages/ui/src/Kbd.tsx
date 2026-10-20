@@ -3,6 +3,9 @@ import { formatKeys, type ShortcutId } from "@akatsuki/shortcuts";
 import type { HTMLAttributes } from "react";
 import { cx, firstKeys, useUiConfig } from "./config.tsx";
 
+/** Short glyphs for keycaps (the spoken label keeps the words). */
+const CAP_GLYPH: Record<string, string> = { Enter: "↵", Shift: "⇧", Return: "↵" };
+
 export interface KbdProps extends HTMLAttributes<HTMLElement> {
   /** A shortcut id from packages/shortcuts (preferred). */
   shortcut?: ShortcutId;
@@ -19,15 +22,26 @@ export function Kbd({ shortcut, keys, className, ...rest }: KbdProps) {
   const notation = keys ?? (shortcut ? firstKeys(shortcut, config) : null);
   if (!notation) return null;
   const steps = notation.trim().split(/ +/);
+  // A chord shows one keycap per key ([Ctrl][⇧][L]), like the landing page; macOS glyphs stay one cap ("⌘K").
+  const caps = (step: string) => {
+    const text = formatKeys(step, config.platform);
+    const parts = text.length > 1 && text.includes("+") ? text.split(/\+(?=.)/) : [text];
+    return parts.map((k) => CAP_GLYPH[k] ?? k);
+  };
   return (
     <kbd className={cx("ak-kbd", className)} {...rest}>
       {/* Read once as words ("G then I"); the visible keycaps are hidden from assistive tech. */}
       <span className="ak-kbd__label">{formatKeys(notation, config.platform)}</span>
       {steps.map((step, i) => (
+        // Sequences are keycaps side by side (`[G][I]`), with no "then" between them (SPEC §3.5).
         // biome-ignore lint/suspicious/noArrayIndexKey: steps are positional and may repeat ("g g")
         <span key={`${i}-${step}`} className="ak-kbd__step" aria-hidden="true">
-          {i > 0 && <span className="ak-kbd__then">then</span>}
-          <kbd className="ak-kbd__key">{formatKeys(step, config.platform)}</kbd>
+          {caps(step).map((k, j) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: keys of one chord are positional
+            <kbd key={j} className="ak-kbd__key">
+              {k}
+            </kbd>
+          ))}
         </span>
       ))}
     </kbd>

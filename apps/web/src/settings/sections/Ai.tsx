@@ -4,7 +4,7 @@
 // memory for the session, or IndexedDB under a non-extractable WebCrypto key with "Remember on this browser"
 // (D-009); `keyOnDevices` only lists device ids. Then one route per feature (or the default) with an optional
 // model override, and the egress label under each row. Test connection runs from this device.
-import { Badge, Button, errorMessage, Heading, Orbs, useToast } from "@akatsuki/ui";
+import { Button, errorMessage, useToast } from "@akatsuki/ui";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { keyStore } from "../../ai/keyStore.ts";
 import { useAiModule } from "../../ai/module.ts";
@@ -141,7 +141,7 @@ export function AiSection(_props: { me: MeView }) {
         description="Summaries, suggested replies, writing help, search and dictation. You choose the provider for each, including models on your own computer."
       >
         {!consented ? (
-          <div className="ak-settings__warning">
+          <div className="ak-settings__consent">
             <p>
               AI features send only what each one needs, to the provider you pick: a thread for a summary,
               your draft for a rewrite, headers and previews for auto-triage. With Ollama or another local
@@ -212,11 +212,8 @@ export function AiSection(_props: { me: MeView }) {
         )}
         {s.profiles.length === 0 && !adding ? (
           <div className="ak-settings__emptystate">
-            <Orbs variant="subtle" />
-            <Heading level={3} variant="empty">
-              No provider yet.
-            </Heading>
-            <p className="ak-settings__lede">
+            <p className="ak-settings__emptytext">
+              <span className="ak-settings__row-label">No provider yet.</span>{" "}
               {ai.managedAi
                 ? "Akatsuki AI is included with Pro and keeps nothing it reads. Or add Ollama to keep everything on this computer, or bring your own key."
                 : "Add Ollama to keep everything on this computer, or bring your own key."}
@@ -224,7 +221,7 @@ export function AiSection(_props: { me: MeView }) {
             {ai.managedAi && (
               <Button
                 size="sm"
-                variant="primary"
+                variant="secondary"
                 onClick={() =>
                   void addProfile({
                     profileId: crypto.randomUUID(),
@@ -420,15 +417,19 @@ function ProfileCard({
 
   return (
     <li className="ak-settings__card">
-      <div className="ak-settings__card-head">
-        <div>
+      {/* The model-picker anatomy (SPEC §3.8): a mono letter tile, the name, the host, where data goes. */}
+      <div className="ak-settings__card-head ak-provider">
+        <span className="ak-sidebar__tile ak-provider__tile" aria-hidden="true">
+          {(p.label[0] ?? "?").toUpperCase()}
+        </span>
+        <div className="ak-provider__text">
           <span className="ak-settings__card-title">{p.label}</span>
           <span className="ak-settings__hint">
             {info.label}
             {p.baseUrl ? ` · ${p.baseUrl}` : ""}
           </span>
+          {mod && <span className="ak-provider__egress">{mod.egressText(p, "default")}</span>}
         </div>
-        {mod && <Badge tone="outline">{mod.egressText(p, "default")}</Badge>}
       </div>
       {info.needsKey && (
         <>

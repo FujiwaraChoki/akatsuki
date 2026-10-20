@@ -101,7 +101,7 @@ export const ListRowMeta = slot("meta");
 /** Trailing slot: date or hover actions. */
 export const ListRowTrailing = slot("trailing");
 
-/** The unread marker: a small crimson dot with a text alternative. */
+/** The unread marker: a 6px ink dot with a text alternative (never red: the red dot is the brand). */
 export function UnreadDot({ label = "Unread" }: { label?: string }) {
   return <span className="ak-row__dot" role="img" aria-label={label} />;
 }

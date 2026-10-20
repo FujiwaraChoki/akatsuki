@@ -2,16 +2,7 @@
 // and Extract actions, each with its egress label; "Search with AI" turns a sentence into the one search
 // grammar (§11) shown as editable chips before it runs; client-side triage for BYO and local routes while the
 // tab is in the foreground (§12.5). Every action is in the command palette.
-import {
-  Button,
-  Dialog,
-  Eyebrow,
-  errorMessage,
-  Kbd,
-  type PaletteItem,
-  Spinner,
-  useToast,
-} from "@akatsuki/ui";
+import { Button, Crumb, Dialog, errorMessage, Kbd, type PaletteItem, Spinner, useToast } from "@akatsuki/ui";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { registerExtension } from "../app/extensions.ts";
 import { navigate } from "../app/router.tsx";
@@ -131,64 +122,65 @@ function ThreadAi({ detail }: { detail: ThreadDetail }) {
     void run(req.kind);
   }, [req, threadId, run, ai, toast]);
 
+  const [hidden, setHidden] = useState(false);
+  // 1, 2, 3 choose a suggested reply while they are on screen (no field or dialog has the keys).
+  const shown = (replies.state.object as Replies | null)?.replies;
+  const ready = replies.state.status === "done" && (shown?.length ?? 0) > 0;
+  useEffect(() => {
+    if (!ready || !shown) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || !/^[1-3]$/.test(e.key)) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.isContentEditable || (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      const body = shown[Number(e.key) - 1]?.body;
+      if (!body) return;
+      e.preventDefault();
+      composer.requestReply(threadId as ThreadId, "reply", body);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ready, shown, threadId]);
+
   const consent = ai.status("summarize");
   if (consent === "loading") return null;
   if (consent === "consent")
     return (
       <section className="ak-ai ak-ai--off" aria-label="AI">
-        <EgressNote ai={ai} feature="summarize" />
+        <EgressNote ai={ai} feature="summarize" className="ak-ai__egress" />
       </section>
     );
   const s = summary.state.object as Summary | null;
   const r = replies.state.object as Replies | null;
   const a = actions.state.object as Actions | null;
+  const where = (feature: "summarize" | "instant_reply" | "extract_actions") => ai.provenance(feature);
+  const sumStreaming = summary.state.status === "running";
   return (
     <section className="ak-ai" aria-label="AI">
-      <div className="ak-ai__bar" role="toolbar" aria-label="AI actions">
-        <Button
-          size="sm"
-          variant="ghost"
-          shortcut="ai.summarize"
-          onClick={() => void run("summarize")}
-          loading={summary.state.status === "running"}
-        >
-          Summarize
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          shortcut="ai.instantReply"
-          onClick={() => void run("instant_reply")}
-          loading={replies.state.status === "running"}
-        >
-          Suggest replies
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => void run("extract_actions")}
-          loading={actions.state.status === "running"}
-        >
-          Extract actions
-        </Button>
-      </div>
-      <EgressNote ai={ai} feature="summarize" />
-
-      {(summary.state.status === "running" || summary.state.status === "done") && s && (
-        <div className="ak-ai__card" aria-live="polite">
-          <Eyebrow>Summary</Eyebrow>
-          {s.tldr && <p className="ak-ai__tldr">{s.tldr}</p>}
-          {s.bullets && s.bullets.length > 0 && (
-            <ul className="ak-ai__list">
-              {s.bullets.slice(0, 5).map((b, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: streamed list, positional
-                <li key={i}>{b}</li>
-              ))}
-            </ul>
-          )}
+      {(summary.state.status === "running" || summary.state.status === "done") && s && !hidden && (
+        // The summary block (SPEC §3.8, landing .rp-sum): a hairline box, the provenance line in mono caps, then
+        // the text in Geist 13/20. No serif, no tinted fill.
+        <div className="ak-sum ak-sum--summary" aria-live="polite">
+          <div className="ak-sum__head">
+            <Crumb>Summary{where("summarize") ? ` · ${where("summarize")}` : ""}</Crumb>
+            <button type="button" className="ak-textbutton ak-sum__hide" onClick={() => setHidden(true)}>
+              Hide
+            </button>
+          </div>
+          <div className="ak-sum__text" data-streaming={sumStreaming || undefined}>
+            {s.tldr && <p className="ak-sum__tldr">{s.tldr}</p>}
+            {s.bullets && s.bullets.length > 0 && (
+              <ul className="ak-ai__list">
+                {s.bullets.slice(0, 5).map((b, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: streamed list, positional
+                  <li key={i}>{b}</li>
+                ))}
+              </ul>
+            )}
+          </div>
           {s.asks && s.asks.length > 0 && (
             <>
-              <h3 className="ak-ai__sub">Asks</h3>
+              <h3 className="ak-crumb ak-ai__sub">Asks</h3>
               <ul className="ak-ai__list">
                 {s.asks.map((x, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: positional
@@ -199,7 +191,7 @@ function ThreadAi({ detail }: { detail: ThreadDetail }) {
           )}
           {s.deadlines && s.deadlines.length > 0 && (
             <>
-              <h3 className="ak-ai__sub">Deadlines</h3>
+              <h3 className="ak-crumb ak-ai__sub">Deadlines</h3>
               <ul className="ak-ai__list">
                 {s.deadlines.map((x, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: positional
@@ -213,39 +205,28 @@ function ThreadAi({ detail }: { detail: ThreadDetail }) {
           )}
         </div>
       )}
-      {summary.state.status === "error" && <AiError error={summary.state.error} />}
-
-      {r?.replies && r.replies.length > 0 && (
-        <fieldset className="ak-ai__replies">
-          <legend className="ak-visually-hidden">Suggested replies</legend>
-          {r.replies.slice(0, 3).map((x, i) => (
-            <button
-              // biome-ignore lint/suspicious/noArrayIndexKey: positional
-              key={i}
-              type="button"
-              className="ak-ai__reply"
-              disabled={replies.state.status !== "done" || !x.body}
-              onClick={() => composer.requestReply(threadId as ThreadId, "reply", x.body ?? "")}
-            >
-              <span className="ak-ai__reply-label">{x.label}</span>
-              <span className="ak-ai__reply-body">{x.body}</span>
-            </button>
-          ))}
-        </fieldset>
+      {summary.state.status === "error" && (
+        <AiError
+          error={summary.state.error}
+          what="summarize"
+          className="ak-ai__error--summary"
+          onRetry={() => void run("summarize")}
+        />
       )}
-      {replies.state.status === "error" && <AiError error={replies.state.error} />}
 
       {a?.actions && (
-        <div className="ak-ai__card">
-          <Eyebrow>Actions</Eyebrow>
+        <div className="ak-sum">
+          <div className="ak-sum__head">
+            <Crumb>Actions{where("extract_actions") ? ` · ${where("extract_actions")}` : ""}</Crumb>
+          </div>
           {a.actions.length === 0 ? (
-            <p className="ak-settings__hint">Nothing to do in this conversation.</p>
+            <p className="ak-sum__text">Nothing to do in this conversation.</p>
           ) : (
             <ul className="ak-ai__actions">
               {a.actions.map((x, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: positional
                 <li key={i} className="ak-ai__action">
-                  <span className="ak-ai__action-kind">{x.kind}</span>
+                  <span className="ak-crumb ak-ai__action-kind">{x.kind}</span>
                   <span className="ak-ai__action-title">
                     {x.title}
                     {x.due ? ` (${x.due})` : ""}
@@ -273,15 +254,103 @@ function ThreadAi({ detail }: { detail: ThreadDetail }) {
           )}
         </div>
       )}
-      {actions.state.status === "error" && <AiError error={actions.state.error} />}
+      {actions.state.status === "error" && (
+        <AiError
+          error={actions.state.error}
+          what="extract actions"
+          onRetry={() => void run("extract_actions")}
+        />
+      )}
+
+      {r?.replies && r.replies.length > 0 && (
+        // Suggested replies (SPEC §3.8): up to three secondary pills with 1, 2, 3, then where the data went.
+        <div className="ak-ai__suggest">
+          <fieldset className="ak-ai__replies">
+            <legend className="ak-visually-hidden">Suggested replies</legend>
+            {r.replies.slice(0, 3).map((x, i) => (
+              <button
+                // biome-ignore lint/suspicious/noArrayIndexKey: positional
+                key={i}
+                type="button"
+                className="ak-ai__reply"
+                title={x.body}
+                disabled={replies.state.status !== "done" || !x.body}
+                onClick={() => composer.requestReply(threadId as ThreadId, "reply", x.body ?? "")}
+              >
+                <span className="ak-ai__reply-label">{x.label}</span>
+                <Kbd keys={String(i + 1)} />
+              </button>
+            ))}
+          </fieldset>
+          {where("instant_reply") && (
+            <Crumb className="ak-ai__where">Suggested · {where("instant_reply")}</Crumb>
+          )}
+        </div>
+      )}
+      {replies.state.status === "error" && (
+        <AiError
+          error={replies.state.error}
+          what="suggest replies"
+          onRetry={() => void run("instant_reply")}
+        />
+      )}
+
+      <div className="ak-ai__bar" role="toolbar" aria-label="AI actions">
+        <Button
+          size="sm"
+          variant="ghost"
+          shortcut="ai.summarize"
+          onClick={() => {
+            setHidden(false);
+            void run("summarize");
+          }}
+          loading={summary.state.status === "running"}
+        >
+          Summarize
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          shortcut="ai.instantReply"
+          onClick={() => void run("instant_reply")}
+          loading={replies.state.status === "running"}
+        >
+          Suggest replies
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => void run("extract_actions")}
+          loading={actions.state.status === "running"}
+        >
+          Extract actions
+        </Button>
+        <EgressNote ai={ai} feature="summarize" className="ak-ai__egress" />
+      </div>
     </section>
   );
 }
 
-function AiError({ error }: { error: unknown }) {
+function AiError({
+  error,
+  what,
+  onRetry,
+  className,
+}: {
+  error: unknown;
+  what: string;
+  onRetry: () => void;
+  className?: string;
+}) {
   return (
-    <p className="ak-compose__error" role="alert">
-      {errorMessage(error)}
+    <p className={`ak-ai__error ${className ?? ""}`} role="alert">
+      <span className="ak-ai__bang" aria-hidden="true">
+        !
+      </span>
+      Couldn't {what}: {errorMessage(error)} ·{" "}
+      <button type="button" className="ak-textbutton" onClick={onRetry}>
+        Retry
+      </button>
     </p>
   );
 }
@@ -365,7 +434,9 @@ function NlSearchDialog({ me }: { me: MeView }) {
         </Button>
       </div>
       <EgressNote ai={ai} feature="nl_search" />
-      {stream.state.status === "error" && <AiError error={stream.state.error} />}
+      {stream.state.status === "error" && (
+        <AiError error={stream.state.error} what="translate" onRetry={ask} />
+      )}
       {stream.state.status === "running" && <Spinner size="sm" label="Translating" />}
       {(query || out?.query) && (
         <div className="ak-nl">

@@ -57,7 +57,7 @@ AI models and APIs (OpenRouter, Anthropic, OpenAI, Google, Vercel AI Gateway, Ol
 
 | Component | Version | Licence | Notes |
 |---|---|---|---|
-| `expo` and the `expo-*` modules (router, secure-store, sqlite, notifications, font, haptics, crypto, web-browser, linking, localization, network, device, application, constants, splash-screen, status-bar, system-ui, dev-client, build-properties, document-picker, image-picker, file-system) | 58.x (exact pins in `apps/mobile/package.json`) | MIT | |
+| `expo` and the `expo-*` modules (router, secure-store, sqlite, notifications, font, haptics, crypto, web-browser, linking, localization, network, device, application, constants, splash-screen, status-bar, system-ui, dev-client, build-properties, document-picker, image-picker, file-system, audio) | 58.x (exact pins in `apps/mobile/package.json`) | MIT | |
 | `react-native` | 0.88.0 | MIT | |
 | `react`, `react-dom` | 19.3.0 | MIT | mobile pins the React version of its Expo SDK |
 | `react-native-web` | 0.21.4 | MIT | web preview build only |
@@ -66,6 +66,7 @@ AI models and APIs (OpenRouter, Anthropic, OpenAI, Google, Vercel AI Gateway, Ol
 | `react-native-reanimated`, `react-native-worklets` | 4.7.1, 0.13.0 | MIT | |
 | `react-native-safe-area-context`, `react-native-screens` | 5.10.1, 4.30.0 | MIT | |
 | `@shopify/flash-list` | 2.3.2 | MIT | thread lists |
+| `react-native-svg` | 15.16.0 | MIT | the shared stroke icons and the horizon (design spec §2.10, §2.11) |
 | `expo-key-event` | 1.9.0 | MIT | hardware keyboard events (iPad); community module, github.com/tlow92/expo-key-event |
 
 ## Rust

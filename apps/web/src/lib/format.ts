@@ -41,6 +41,22 @@ export function fullDate(ms: number, tz: string): string {
   }).format(ms);
 }
 
+/** A message's time in the reader: "10:56 AM" today, "Tue 10:56 AM" this week, then "Oct 3" / "Oct 3, 2025". */
+export function messageWhen(ms: number, now: number, tz: string): string {
+  const time = fmt(tz, { hour: "numeric", minute: "2-digit" }).format(ms);
+  if (dayKey(ms, tz) === dayKey(now, tz)) return time;
+  if (now - ms < 6 * 86_400_000 && ms <= now) return `${fmt(tz, { weekday: "short" }).format(ms)} ${time}`;
+  return listDate(ms, now, tz);
+}
+
+/** Picker time: "18:00" today, "Wed 08:00" this week, "Oct 30 08:00" later (mono, SPEC §3.7). */
+export function pickerWhen(ms: number, now: number, tz: string): string {
+  const time = fmt(tz, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(ms);
+  if (dayKey(ms, tz) === dayKey(now, tz)) return time;
+  if (ms - now < 6.5 * 86_400_000) return `${fmt(tz, { weekday: "short" }).format(ms)} ${time}`;
+  return `${fmt(tz, { month: "short", day: "numeric" }).format(ms)} ${time}`;
+}
+
 /**
  * The sender column: the other people first ("Mara Okafor" alone, "Mara, Jun" when several), "me" last for
  * the account's own addresses, at most three names.

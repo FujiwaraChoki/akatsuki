@@ -1,10 +1,14 @@
 // The virtualized thread list (ARCHITECTURE §16.2). Fixed row heights from the density tokens, so only the
 // visible window is rendered and nothing shifts as pages stream in. Focus stays on the list
 // (`aria-activedescendant`); the keyboard cursor (j/k) and the selection (x) are owned by the caller.
+// First Light (SPEC §3.1.4): the landing row, fixed tracks (dot 16 | sender 168 | subject and snippet | meta | time
+// 72) so every time and key hint shares one right edge; the cursor row shows its keys instead of the time, a
+// hovered row shows Archive, Snooze and Label buttons in the time's place.
 import { SYS } from "@akatsuki/mail-model";
 import { layout } from "@akatsuki/tokens";
 import {
   Badge,
+  Kbd,
   List,
   ListRow,
   ListRowLeading,
@@ -18,7 +22,7 @@ import {
 import { memo, type ReactNode, type Ref, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TriageChip } from "../ai/TriageChip.tsx";
 import type { LabelView, ListStatus, ThreadRow } from "../backend/types.ts";
-import { IconPaperclip, IconStar } from "../components/Icons.tsx";
+import { IconArchive, IconCheck, IconClock, IconPaperclip, IconStar, IconTag } from "../components/Icons.tsx";
 import { listDate, sendersLabel } from "../lib/format.ts";
 import type { Density } from "../lib/theme.ts";
 import { nearEnd, scrollToReveal, windowFor } from "./virtual.ts";
@@ -28,10 +32,11 @@ export const ROW_HEIGHT: Record<Density, number> = {
   comfortable: layout.rowHeightComfortable,
 };
 
-/** Below this width a row has two lines (sender and time, then subject and preview); keep in step with app.css. */
-export const TWO_LINE_QUERY = "(max-width: 600px)";
-/** Height of a two-line row (the `--ak-row-height` app.css sets for the same query). */
-export const TWO_LINE_ROW_HEIGHT = 64;
+/** At phone width (one column, SPEC §3.1) a row has two lines (sender and time, then subject and preview); keep
+ *  in step with app.css. */
+export const TWO_LINE_QUERY = "(max-width: 768px)";
+/** Height of a two-line row (`layout.rowHeightTouch`, the `--ak-row-height` app.css sets for the same query). */
+export const TWO_LINE_ROW_HEIGHT = layout.rowHeightTouch;
 
 const twoLineQuery = () =>
   typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -70,8 +75,12 @@ export interface ThreadListProps {
   empty: ReactNode;
   onActivate: (id: string) => void;
   onToggleSelect: (id: string) => void;
+  /** Pointer-only row actions (the keys do the same from the keyboard). */
+  onRowAction?: (id: string, action: RowAction) => void;
   listRef?: Ref<HTMLDivElement>;
 }
+
+export type RowAction = "archive" | "snooze" | "label";
 
 export const rowDomId = (id: string) => `row-${id}`;
 
@@ -163,6 +172,7 @@ export function ThreadList(props: ThreadListProps) {
             showSnoozedUntil={props.showSnoozedUntil}
             onActivate={props.onActivate}
             onToggleSelect={props.onToggleSelect}
+            onRowAction={props.onRowAction}
           />
         ))}
       </List>
@@ -189,7 +199,14 @@ interface RowProps {
   showSnoozedUntil?: boolean;
   onActivate: (id: string) => void;
   onToggleSelect: (id: string) => void;
+  onRowAction?: (id: string, action: RowAction) => void;
 }
+
+const ROW_ACTIONS: { action: RowAction; label: string; icon: ReactNode; shortcut: string }[] = [
+  { action: "archive", label: "Archive", icon: <IconArchive />, shortcut: "E" },
+  { action: "snooze", label: "Snooze", icon: <IconClock />, shortcut: "H" },
+  { action: "label", label: "Label", icon: <IconTag />, shortcut: "L" },
+];
 
 const Row = memo(function Row({
   row,
@@ -205,16 +222,22 @@ const Row = memo(function Row({
   showSnoozedUntil,
   onActivate,
   onToggleSelect,
+  onRowAction,
 }: RowProps) {
   const unread = row.labelKeys.includes(SYS.unread);
   const starred = row.labelKeys.includes(SYS.starred);
-  const userLabels = row.labelKeys
+  const allLabels = row.labelKeys
     .filter((k) => k.startsWith("l:"))
     .map((k) => labelsByKey.get(k))
     .filter(
       (l): l is LabelView => l !== undefined && !l.hidden && l.role === undefined && l.kind !== "folder",
-    )
-    .slice(0, 2);
+    );
+  // At most two chips, triage first, then "+1" (SPEC §3.1.4).
+  const triageChips =
+    (row.triage?.needsReply ? 1 : 0) + (row.triage && row.triage.category !== "other" ? 1 : 0);
+  const labelRoom = Math.max(0, 2 - triageChips);
+  const hiddenLabels = Math.max(0, allLabels.length - labelRoom);
+  const userLabels = allLabels.slice(0, labelRoom);
   const when = showSnoozedUntil && row.snoozedUntil ? row.snoozedUntil : row.sortAt;
   return (
     <ListRow
@@ -235,12 +258,16 @@ const Row = memo(function Row({
     >
       <ListRowLeading className="ak-threadrow__lead">
         {selected ? (
-          <span className="ak-threadrow__check" aria-hidden="true" />
+          <>
+            <IconCheck />
+            <span className="ak-visually-hidden">Selected</span>
+          </>
         ) : unread ? (
           <UnreadDot />
         ) : null}
       </ListRowLeading>
       <ListRowTitle>
+        {row.draftCount > 0 && <span className="ak-threadrow__draft">Draft · </span>}
         {sendersLabel(row, myEmails)}
         {row.messageCount > 1 && <span className="ak-threadrow__count">{row.messageCount}</span>}
       </ListRowTitle>
@@ -255,6 +282,7 @@ const Row = memo(function Row({
             {l.name}
           </Badge>
         ))}
+        {hiddenLabels > 0 && <span className="ak-threadrow__more">+{hiddenLabels}</span>}
         {row.hasAttachments && (
           <>
             <IconPaperclip />
@@ -269,8 +297,38 @@ const Row = memo(function Row({
         )}
       </ListRowMeta>
       <ListRowTrailing>
-        <time dateTime={new Date(when).toISOString()}>{listDate(when, now, timezone)}</time>
+        <time className="ak-threadrow__time" dateTime={new Date(when).toISOString()}>
+          {listDate(when, now, timezone)}
+        </time>
+        {active && (
+          <span className="ak-threadrow__hints" aria-hidden="true">
+            <Kbd shortcut="thread.archive" />
+            <Kbd shortcut="thread.snooze" />
+            <Kbd shortcut="thread.reply" />
+          </span>
+        )}
       </ListRowTrailing>
+      {onRowAction && (
+        // Pointer-only shortcuts for what the keys already do (E, H, L): hidden from assistive tech and out of the
+        // tab order, so the option keeps a single accessible name and no nested interactive content.
+        <span className="ak-threadrow__acts" aria-hidden="true">
+          {ROW_ACTIONS.map((a) => (
+            // biome-ignore lint/a11y/noStaticElementInteractions: pointer-only duplicate of a keyboard shortcut
+            // biome-ignore lint/a11y/useKeyWithClickEvents: the shortcut is the keyboard path
+            <span
+              key={a.action}
+              className="ak-threadrow__act"
+              title={`${a.label} ${a.shortcut}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRowAction(row._id, a.action);
+              }}
+            >
+              {a.icon}
+            </span>
+          ))}
+        </span>
+      )}
     </ListRow>
   );
 });

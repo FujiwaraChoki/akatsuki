@@ -158,12 +158,29 @@ export function useAi() {
     },
     [ai, settings],
   );
+  /**
+   * The mono caps provenance line's words (SPEC §3.8): "llama3.3 · On this device", "Akatsuki · Not stored",
+   * "Leaves this device · Anthropic". The full sentence stays `egress()`.
+   */
+  const provenance = useCallback(
+    (feature: AiFeatureId | "dictation"): string | null => {
+      if (!ai) return null;
+      const r = ai.resolveFeature(feature, settings as never);
+      if (r.status !== "ok") return null;
+      const model = (r.model.split("/").pop() ?? r.model).split(":")[0];
+      if (r.egress === "device") return `${model} · On this device`;
+      if (r.egress === "network") return `${model} · On your network`;
+      if (r.egress === "akatsuki" || r.egress === "akatsuki_openai") return "Akatsuki · Not stored";
+      return `Leaves this device · ${r.profile.label}`;
+    },
+    [ai, settings],
+  );
   const run = useCallback(
     (feature: AiFeatureId, vars: Record<string, unknown>, signal?: AbortSignal) =>
       runAi(feature, vars, env, signal, ai ?? undefined),
     [env, ai],
   );
-  return { ai, settings, view, env, status, egress, run, managedAi, keys };
+  return { ai, settings, view, env, status, egress, provenance, run, managedAi, keys };
 }
 
 export type UseAi = ReturnType<typeof useAi>;

@@ -1,5 +1,6 @@
-// Brand typography: Instrument Serif headings (single weight; emphasis by size and colour) and uppercase,
-// tracked labels (0.12em in app chrome, 0.3em on marketing).
+// Typography (First Light, D-482): Instrument Serif headings once per screen at most (subject, empty states,
+// sign-in, settings page title), the sentence-case section label, and mono caps only for the reader crumb, the AI
+// provenance line and chips.
 import type { HTMLAttributes } from "react";
 import { cx } from "./config.tsx";
 
@@ -22,11 +23,16 @@ export function Heading({ level = 2, variant = "heading", accent, className, ...
 }
 
 export interface EyebrowProps extends HTMLAttributes<HTMLSpanElement> {
-  /** `app` (0.12em, Geist) or `brand` (0.3em, Instrument Serif). */
+  /** `app` (Geist 12/500) or `brand` (Instrument Serif 14). */
   variant?: "app" | "brand";
 }
 
-/** An uppercase, tracked label ("SPLITS", "ACCOUNTS"). */
+/** A section label in sentence case ("Labels", "Accounts"), 12/500 tertiary. */
 export function Eyebrow({ variant = "app", className, ...rest }: EyebrowProps) {
   return <span className={cx("ak-eyebrow", `ak-eyebrow--${variant}`, className)} {...rest} />;
+}
+
+/** Mono caps (`INBOX · IMPORTANT`, `SUMMARY · ON THIS DEVICE`): the reader crumb and the AI provenance line only. */
+export function Crumb({ className, ...rest }: HTMLAttributes<HTMLSpanElement>) {
+  return <span className={cx("ak-crumb", className)} {...rest} />;
 }

@@ -1,7 +1,12 @@
-// Small building blocks shared by the settings sections: a section with an Instrument Serif heading, labelled
-// rows, a switch, a segmented radio group. Token-only styles in src/styles/features.css.
-import { cx, Heading } from "@akatsuki/ui";
-import { type ReactNode, useId } from "react";
+// Small building blocks shared by the settings sections: a section (a sentence-case group header over a
+// hairline-bordered group of rows), labelled rows, an ink switch, a segmented radio group. Token-only styles in
+// src/styles/features.css. The page title (Instrument Serif, once per page) is SettingsApp's; a section that
+// repeats it shows only its description, as the page's lede.
+import { cx } from "@akatsuki/ui";
+import { createContext, type ReactNode, useContext, useId } from "react";
+
+/** The settings page's own title, so a section with the same name does not repeat it. */
+export const SettingsPageTitle = createContext<string | null>(null);
 
 export function Section({
   title,
@@ -14,14 +19,16 @@ export function Section({
   children: ReactNode;
   actions?: ReactNode;
 }) {
+  const pageTitle = useContext(SettingsPageTitle);
+  const isPage = pageTitle !== null && pageTitle === title;
   return (
-    <section className="ak-settings__section" aria-label={title}>
-      <header className="ak-settings__section-head">
-        <Heading level={2} variant="heading">
-          {title}
-        </Heading>
-        {actions && <div className="ak-settings__actions">{actions}</div>}
-      </header>
+    <section className="ak-settings__section" aria-label={title} data-page={isPage || undefined}>
+      {(!isPage || actions) && (
+        <header className="ak-settings__section-head">
+          {!isPage && <h2 className="ak-settings__group-head">{title}</h2>}
+          {actions && <div className="ak-settings__actions">{actions}</div>}
+        </header>
+      )}
       {description && <p className="ak-settings__lede">{description}</p>}
       {children}
     </section>

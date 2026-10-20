@@ -140,7 +140,7 @@ test("split tabs, g sequences and Inbox Zero", async ({ page }) => {
   await expect(page.getByRole("listbox", { name: "Inbox conversations" })).toBeVisible();
   await page.keyboard.press("Control+a");
   await page.keyboard.press("e");
-  await expect(page.getByRole("heading", { name: "Inbox zero." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Inbox zero" })).toBeVisible();
 });
 
 test("an op failure shows a toast with Retry, and the thread comes back", async ({ page }) => {
@@ -173,7 +173,9 @@ test("remote images stay blocked until asked", async ({ page }) => {
 
 test("sign out returns to the sign-in page", async ({ page }) => {
   await onboardWithGmail(page);
-  await page.getByRole("button", { name: "Sign out" }).click();
+  // First Light: sign out lives in the account menu ("All inboxes ⌄").
+  await page.getByRole("button", { name: /account menu/ }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Mail at the speed of thought." })).toBeVisible();
 });
 

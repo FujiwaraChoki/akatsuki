@@ -84,6 +84,7 @@ describe("palette", () => {
       "app.settings",
       "app.settings.ai",
       "app.settings.shortcuts",
+      "app.settings.snippets",
       "app.mailboxes",
       "app.signOut",
     ]);

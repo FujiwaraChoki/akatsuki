@@ -3,14 +3,17 @@
 // `?status=pending&grant=` or `?status=error&code=`); this page then redeems the grant with
 // `POST /v1/connect/complete`, which only the user who started the flow can do (D-395). IMAP posts the settings to
 // `/v1/connect/imap`, which tests LOGIN and SMTP AUTH live; host autodetect fills the server fields (D-264, D-396).
-import { Button, Eyebrow, errorCopy, Heading, Orbs, useToast } from "@akatsuki/ui";
+// First Light (SPEC §3.2): no cards and no icons in pink circles; the providers are the landing's ruled specimen
+// rows, chosen with 1, 2 and 3.
+import { Button, errorCopy, Heading, Kbd } from "@akatsuki/ui";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { routeSlot } from "../app/extensions.ts";
 import { navigate } from "../app/router.tsx";
 import { useBackend } from "../backend/context.tsx";
 import type { ImapDiscovery, ImapEndpoint } from "../backend/types.ts";
 import { codeOf } from "../components/ErrorState.tsx";
-import { IconMail } from "../components/Icons.tsx";
+import { IconArrowRight } from "../components/Icons.tsx";
+import { echo } from "../mail/statusEcho.ts";
 
 /** Where the worker sends the browser back after OAuth (must be on its returnTo allow-list, §6.7). */
 export function returnToUrl(): string {
@@ -28,7 +31,9 @@ export function Onboarding({ step, state }: { step?: "imap"; state: "checkout" |
 function Frame({ children }: { children: React.ReactNode }) {
   return (
     <main className="ak-onboarding">
-      <Orbs variant="hero" />
+      <a className="ak-auth__dot" href="https://akatsuki.vc">
+        <span className="ak-visually-hidden">Akatsuki</span>
+      </a>
       <div className="ak-onboarding__inner">{children}</div>
     </main>
   );
@@ -38,7 +43,6 @@ function CheckoutUnavailable() {
   const backend = useBackend();
   return (
     <Frame>
-      <Eyebrow>Akatsuki Pro</Eyebrow>
       <Heading level={1} variant="display" className="ak-onboarding__title">
         Start your trial.
       </Heading>
@@ -81,7 +85,6 @@ function completeError(code: string): string {
 function ConnectChooser() {
   const backend = useBackend();
   const m = backend.useMutations();
-  const { toast } = useToast();
   const result = useConnectResult();
   const [busy, setBusy] = useState<null | "google" | "microsoft" | "skip" | "finishing">(
     result?.status === "pending" ? "finishing" : null,
@@ -97,10 +100,8 @@ function ConnectChooser() {
     backend.worker
       .connectComplete(result.grant)
       .then(async (r) => {
-        toast({
-          title: r.reconnected ? "Mailbox reconnected." : "Mailbox connected. Your mail is syncing.",
-          tone: "success",
-        });
+        // The status bar says it (SPEC §3.9: no persistent "connected" toast).
+        echo(r.reconnected ? "Mailbox reconnected" : "Mailbox connected · syncing");
         await m.updateProfile({ onboarding: "done" }).catch(() => undefined);
         navigate("/inbox", { replace: true });
       })
@@ -108,7 +109,7 @@ function ConnectChooser() {
         setError(completeError(codeOf(e)));
         setBusy(null);
       });
-  }, [result, m, toast, backend.worker]);
+  }, [result, m, backend.worker]);
 
   const start = async (provider: "google" | "microsoft") => {
     setBusy(provider);
@@ -128,9 +129,28 @@ function ConnectChooser() {
     navigate("/inbox", { replace: true });
   };
 
+  // 1, 2, 3 choose a provider (SPEC §3.2).
+  const choose = useRef<(n: number) => void>(() => undefined);
+  choose.current = (n) => {
+    if (busy) return;
+    if (n === 1) void start("google");
+    else if (n === 2) void start("microsoft");
+    else if (n === 3) navigate("/onboarding/imap");
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || !/^[123]$/.test(e.key)) return;
+      const t = e.target as HTMLElement | null;
+      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      e.preventDefault();
+      choose.current(Number(e.key));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <Frame>
-      <Eyebrow>Connect your mail</Eyebrow>
       <Heading level={1} variant="display" className="ak-onboarding__title">
         Bring your inbox.
       </Heading>
@@ -141,18 +161,21 @@ function ConnectChooser() {
         <ConnectCard
           title="Gmail"
           detail="Google Workspace and gmail.com"
+          n={1}
           busy={busy === "google"}
           onClick={() => start("google")}
         />
         <ConnectCard
           title="Outlook"
           detail="Microsoft 365, outlook.com and hotmail.com"
+          n={2}
           busy={busy === "microsoft"}
           onClick={() => start("microsoft")}
         />
         <ConnectCard
           title="Other (IMAP)"
           detail="iCloud, Fastmail, Yahoo, your own server"
+          n={3}
           onClick={() => navigate("/onboarding/imap")}
         />
       </ul>
@@ -166,9 +189,14 @@ function ConnectChooser() {
           {error}
         </p>
       )}
-      <Button variant="ghost" onClick={skip} loading={busy === "skip"} className="ak-onboarding__skip">
+      <button
+        type="button"
+        className="ak-auth__text ak-onboarding__skip"
+        onClick={skip}
+        disabled={busy === "skip"}
+      >
         I'll do this later
-      </Button>
+      </button>
     </Frame>
   );
 }
@@ -176,11 +204,13 @@ function ConnectChooser() {
 function ConnectCard({
   title,
   detail,
+  n,
   busy,
   onClick,
 }: {
   title: string;
   detail: string;
+  n: number;
   busy?: boolean;
   onClick: () => void;
 }) {
@@ -193,13 +223,12 @@ function ConnectCard({
         aria-busy={busy || undefined}
         disabled={busy}
       >
-        <span className="ak-connect__icon" aria-hidden="true">
-          <IconMail width={20} height={20} />
-        </span>
         <span className="ak-connect__text">
           <span className="ak-connect__title">{title}</span>
           <span className="ak-connect__detail">{detail}</span>
         </span>
+        <Kbd keys={String(n)} className="ak-connect__key" />
+        <IconArrowRight className="ak-connect__arrow" />
       </button>
     </li>
   );
@@ -268,7 +297,6 @@ const SOURCE_NOTE: Record<ImapDiscovery["source"], string> = {
 function ImapForm() {
   const backend = useBackend();
   const m = backend.useMutations();
-  const { toast } = useToast();
   const ids = { email: useId(), user: useId(), pass: useId() };
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -317,7 +345,7 @@ function ImapForm() {
         smtp,
       });
       setPassword("");
-      toast({ title: "Mailbox connected. Your mail is syncing.", tone: "success" });
+      echo("Mailbox connected · syncing");
       await m.updateProfile({ onboarding: "done" }).catch(() => undefined);
       navigate("/inbox", { replace: true });
     } catch (err) {
@@ -329,8 +357,7 @@ function ImapForm() {
 
   return (
     <Frame>
-      <Eyebrow>Connect IMAP</Eyebrow>
-      <Heading level={1} variant="heading" className="ak-onboarding__title">
+      <Heading level={1} variant="display" className="ak-onboarding__title ak-onboarding__title--step">
         Any mailbox, one inbox.
       </Heading>
       <form className="ak-imap" onSubmit={submit} noValidate>
@@ -399,12 +426,12 @@ function ImapForm() {
           </p>
         )}
         <div className="ak-auth__actions">
-          <Button type="submit" variant="primary" size="lg" loading={busy}>
+          <Button type="submit" variant="brand" size="lg" loading={busy}>
             Connect
           </Button>
-          <Button variant="ghost" onClick={() => navigate("/onboarding")}>
+          <button type="button" className="ak-auth__text" onClick={() => navigate("/onboarding")}>
             Back
-          </Button>
+          </button>
         </div>
         <p className="ak-imap__privacy">
           Your password is sent once over TLS to the Akatsuki sync service, which tests it and stores it

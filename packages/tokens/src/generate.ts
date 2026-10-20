@@ -10,10 +10,15 @@ export interface Palette {
   accentText: Hex;
   background: Hex;
   foreground: Hex;
+  /** Emissive marks (D-431, First Light): the logo dot, the keyboard cursor bar, carets, the horizon and the
+   *  recording dot. The light accent in both themes; a graphic, never body text on dark. */
+  dawn: Hex;
+  /** Text and glyphs on `accent` fills (D-431). */
+  onAccent: Hex;
 }
 
 /** Palette keys, in output order. */
-export const PALETTE_KEYS = ["accent", "accentText", "background", "foreground"] as const;
+export const PALETTE_KEYS = ["accent", "accentText", "background", "foreground", "dawn", "onAccent"] as const;
 
 export type FontRole = "serif" | "sans" | "mono";
 
@@ -35,6 +40,8 @@ export interface TextStyle {
 }
 
 export interface Tokens {
+  /** Token paths kept only for apps that have not migrated yet (First Light, D-481); delete once unused. */
+  $deprecated?: { $note?: string; paths: string[] };
   color: { light: Palette; dark: Palette };
   opacity: { foreground: Record<string, number>; accent: Record<string, number> };
   space: { base: number; scale: Record<string, number> };
@@ -82,6 +89,11 @@ export function validateTokens(input: unknown): Tokens {
       if (!KEY_RE.test(k)) fail(`opacity.${group}.${k}: bad key`);
       if (typeof v !== "number" || v < 0 || v > 1) fail(`opacity.${group}.${k} must be in [0, 1]`);
     }
+  }
+  for (const path of t.$deprecated?.paths ?? []) {
+    let node: unknown = t;
+    for (const part of path.split(".")) node = (node as Record<string, unknown> | undefined)?.[part];
+    if (node === undefined) fail(`$deprecated: ${path} does not exist (delete it from the list)`);
   }
   if (t.space?.base !== 8) fail("space.base must be 8 (8px grid)");
   for (const [k, v] of Object.entries(t.space.scale)) {
@@ -143,6 +155,14 @@ function cubic(e: [number, number, number, number]): string {
   return `cubic-bezier(${e.map(num).join(", ")})`;
 }
 
+/** One comment naming the deprecated token paths, for the generated file headers. */
+function deprecatedNote(t: Tokens, kind: "css" | "ts" | "rust"): string {
+  const paths = t.$deprecated?.paths ?? [];
+  if (paths.length === 0) return "";
+  const text = `Deprecated (First Light, D-481; delete once desktop and mobile stop using them): ${paths.join(", ")}.`;
+  return kind === "css" ? `\n/* ${text} */` : `\n// ${text}`;
+}
+
 // ───────────── CSS ─────────────
 
 function paletteVars(p: Palette): string[] {
@@ -193,6 +213,8 @@ function staticVars(t: Tokens): string[] {
   out.push(`--orb-opacity: ${num(t.motion.orb.opacity)};`);
   for (const [k, v] of Object.entries(t.layout)) out.push(`--layout-${kebab(k)}: ${v}px;`);
   out.push(`--card-blur: ${num(t.effect.cardBlur ?? 20)}px;`);
+  // Unitless effect values (e.g. the level 1 shadow opacities, First Light D-481).
+  for (const [k, v] of Object.entries(t.effect)) out.push(`--effect-${kebab(k)}: ${num(v)};`);
   return out;
 }
 
@@ -207,7 +229,7 @@ export function toCss(t: Tokens): string {
   const light = [...paletteVars(t.color.light), "color-scheme: light;"];
   const dark = [...paletteVars(t.color.dark), "color-scheme: dark;"];
   const parts = [
-    `/* ${GENERATED_HEADER} */`,
+    `/* ${GENERATED_HEADER} */${deprecatedNote(t, "css")}`,
     block(":root", [...staticVars(t), ...derivedColorVars(t)]),
     block(':root,\n[data-theme="light"]', light),
     `@media (prefers-color-scheme: dark) {\n${block(':root:not([data-theme="light"])', dark, "  ")}\n}`,
@@ -215,7 +237,11 @@ export function toCss(t: Tokens): string {
     // The derived colours must be re-declared where the palette changes, because custom
     // properties referencing other custom properties resolve on the element that declares them.
     block('[data-theme="light"],\n[data-theme="dark"]', derivedColorVars(t)),
-    `@media (prefers-reduced-motion: reduce) {\n${block(":root", ["--duration-instant: 0ms;", "--duration-fast: 0ms;", "--duration-normal: 0ms;", "--duration-slow: 0ms;", "--duration-stagger: 0ms;"], "  ")}\n}`,
+    `@media (prefers-reduced-motion: reduce) {\n${block(
+      ":root",
+      Object.keys(t.motion.duration).map((k) => `--duration-${kebab(k)}: 0ms;`),
+      "  ",
+    )}\n}`,
   ];
   return `${parts.join("\n\n")}\n`;
 }
@@ -279,13 +305,13 @@ export function toTs(t: Tokens): string {
     effect: t.effect,
   };
   const json = JSON.stringify(data, null, 2);
-  return `// ${GENERATED_HEADER}
+  return `// ${GENERATED_HEADER}${deprecatedNote(t, "ts")}
 
 export const tokens = ${json} as const;
 
 export type Tokens = typeof tokens;
 export type ThemeMode = "light" | "dark";
-export type ColorName = "accent" | "accentText" | "background" | "foreground";
+export type ColorName = ${PALETTE_KEYS.map((k) => `"${k}"`).join(" | ")};
 export type FontRole = keyof Tokens["font"];
 export type SpaceKey = keyof Tokens["space"];
 export type RadiusKey = keyof Tokens["radius"];
@@ -315,12 +341,7 @@ export function accent(mode: ThemeMode, step: AccentOpacity): string {
 }
 
 function upper(p: Palette): Palette {
-  return {
-    accent: p.accent.toUpperCase() as Hex,
-    accentText: p.accentText.toUpperCase() as Hex,
-    background: p.background.toUpperCase() as Hex,
-    foreground: p.foreground.toUpperCase() as Hex,
-  };
+  return Object.fromEntries(PALETTE_KEYS.map((k) => [k, p[k].toUpperCase()])) as unknown as Palette;
 }
 
 // ───────────── Rust ─────────────
@@ -340,7 +361,8 @@ export function toRust(t: Tokens): string {
       const [r, g, b] = hexToRgb(hex);
       return `Rgb { r: ${r}, g: ${g}, b: ${b} }`;
     };
-    return `pub const ${name}: Palette = Palette {\n    accent: ${c(p.accent)},\n    accent_text: ${c(p.accentText)},\n    background: ${c(p.background)},\n    foreground: ${c(p.foreground)},\n};`;
+    const fields = PALETTE_KEYS.map((k) => `    ${screamingSnake(k).toLowerCase()}: ${c(p[k])},`).join("\n");
+    return `pub const ${name}: Palette = Palette {\n${fields}\n};`;
   };
   const consts = (rec: Record<string, number>, ty: string, prefix = "") =>
     Object.entries(rec)
@@ -370,7 +392,7 @@ export function toRust(t: Tokens): string {
     .map(([k, v]) => `        pub const ${screamingSnake(k)}: [f32; 4] = [${v.map(f32).join(", ")}];`)
     .join("\n");
 
-  return `// ${GENERATED_HEADER}
+  return `// ${GENERATED_HEADER}${deprecatedNote(t, "rust")}
 // Rust owner: include with \`#[rustfmt::skip] mod generated; pub use generated::*;\` in crates/tokens/src/lib.rs
 // (this file is the canonical layout; rustfmt must not reformat it, or tokens:build and cargo fmt disagree).
 #![allow(dead_code)]
@@ -402,6 +424,11 @@ pub struct Palette {
     pub accent_text: Rgb,
     pub background: Rgb,
     pub foreground: Rgb,
+    /// Emissive marks: the logo dot, cursor bar, carets, horizon and recording dot (D-431). The same red in
+    /// both themes; a graphic, never body text on dark.
+    pub dawn: Rgb,
+    /// Text and glyphs on \`accent\` fills (D-431).
+    pub on_accent: Rgb,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -1,11 +1,15 @@
-// Primitives styled only from tokens (via the theme): text styles, buttons, fields, chips, rows.
-import type { ReactNode } from "react";
+// Primitives styled only from tokens (via the theme), per the First Light spec (§2, §4): ink on paper, hairlines
+// for structure, red only where it means something. Buttons are flat pills: `primary` is ink, `brand` is the
+// accent fill (sign-in only), `secondary` a hairline pill, `ghost` quiet text, `destructive` accent-text.
+import { Children, Fragment, isValidElement, type ReactNode, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   type PressableProps,
   type StyleProp,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   type TextInputProps,
@@ -18,8 +22,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../theme/ThemeProvider";
 import type { Theme } from "../theme/theme";
 
+/** Borderless inputs (compose fields, search, palette) draw no browser focus outline in the web preview. */
+export const NO_OUTLINE: TextStyle | null =
+  Platform.OS === "web" ? ({ outlineStyle: "none", outlineWidth: 0 } as unknown as TextStyle) : null;
+
+/** Keyboard hints next to actions only where a keyboard is likely: iPad (spec §4.6), and wide web previews. */
+export function showKeyHints(width?: number): boolean {
+  if (Platform.OS === "ios") return Platform.isPad;
+  if (Platform.OS === "web") return (width ?? 0) >= 768;
+  return false;
+}
+
 type Variant = keyof Theme["text"];
-type Tone = "text" | "secondary" | "muted" | "accent" | "onAccent" | "error";
+type Tone = "text" | "secondary" | "tertiary" | "muted" | "accent" | "onAccent" | "error" | "inverse";
 
 export function Txt({
   variant = "body",
@@ -33,14 +48,25 @@ export function Txt({
       ? t.colors.accentText
       : tone === "onAccent"
         ? t.colors.onAccent
-        : t.colors[tone];
+        : tone === "inverse"
+          ? t.colors.background
+          : t.colors[tone];
   return <Text {...rest} maxFontSizeMultiplier={1.6} style={[t.text[variant], { color }, style]} />;
 }
 
-/** Uppercase tracked label (0.12em in app chrome). */
+/** Sentence-case group or field label (`text.app.section`). */
 export function Label({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
   return (
     <Txt variant="label" tone="muted" style={style} accessibilityRole="header">
+      {children}
+    </Txt>
+  );
+}
+
+/** Mono caps (spec §2.1): only the thread crumb, AI provenance and chips. */
+export function Crumb({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
+  return (
+    <Txt variant="crumb" tone="muted" style={style}>
       {children}
     </Txt>
   );
@@ -61,7 +87,7 @@ export function Screen({
   );
 }
 
-export type ButtonVariant = "primary" | "secondary" | "ghost";
+export type ButtonVariant = "primary" | "brand" | "secondary" | "ghost" | "destructive";
 
 export function Button({
   title,
@@ -73,6 +99,7 @@ export function Button({
   style,
   accessibilityLabel,
   compact,
+  icon,
 }: {
   title: string;
   onPress?: () => void;
@@ -84,9 +111,23 @@ export function Button({
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   compact?: boolean;
+  /** An icon before the title. */
+  icon?: ReactNode;
 }) {
   const t = useTheme();
-  const primary = variant === "primary";
+  const filled = variant === "primary" || variant === "brand";
+  const fill = variant === "brand" ? t.colors.accent : t.colors.foreground;
+  const textColor = filled
+    ? disabled
+      ? t.colors.muted
+      : variant === "brand"
+        ? t.colors.onAccent
+        : t.colors.background
+    : variant === "destructive"
+      ? t.colors.accentText
+      : variant === "ghost"
+        ? t.colors.tertiary
+        : t.colors.text;
   return (
     <Pressable
       accessibilityRole="button"
@@ -97,41 +138,34 @@ export function Button({
       hitSlop={6}
       style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
         {
-          minHeight: compact ? 36 : 44,
+          minHeight: compact ? 36 : 48,
           paddingHorizontal: compact ? t.space["1_5"] : t.space[2],
-          // Pills, like web and the landing site (one radius token for buttons on every client, D-409).
           borderRadius: t.radius.full,
           alignItems: "center",
           justifyContent: "center",
           flexDirection: "row",
           gap: t.space[1],
-          // A disabled primary is an outline with quiet text, not a dimmed deep crimson that reads as broken.
-          opacity: disabled && !primary ? 0.45 : 1,
-          backgroundColor: primary
-            ? disabled
-              ? "transparent"
-              : t.colors.accent
-            : variant === "secondary"
-              ? t.colors.surface
-              : "transparent",
-          borderWidth: variant === "secondary" ? StyleSheet.hairlineWidth : primary && disabled ? 1 : 0,
+          opacity: disabled && !filled ? 0.45 : 1,
+          // A disabled filled button is a quiet grey pill, not a dimmed colour that reads as broken.
+          backgroundColor: filled ? (disabled ? t.colors.border : fill) : "transparent",
+          borderWidth: variant === "secondary" ? 1 : 0,
           borderColor: t.colors.border,
         },
-        primary && !disabled ? { boxShadow: `0 0 ${t.space[3]}px ${t.colors.accentGlow}` } : null,
-        pressed ? { opacity: 0.75 } : null,
-        focused ? { borderWidth: 2, borderColor: t.colors.accentMid } : null,
+        pressed ? { opacity: 0.7 } : null,
+        // Focus is a 2px ink ring (spec §2.8).
+        focused ? { outlineWidth: 2, outlineColor: t.colors.foreground, outlineOffset: 2 } : null,
         style,
       ]}
     >
-      {busy ? <ActivityIndicator color={primary ? t.colors.onAccent : t.colors.muted} /> : null}
-      <Txt
-        variant="bodyStrong"
-        tone={primary ? (disabled ? "muted" : "onAccent") : variant === "ghost" ? "accent" : "text"}
+      {busy ? <ActivityIndicator color={textColor} /> : icon}
+      <Text
+        maxFontSizeMultiplier={1.6}
+        style={[t.text.bodyStrong, { color: textColor }, compact ? { fontSize: 14 } : null]}
       >
         {title}
-      </Txt>
+      </Text>
       {hint ? (
-        <Txt variant="caption" tone={primary ? "onAccent" : "muted"} style={{ opacity: 0.8 }}>
+        <Txt variant="caption" style={{ color: textColor, opacity: 0.7 }}>
           {hint}
         </Txt>
       ) : null}
@@ -143,27 +177,39 @@ export function Field({
   label,
   error,
   style,
+  onFocus,
+  onBlur,
   ...rest
 }: TextInputProps & { label?: string; error?: string | null }) {
   const t = useTheme();
+  const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: t.space["0_5"] }}>
       {label ? <Label>{label}</Label> : null}
       <TextInput
         placeholderTextColor={t.colors.muted}
-        selectionColor={t.colors.accent}
+        selectionColor={t.colors.dawn}
+        cursorColor={t.colors.dawn}
         accessibilityLabel={label}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
         {...rest}
         style={[
           t.text.reading,
           {
             color: t.colors.text,
-            minHeight: 44,
+            minHeight: 48,
             paddingHorizontal: t.space["1_5"],
             paddingVertical: t.space[1],
             borderRadius: t.radius.md,
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: error ? t.colors.accent : t.colors.border,
+            borderWidth: 1,
+            borderColor: error ? t.colors.accentText : focused ? t.colors.foreground : t.colors.border,
             backgroundColor: t.colors.background,
           },
           style,
@@ -183,11 +229,14 @@ export function Chip({
   onPress,
   selected,
   onRemove,
+  mono,
 }: {
   label: string;
   onPress?: () => void;
   selected?: boolean;
   onRemove?: () => void;
+  /** Mono text (search operators). */
+  mono?: boolean;
 }) {
   const t = useTheme();
   return (
@@ -197,19 +246,23 @@ export function Chip({
       accessibilityState={{ selected: !!selected }}
       onPress={onRemove ?? onPress}
       style={({ pressed }) => ({
+        alignSelf: "flex-start",
         flexDirection: "row",
         alignItems: "center",
         gap: t.space["0_5"],
         paddingHorizontal: t.space["1_5"],
         minHeight: 32,
         borderRadius: t.radius.full,
-        backgroundColor: selected ? t.colors.accentTint : t.colors.surface,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: selected ? t.colors.accentMid : t.colors.borderSubtle,
-        opacity: pressed ? 0.7 : 1,
+        backgroundColor: selected || pressed ? t.colors.surfaceStrong : t.colors.background,
+        borderWidth: 1,
+        borderColor: selected ? t.colors.border : t.colors.borderSubtle,
       })}
     >
-      <Txt variant="meta" tone={selected ? "accent" : "text"}>
+      <Txt
+        variant={mono ? "code" : "meta"}
+        tone={selected ? "text" : "secondary"}
+        style={mono ? { fontSize: 13 } : null}
+      >
         {label}
       </Txt>
       {onRemove ? (
@@ -227,8 +280,9 @@ export function Row({
   right,
   onPress,
   selected,
+  icon,
   ...rest
-}: { title: string; detail?: string | null; right?: ReactNode; selected?: boolean } & Pick<
+}: { title: string; detail?: string | null; right?: ReactNode; selected?: boolean; icon?: ReactNode } & Pick<
   PressableProps,
   "onPress" | "accessibilityHint"
 >) {
@@ -246,14 +300,17 @@ export function Row({
         gap: t.space["1_5"],
         paddingHorizontal: t.space[2],
         paddingVertical: t.space["1_5"],
-        minHeight: 52,
-        backgroundColor: pressed || selected ? t.colors.selected : "transparent",
+        minHeight: 48,
+        backgroundColor: pressed || selected ? t.colors.surfaceStrong : "transparent",
       })}
     >
+      {icon}
       <View style={{ flex: 1, gap: 2 }}>
-        <Txt variant="body">{title}</Txt>
+        <Txt variant="body" style={{ fontSize: 16, lineHeight: 22 }}>
+          {title}
+        </Txt>
         {detail ? (
-          <Txt variant="meta" tone="muted">
+          <Txt variant="meta" tone="tertiary">
             {detail}
           </Txt>
         ) : null}
@@ -263,11 +320,19 @@ export function Row({
   );
 }
 
-export function Divider() {
+export function Divider({ inset = 0 }: { inset?: number }) {
   const t = useTheme();
-  return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: t.colors.borderSubtle }} />;
+  return (
+    <View
+      style={{ height: StyleSheet.hairlineWidth, marginLeft: inset, backgroundColor: t.colors.borderSubtle }}
+    />
+  );
 }
 
+/**
+ * A settings group (spec §4.9): a sentence-case header, the rows on a `surface` plane with radius lg, hairlines
+ * between rows inset 16, and an optional footer. One level, no card inside a card.
+ */
 export function Section({
   title,
   children,
@@ -278,20 +343,22 @@ export function Section({
   footer?: string | null;
 }) {
   const t = useTheme();
+  const items = Children.toArray(children).filter((c) => isValidElement(c));
   return (
-    <View style={{ marginTop: t.space[3] }}>
-      <Label style={{ paddingHorizontal: t.space[2], marginBottom: t.space[1] }}>{title}</Label>
-      <View
-        style={{
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderColor: t.colors.borderSubtle,
-        }}
-      >
-        {children}
-      </View>
+    <View style={{ marginTop: t.space[3], marginHorizontal: t.space[2] }}>
+      <Label style={{ marginBottom: t.space[1], marginLeft: t.space["0_5"] }}>{title}</Label>
+      {items.length > 0 ? (
+        <View style={{ backgroundColor: t.colors.surface, borderRadius: t.radius.lg, overflow: "hidden" }}>
+          {items.map((c, i) => (
+            <Fragment key={(isValidElement(c) && c.key) || i}>
+              {i > 0 ? <Divider inset={t.space[2]} /> : null}
+              {c}
+            </Fragment>
+          ))}
+        </View>
+      ) : null}
       {footer ? (
-        <Txt variant="meta" tone="muted" style={{ paddingHorizontal: t.space[2], marginTop: t.space[1] }}>
+        <Txt variant="meta" tone="muted" style={{ marginTop: t.space[1], marginHorizontal: t.space["0_5"] }}>
           {footer}
         </Txt>
       ) : null}
@@ -301,10 +368,10 @@ export function Section({
 
 export function Spinner() {
   const t = useTheme();
-  return <ActivityIndicator color={t.colors.accent} accessibilityLabel="Loading" />;
+  return <ActivityIndicator color={t.colors.muted} accessibilityLabel="Loading" />;
 }
 
-/** A radio-style choice row. */
+/** A radio-style choice row: an ink ring, an ink dot when chosen (no accent, spec §4.9). */
 export function Choice({
   title,
   detail,
@@ -329,18 +396,45 @@ export function Choice({
             width: 20,
             height: 20,
             borderRadius: 10,
-            borderWidth: 2,
-            borderColor: selected ? t.colors.accent : t.colors.borderHover,
+            borderWidth: 1.5,
+            borderColor: selected ? t.colors.foreground : t.colors.border,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
           {selected ? (
-            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.colors.accent }} />
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.colors.foreground }} />
           ) : null}
         </View>
       }
       selected={false}
+    />
+  );
+}
+
+/** An ink switch (spec §4.9): track `fg` when on, `lineStrong` when off; the thumb is the page colour. */
+export function Toggle({
+  value,
+  onValueChange,
+  disabled,
+  accessibilityLabel,
+}: {
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+  disabled?: boolean;
+  accessibilityLabel: string;
+}) {
+  const t = useTheme();
+  return (
+    <Switch
+      accessibilityLabel={accessibilityLabel}
+      value={value}
+      disabled={disabled}
+      onValueChange={onValueChange}
+      trackColor={{ true: t.colors.foreground, false: t.colors.border }}
+      thumbColor={t.colors.background}
+      ios_backgroundColor={t.colors.border}
+      {...({ activeThumbColor: t.colors.background } as object)}
     />
   );
 }

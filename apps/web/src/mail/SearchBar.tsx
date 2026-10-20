@@ -1,14 +1,19 @@
 // The search field (§11): one grammar (parseQuery from @akatsuki/mail-model), operator and value suggestions
 // as you type, parse errors shown inline once the user pauses (never for an operator still waiting for its value)
 // or presses Enter. `search.submit` runs it, `search.close` leaves.
+// First Light (SPEC §3.6): it rests in the top bar as "Search /"; focused, it takes over the whole bar with the
+// operator chips on the right and the suggestions in a popover under it.
 import { parseQuery } from "@akatsuki/mail-model";
-import { eventMatchesShortcut, useUiConfig } from "@akatsuki/ui";
+import { eventMatchesShortcut, Kbd, useUiConfig } from "@akatsuki/ui";
 import { type KeyboardEvent, type Ref, useEffect, useId, useMemo, useState } from "react";
 import { IconSearch } from "../components/Icons.tsx";
 import { applySuggestion, lastToken, type SuggestContext, suggest } from "./searchSuggest.ts";
 
 /** How long typing pauses before a parse error shows. */
 export const ERROR_PAUSE_MS = 900;
+
+/** Operator chips shown in the open field; a click inserts one. */
+const OPERATORS = ["from:", "to:", "is:unread", "has:attachment", "before:"] as const;
 
 export interface SearchBarProps {
   value: string;
@@ -98,7 +103,7 @@ export function SearchBar(props: SearchBarProps) {
         aria-autocomplete="list"
         aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
         aria-invalid={(showErrors && errors.length > 0) || undefined}
-        placeholder="Search (from:, is:unread, has:attachment, before:2026-01-01)"
+        placeholder={focused ? "Search mail: from:, is:unread, has:attachment, before:2026-01-01" : "Search"}
         value={value}
         onChange={(e) => change(e.target.value)}
         onKeyDown={onKeyDown}
@@ -114,6 +119,24 @@ export function SearchBar(props: SearchBarProps) {
         autoComplete="off"
         spellCheck={false}
       />
+      {!focused && !value && <Kbd shortcut="search.open" className="ak-search__key" />}
+      {focused && (
+        <span className="ak-search__ops" aria-hidden="true">
+          {OPERATORS.map((op) => (
+            // biome-ignore lint/a11y/noStaticElementInteractions: pointer shortcut for typing the operator
+            <span
+              key={op}
+              className="ak-search__opchip"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                change(`${value.trim() ? `${value.trimEnd()} ` : ""}${op}`);
+              }}
+            >
+              {op}
+            </span>
+          ))}
+        </span>
+      )}
       {items.length > 0 && (
         <div id={listId} role="listbox" aria-label="Suggestions" className="ak-search__suggest">
           {items.map((s, i) => (

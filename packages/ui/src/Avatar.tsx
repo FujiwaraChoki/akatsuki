@@ -1,6 +1,6 @@
 // Avatars: an image when one is given (proxied by the caller; never a raw remote URL from mail), otherwise
-// initials on an accent tint. The tint is one of the accent opacity steps picked by a hash of the address,
-// so people are distinguishable without a second palette.
+// initials as a mono letter tile (First Light: no tinted circles; the sender's name carries the identity, so the
+// mail views do not use avatars at all). `tintOf` stays as a stable hash for callers that group by sender.
 import { type HTMLAttributes, useState } from "react";
 import { cx } from "./config.tsx";
 

@@ -1,10 +1,12 @@
 // Settings (`/settings/<section>`): a sidebar of sections and the section's page. Keyboard-first like the mail
 // shell: ↑/↓ or j/k move between sections, Escape or g i goes back to the inbox, Ctrl/⌘ K opens the palette
 // with every section and the main navigation, Ctrl/⌘ , comes here from anywhere.
+// First Light (SPEC §3.10, the Linear pattern): the nav has the sidebar's metrics with "← Back to mail Esc" on top;
+// the page is a 640 column with one serif title, then hairline-bordered groups of rows.
 import {
   CommandPalette,
-  Eyebrow,
-  IconButton,
+  Heading,
+  Kbd,
   type PaletteItem,
   paletteItemsFromShortcuts,
   useUiConfig,
@@ -22,7 +24,7 @@ import { Link, navigate } from "../app/router.tsx";
 import { useBackend } from "../backend/context.tsx";
 import type { MeView } from "../backend/types.ts";
 import { ErrorBoundary, ErrorState } from "../components/ErrorState.tsx";
-import { IconBack, IconClose } from "../components/Icons.tsx";
+import { IconBack } from "../components/Icons.tsx";
 import { isTextInput, useShortcuts } from "../keyboard/useShortcuts.ts";
 import { type AppearancePatch, useSyncServerTheme } from "../lib/theme.ts";
 import { SETTINGS_PAGES, type SettingsPageId } from "./pages.ts";
@@ -39,6 +41,7 @@ import {
 import { LabelsSection } from "./sections/Labels.tsx";
 import { RulesSection, SplitsSection } from "./sections/Rules.tsx";
 import { SendersSection, SnippetsSection } from "./sections/Snippets.tsx";
+import { SettingsPageTitle } from "./ui.tsx";
 
 const RENDER: Record<SettingsPageId, (me: MeView) => ReactNode> = {
   accounts: () => <AccountsSection />,
@@ -161,13 +164,11 @@ export default function SettingsApp({ section }: { section?: string }) {
   return (
     <div className="ak-settings" data-view={view}>
       <nav ref={nav} className="ak-settings__nav" aria-label="Settings" onKeyDown={onNavKey}>
-        <div className="ak-settings__brand">
-          <Link href="/inbox" className="ak-settings__back">
-            <span className="ak-sidebar__mark" aria-hidden="true" />
-            <span>Back to mail</span>
-          </Link>
-        </div>
-        <Eyebrow>Settings</Eyebrow>
+        <Link href="/inbox" className="ak-settings__back">
+          <IconBack />
+          <span>Back to mail</span>
+          <Kbd shortcut="nav.back" />
+        </Link>
         <ul>
           {SETTINGS_PAGES.map((p) => (
             <li key={p.id}>
@@ -184,24 +185,27 @@ export default function SettingsApp({ section }: { section?: string }) {
         </ul>
       </nav>
       <main className="ak-settings__main" aria-label={page.label}>
-        <h1 className="ak-visually-hidden">{page.label} settings</h1>
-        <div className="ak-settings__top">
-          {narrow && (
+        {narrow && (
+          <div className="ak-settings__top">
             <Link href="/settings" className="ak-settings__up">
               <IconBack />
               <span>All settings</span>
             </Link>
-          )}
-          <IconButton
-            label="Close settings"
-            icon={<IconClose />}
-            shortcut="nav.back"
-            onClick={() => navigate("/inbox")}
-          />
+          </div>
+        )}
+        <div className="ak-settings__page">
+          <Heading level={1} variant="heading" className="ak-settings__title">
+            {page.label}
+          </Heading>
+          <SettingsPageTitle.Provider value={page.label}>
+            <ErrorBoundary
+              resetKey={page.id}
+              fallback={(e, reset) => <ErrorState error={e} onRetry={reset} />}
+            >
+              {RENDER[page.id](me)}
+            </ErrorBoundary>
+          </SettingsPageTitle.Provider>
         </div>
-        <ErrorBoundary resetKey={page.id} fallback={(e, reset) => <ErrorState error={e} onRetry={reset} />}>
-          {RENDER[page.id](me)}
-        </ErrorBoundary>
       </main>
       <CommandPalette open={palette} onOpenChange={setPalette} items={items} />
     </div>

@@ -8,11 +8,13 @@ import { type ComponentProps, useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StorageFailureScreen } from "../src/components/StorageFailure";
 import { ToastHost } from "../src/components/Toasts";
-import { Label, Txt } from "../src/components/ui";
+import { Txt } from "../src/components/ui";
 import { ENV } from "../src/env";
 import { authClient } from "../src/lib/auth";
 import { convex } from "../src/lib/clients";
+import { useSecureFailure } from "../src/lib/secure";
 import { FONT_SOURCES } from "../src/theme/fonts";
 import { ThemeProvider, useTheme } from "../src/theme/ThemeProvider";
 
@@ -39,7 +41,19 @@ function NotConfigured({ missing }: { missing: string[] }) {
         This build has no server addresses. Set these variables and rebuild:
       </Txt>
       {missing.map((m) => (
-        <Label key={m}>{m}</Label>
+        <Txt
+          key={m}
+          variant="code"
+          tone="secondary"
+          style={{
+            fontSize: 13,
+            paddingVertical: t.space[1],
+            borderBottomWidth: 1,
+            borderBottomColor: t.colors.borderSubtle,
+          }}
+        >
+          {m}
+        </Txt>
       ))}
     </View>
   );
@@ -47,6 +61,8 @@ function NotConfigured({ missing }: { missing: string[] }) {
 
 function AppStack() {
   const t = useTheme();
+  const storage = useSecureFailure();
+  if (storage) return <StorageFailureScreen failure={storage} />;
   return (
     <>
       <StatusBar style={t.mode === "dark" ? "light" : "dark"} />

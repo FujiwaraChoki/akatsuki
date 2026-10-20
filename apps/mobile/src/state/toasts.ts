@@ -26,7 +26,18 @@ function emit() {
 }
 
 export function showToast(t: Toast): void {
-  toasts = [...toasts.filter((x) => x.id !== t.id), t].slice(-3);
+  // At most one info toast (a new one replaces it) and two errors above it (design spec §3.9, §4.8).
+  const kept = toasts.filter((x) => x.id !== t.id && (t.tone === "error" || x.tone === "error"));
+  const errors = [...kept.filter((x) => x.tone === "error"), ...(t.tone === "error" ? [t] : [])].slice(-2);
+  const info = t.tone === "error" ? kept.filter((x) => x.tone !== "error").slice(-1) : [t];
+  const next = [...errors, ...info];
+  for (const x of toasts) {
+    if (next.includes(x)) continue;
+    const timer = timers.get(x.id);
+    if (timer) clearTimeout(timer);
+    timers.delete(x.id);
+  }
+  toasts = next;
   const old = timers.get(t.id);
   if (old) clearTimeout(old);
   const ms = t.durationMs ?? 4000;

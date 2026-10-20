@@ -1,4 +1,5 @@
-// Status banners above the list: offline, accounts that need a reconnect, accounts still syncing (§15).
+// Status lines above the list: offline, accounts that need a reconnect, accounts still syncing (§15). First Light:
+// one quiet hairline-ruled line each, no tinted fills; the status bar carries the same state in brief.
 import { Button, maskAccount } from "@akatsuki/ui";
 import { useEffect, useState } from "react";
 import { useBackend } from "../backend/context.tsx";
@@ -20,7 +21,7 @@ function useOnline(): boolean {
 }
 
 /** True after the live connection has been down for `graceMs` (short blips are not worth a banner). */
-function useOffline(graceMs = 2500): boolean {
+export function useOffline(graceMs = 2500): boolean {
   const backend = useBackend();
   const connected = backend.useConnected();
   const online = useOnline();
@@ -59,7 +60,7 @@ export function Banners({
       {reauth.map((a) => (
         <div key={a._id} className="ak-banner ak-banner--error" role="alert">
           <span>{maskAccount(a.email)} needs to be reconnected before it can sync again.</span>
-          <Button size="sm" variant="primary" onClick={() => onReconnect(a)}>
+          <Button size="sm" variant="secondary" onClick={() => onReconnect(a)}>
             Reconnect
           </Button>
         </div>

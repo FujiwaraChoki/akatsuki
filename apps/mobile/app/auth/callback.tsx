@@ -2,7 +2,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { Orbs } from "../../src/components/Orbs";
 import { Button, Screen, Spinner, Txt } from "../../src/components/ui";
 import { acceptHandoff } from "../../src/lib/auth";
 import { useTheme } from "../../src/theme/ThemeProvider";
@@ -26,7 +25,6 @@ export default function AuthCallback() {
 
   return (
     <Screen>
-      <Orbs />
       <View
         style={{
           flex: 1,

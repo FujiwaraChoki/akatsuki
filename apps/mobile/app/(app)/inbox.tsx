@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { EmptyState } from "../../src/components/EmptyState";
 import { Header, HeaderButton } from "../../src/components/Header";
+import { Icon } from "../../src/components/Icon";
 import { ThreadList } from "../../src/components/ThreadList";
 import { Button, Screen, Spinner, Txt } from "../../src/components/ui";
 import { convex, worker } from "../../src/lib/clients";
@@ -87,6 +88,7 @@ export default function Inbox() {
   const liveReady = list.status !== "LoadingFirstPage";
   const rows = useCachedFirstPage(labelKey, list.results as ThreadRowLike[], liveReady);
   const [refreshing, setRefreshing] = useState(false);
+  const [selecting, setSelecting] = useState(false);
 
   // Wi-Fi prefetch of the newest inbox bodies (§16.2).
   useEffect(() => {
@@ -107,14 +109,28 @@ export default function Inbox() {
     if (list.status === "CanLoadMore") list.loadMore(PAGE);
   }, [list]);
 
+  // Spec §4.1: search and compose as icons in the header; the command palette is a long press on search (and
+  // ⌘K on a keyboard), so every command stays reachable without a keyboard.
   const headerRight = (
     <>
-      <HeaderButton label="Search" onPress={() => router.push("/search")} />
-      <HeaderButton
-        label="Commands"
-        hint="Open the command palette"
-        onPress={() => router.push({ pathname: "/palette", params: { scopes: "list" } })}
-      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Search"
+        accessibilityHint="Long press for the command palette"
+        onPress={() => router.push("/search")}
+        onLongPress={() => router.push({ pathname: "/palette", params: { scopes: "list" } })}
+        hitSlop={8}
+        style={({ pressed }) => ({
+          minWidth: 44,
+          minHeight: 44,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed ? 0.55 : 1,
+        })}
+      >
+        <Icon name="search" />
+      </Pressable>
+      <HeaderButton label="Compose" icon="compose" onPress={() => router.push("/compose")} />
     </>
   );
 
@@ -143,7 +159,7 @@ export default function Inbox() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: t.space[2], gap: t.space[2] }}
+        contentContainerStyle={{ paddingHorizontal: t.space[2], gap: 22 }}
         style={{ flexGrow: 0, borderBottomWidth: 1, borderBottomColor: t.colors.borderSubtle }}
         accessibilityRole="tablist"
       >
@@ -157,21 +173,20 @@ export default function Inbox() {
               accessibilityLabel={x.count ? `${x.title}, ${x.count} unread` : x.title}
               onPress={() => setTab(x.key)}
               style={{
-                paddingVertical: t.space[1],
-                minHeight: 44,
+                minHeight: 40,
                 justifyContent: "center",
                 borderBottomWidth: 2,
-                borderBottomColor: on ? t.colors.accent : "transparent",
+                borderBottomColor: on ? t.colors.foreground : "transparent",
                 flexDirection: "row",
                 alignItems: "center",
-                gap: t.space["0_5"],
+                gap: 6,
               }}
             >
-              <Txt variant="label" tone={on ? "text" : "muted"}>
+              <Txt variant="body" tone={on ? "text" : "muted"} style={on ? t.text.bodyStrong : null}>
                 {x.title}
               </Txt>
               {x.count ? (
-                <Txt variant="caption" tone="accent">
+                <Txt variant="code" tone="muted">
                   {x.count}
                 </Txt>
               ) : null}
@@ -191,12 +206,21 @@ export default function Inbox() {
         <Button title="Connect a mailbox" variant="primary" onPress={() => router.push("/settings")} />
       </EmptyState>
     ) : (
-      <EmptyState title={mailbox.emptyTitle} body={mailbox.emptyBody} />
+      <EmptyState
+        title={mailbox.emptyTitle}
+        body={mailbox.emptyBody}
+        zero={mailbox.id === "inbox" && labelKey === SYS.inbox}
+      />
     );
 
   return (
     <Screen>
-      <Header title={title} onTitlePress={() => router.push("/mailboxes")} right={headerRight} />
+      <Header
+        variant="bar"
+        title={title}
+        onTitlePress={() => router.push("/mailboxes")}
+        right={selecting ? null : headerRight}
+      />
       {splitBar}
       <View style={{ flex: 1 }}>
         <ThreadList
@@ -206,6 +230,7 @@ export default function Inbox() {
           empty={empty}
           refreshing={refreshing}
           onRefresh={refresh}
+          onSelectingChange={setSelecting}
           extraShortcuts={
             tabs.length > 1
               ? {
@@ -215,27 +240,6 @@ export default function Inbox() {
               : {}
           }
         />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Compose"
-          onPress={() => router.push("/compose")}
-          style={({ pressed }) => ({
-            position: "absolute",
-            right: t.space[2],
-            bottom: t.space[3],
-            paddingHorizontal: t.space[3],
-            minHeight: 52,
-            borderRadius: t.radius.full,
-            backgroundColor: t.colors.accent,
-            justifyContent: "center",
-            boxShadow: `0 0 ${t.effect.glowBlur}px ${t.colors.accentGlow}`,
-            opacity: pressed ? 0.85 : 1,
-          })}
-        >
-          <Txt variant="label" tone="onAccent">
-            Compose
-          </Txt>
-        </Pressable>
       </View>
     </Screen>
   );

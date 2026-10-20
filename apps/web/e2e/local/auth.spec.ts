@@ -31,7 +31,7 @@ test("email code sign-in, onboarding, empty inbox, worker errors, sign-out", asy
 
   await page.getByRole("button", { name: "I'll do this later" }).click();
   await expect(page).toHaveURL(/\/inbox$/);
-  await expect(page.getByRole("heading", { name: "No mailbox yet." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No mailbox yet" })).toBeVisible();
 
   // Live data: theme preference round-trips through me.updatePrefs and survives a reload.
   await page.keyboard.press("Control+k");
@@ -41,7 +41,7 @@ test("email code sign-in, onboarding, empty inbox, worker errors, sign-out", asy
   // Reload at once, possibly before the save reached the server: the unsaved choice must win over the older
   // server value and be sent again (lib/theme.ts, D-400).
   await page.reload();
-  await expect(page.getByRole("heading", { name: "No mailbox yet." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No mailbox yet" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   // Once the server has confirmed it, nothing is pending and a fresh load reads "dark" from the server.
   await page.waitForFunction(() => localStorage.getItem("ak:prefs-pending") === null, undefined, {
@@ -49,10 +49,11 @@ test("email code sign-in, onboarding, empty inbox, worker errors, sign-out", asy
   });
   await page.evaluate(() => localStorage.removeItem("ak:theme"));
   await page.reload();
-  await expect(page.getByRole("heading", { name: "No mailbox yet." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No mailbox yet" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("button", { name: /account menu/ }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/signin$/);
   await expect(page.getByRole("heading", { name: "Mail at the speed of thought." })).toBeVisible();
 });

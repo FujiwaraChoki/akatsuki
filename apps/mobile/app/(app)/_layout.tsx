@@ -1,12 +1,12 @@
 // The signed-in shell: mail context, theme from prefs, hardware keyboard, global shortcuts, toasts for op
 // failures, outbox replay (§16.1), device registration with the push token (§4.2 `devices.register`).
 import { api } from "@akatsuki/convex";
-import { useMutation } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import { Redirect, router, Stack } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import { FailureWatcher } from "../../src/components/Toasts";
-import { Spinner } from "../../src/components/ui";
+import { Button, Spinner, Txt } from "../../src/components/ui";
 import { authClient } from "../../src/lib/auth";
 import { convex } from "../../src/lib/clients";
 import { appVersion, deviceName, getDeviceId } from "../../src/lib/device";
@@ -16,6 +16,7 @@ import {
   obtainPushToken,
   pushPermission,
 } from "../../src/lib/push";
+import { signOutEverywhereOnDevice } from "../../src/lib/session";
 import { outbox, useThreadActions } from "../../src/state/actions";
 import { KeyboardProvider, useGlobalShortcuts, useKeyboard } from "../../src/state/keyboard";
 import { deviceTimeZone, MailProvider, useMail } from "../../src/state/mail";
@@ -50,6 +51,15 @@ function GlobalKeys() {
     "go.trash": () => go("go.trash"),
     "go.reminders": () => router.push("/reminders"),
     "go.label": () => router.push({ pathname: "/palette", params: { mode: "labels" } }),
+    // Palette-only commands (no keys): labels are managed on their settings page.
+    "labels.create": () => router.push("/settings/labels"),
+    "labels.rename": () => router.push("/settings/labels"),
+    "labels.remove": () => router.push("/settings/labels"),
+    "sends.scheduled": () => router.push("/scheduled"),
+    "compose.continueDraft": () => go("go.drafts"),
+    // The search screen registers its own handlers for these; from elsewhere they open it.
+    "search.ai": () => router.push("/search"),
+    "search.fullMailbox": () => router.push("/search"),
   });
   return null;
 }
@@ -141,7 +151,10 @@ function ShellStack() {
       <Stack.Screen name="settings/index" />
       <Stack.Screen name="settings/ai" />
       <Stack.Screen name="settings/shortcuts" />
-      <Stack.Screen name="compose" options={{ presentation: "modal", gestureEnabled: false }} />
+      <Stack.Screen name="settings/labels" />
+      <Stack.Screen name="settings/snippets" />
+      <Stack.Screen name="scheduled" />
+      <Stack.Screen name="compose" options={{ presentation: "modal", gestureEnabled: true }} />
       <Stack.Screen
         name="snooze"
         options={{ presentation: "formSheet", sheetAllowedDetents: [0.6, 1], sheetGrabberVisible: true }}
@@ -155,23 +168,59 @@ function ShellStack() {
   );
 }
 
-export default function AppLayout() {
+/** While the session or the Convex token is loading; after 12 s it says so and offers a way out. */
+function Connecting() {
   const t = useTheme();
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setSlow(true), 12_000);
+    return () => clearTimeout(id);
+  }, []);
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: t.space[2],
+        padding: t.space[3],
+        backgroundColor: t.colors.background,
+      }}
+    >
+      <Spinner />
+      {slow ? (
+        <>
+          <Txt
+            variant="body"
+            tone="secondary"
+            style={{ textAlign: "center" }}
+            accessibilityLiveRegion="polite"
+          >
+            Still connecting to Akatsuki. Check your connection.
+          </Txt>
+          <Button
+            title="Sign out"
+            variant="ghost"
+            onPress={() =>
+              signOutEverywhereOnDevice()
+                .catch(() => {})
+                .then(() => router.replace("/sign-in"))
+            }
+          />
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+export default function AppLayout() {
   const session = authClient!.useSession();
-  if (session.isPending)
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: t.colors.background,
-        }}
-      >
-        <Spinner />
-      </View>
-    );
+  const convexAuth = useConvexAuth();
+  if (session.isPending) return <Connecting />;
   if (!session.data) return <Redirect href="/sign-in" />;
+  // Convex must hold this session's token before any query runs; right after sign-in it can lag a moment, and
+  // queries sent without it fail with `unauthenticated`.
+  if (convexAuth.isLoading || !convexAuth.isAuthenticated) return <Connecting />;
   return (
     <MailProvider>
       <Shell />

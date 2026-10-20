@@ -1,30 +1,95 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: rules are ordered by component; a later, less specific rule is scoped to its own component and never meets the earlier one */
 /*
  * @akatsuki/ui styles. Uses ONLY @akatsuki/tokens CSS variables (import @akatsuki/tokens/tokens.css first).
- * No literal colours: every colour is a token or rgb(var(--*-rgb) / <token opacity>). Class prefix: ak-.
- * Motion honours prefers-reduced-motion (the token durations drop to 0ms and the orbs stop).
+ * No literal colours: every colour is a token, rgb(var(--*-rgb) / <opacity>) or a color-mix of two token colours.
+ * Class prefix: ak-.
+ *
+ * First Light (docs/DECISIONS.md D-480..D-489): ink on paper, hairlines for structure, red only where something
+ * needs your eye. Every neutral is the foreground over the background at a token opacity (opaque, so text on it
+ * can be measured); the one red is --dawn for marks and --accent for the three brand buttons. Flat, then one
+ * lift: only popovers, the palette and toasts are raised (one hairline, one soft shadow, never a blur).
+ * Product state changes are instant; only things that appear move, briefly. Reduced motion drops every transform.
  */
 
-/* Derived roles (not new colours): text on the accent is the light end of the theme in both modes. */
-:root {
-  --ak-on-accent: var(--background);
-  --ak-surface: rgb(var(--background-rgb) / 0.92);
-  --ak-raised: rgb(var(--foreground-rgb) / 0.04);
-  --ak-shadow: 0 24px 64px -32px rgb(var(--foreground-rgb) / 0.35), 0 0 0 1px var(--fg-border-subtle);
-  /* Focus indicator (WCAG 1.4.11 / 2.4.13): the accent text colour, at least 4.5:1 on the page in both modes
-     (D-399), as a 2px ring 2px off the element. Inputs use the same colour as a 2px border (D-409). */
-  --ak-focus-color: var(--accent-text);
+/* ───────────── roles (SPEC §2.3) ───────────── */
+
+:root,
+[data-theme] {
+  --ak-fg: var(--foreground);
+  /* Text tones: 80 secondary, 70 tertiary (muted steps up to it on a surface), 60 muted. */
+  --ak-fg-80: color-mix(
+    in srgb,
+    var(--foreground) calc(var(--opacity-fg-secondary) * 100%),
+    var(--background)
+  );
+  --ak-fg-70: color-mix(
+    in srgb,
+    var(--foreground) calc(var(--opacity-fg-tertiary) * 100%),
+    var(--background)
+  );
+  --ak-fg-60: color-mix(in srgb, var(--foreground) calc(var(--opacity-fg-muted) * 100%), var(--background));
+  /* Strokes: hairline, input border, hover/active stroke (never text). */
+  --ak-line: color-mix(
+    in srgb,
+    var(--foreground) calc(var(--opacity-fg-border-subtle) * 100%),
+    var(--background)
+  );
+  --ak-line-strong: color-mix(
+    in srgb,
+    var(--foreground) calc(var(--opacity-fg-border) * 100%),
+    var(--background)
+  );
+  --ak-stroke: color-mix(
+    in srgb,
+    var(--foreground) calc(var(--opacity-fg-border-hover) * 100%),
+    var(--background)
+  );
+  /* Planes: the sidebar, status bar, hover rows and keycaps; the selected row, active nav and highlighted item. */
+  --ak-surface: color-mix(
+    in srgb,
+    var(--foreground) calc(var(--opacity-fg-surface) * 100%),
+    var(--background)
+  );
+  --ak-surface-strong: color-mix(
+    in srgb,
+    var(--foreground) calc(var(--opacity-fg-surface-strong) * 100%),
+    var(--background)
+  );
+  /* The brand dot and every mark (cursor bar, caret, horizon, recording dot): the same red in both themes. */
+  --ak-dot: var(--dawn);
+  --ak-on-accent: var(--on-accent);
+  /* Level 1 elevation (SPEC §2.7): one hairline and one soft shadow, from the palette rgb triplets. */
+  --ak-pop:
+    0 16px 48px -16px rgb(var(--foreground-rgb) / var(--effect-pop-opacity-light)),
+    0 2px 6px -2px rgb(var(--foreground-rgb) / 0.06);
+  --ak-scrim: rgb(var(--foreground-rgb) / 0.06);
+  /* Focus (SPEC §2.8, D-484, supersedes D-399/D-409's accent ring): a 2px ring in the text colour, 2px off the
+     element, at least 17:1 on the page in both themes. Inputs draw a 1px border in the same colour. */
+  --ak-focus-color: var(--foreground);
   --ak-focus: 0 0 0 2px var(--background), 0 0 0 4px var(--ak-focus-color);
-  --ak-focus-field: 0 0 0 1px var(--ak-focus-color);
+  --ak-focus-field: 0 0 0 0 var(--ak-focus-color);
+  /* Older names kept for the app stylesheets. */
+  --ak-raised: var(--ak-surface);
+  --ak-shadow: var(--ak-pop);
   /* Space a page keeps clear under the toasts (a sticky action bar); pages raise it where needed. */
   --ak-toast-offset: 0px;
+  /* Where toasts sit: bottom-left of the list pane, 12px above the status bar (pages without one reset these). */
+  --ak-toast-left: calc(var(--layout-sidebar-width) + var(--space-1-5));
+  --ak-toast-bottom: calc(var(--layout-status-bar-height) + var(--space-1-5));
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ak-on-accent: var(--foreground);
+    --ak-pop:
+      0 16px 48px -16px rgb(var(--background-rgb) / var(--effect-pop-opacity-dark)),
+      0 0 0 1px rgb(var(--background-rgb) / 0.4);
+    --ak-scrim: rgb(var(--background-rgb) / 0.5);
   }
 }
 [data-theme="dark"] {
-  --ak-on-accent: var(--foreground);
+  --ak-pop:
+    0 16px 48px -16px rgb(var(--background-rgb) / var(--effect-pop-opacity-dark)),
+    0 0 0 1px rgb(var(--background-rgb) / 0.4);
+  --ak-scrim: rgb(var(--background-rgb) / 0.5);
 }
 
 /* Optional app shell defaults: put class="ak-app" on <body> or the app root. */
@@ -34,12 +99,17 @@
   font-family: var(--text-app-body-font);
   font-size: var(--text-app-body-size);
   line-height: var(--text-app-body-line-height);
+  caret-color: var(--dawn);
   -webkit-font-smoothing: antialiased;
+}
+::selection {
+  background: var(--accent);
+  color: var(--ak-on-accent);
 }
 
 :where([class^="ak-"], [class*=" ak-"]):focus-visible {
-  outline: none;
-  box-shadow: var(--ak-focus);
+  outline: 2px solid var(--ak-focus-color);
+  outline-offset: 2px;
 }
 
 /* ───────────── typography ───────────── */
@@ -57,6 +127,13 @@
   font-family: var(--text-app-subject-font);
   font-size: var(--text-app-subject-size);
   line-height: var(--text-app-subject-line-height);
+  letter-spacing: var(--text-app-subject-tracking);
+  text-wrap: balance;
+}
+@media (min-width: 768px) {
+  .ak-heading--subject {
+    font-size: var(--text-app-subject-size-wide);
+  }
 }
 .ak-heading--empty {
   font-family: var(--text-app-empty-font);
@@ -65,40 +142,49 @@
   letter-spacing: var(--text-app-empty-tracking);
 }
 .ak-heading--display {
-  font-family: var(--text-brand-display-font);
-  font-size: var(--text-brand-display-size);
-  line-height: var(--text-brand-display-line-height);
-  letter-spacing: var(--text-brand-display-tracking);
+  font-family: var(--text-brand-title-font);
+  font-size: var(--text-brand-title-size);
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
+/* Kept for callers; ink, never red (SPEC §2.4). */
 .ak-heading--accent {
-  color: var(--accent-text);
+  color: var(--fg-text);
 }
 
-.ak-eyebrow {
-  text-transform: uppercase;
-  color: var(--fg-muted);
+/* Section style (SPEC §2.1 `text.app.section`): sentence case, 12/500, no tracking. Replaces the caps labels. */
+.ak-eyebrow,
+.ak-section-label {
+  font-family: var(--text-app-section-font);
+  font-size: var(--text-app-section-size);
+  line-height: var(--text-app-section-line-height);
+  font-weight: var(--text-app-section-weight);
+  color: var(--ak-fg-70);
 }
-.ak-eyebrow--app {
+.ak-eyebrow--brand {
+  font-family: var(--text-brand-small-font);
+  font-size: var(--text-brand-small-size);
+  font-weight: var(--text-brand-small-weight);
+}
+/* Mono caps (`text.app.label`): only the reader crumb, the AI provenance line and chips (SPEC §2.1). */
+.ak-crumb {
   font-family: var(--text-app-label-font);
   font-size: var(--text-app-label-size);
   line-height: var(--text-app-label-line-height);
-  letter-spacing: var(--text-app-label-tracking);
   font-weight: var(--text-app-label-weight);
-}
-.ak-eyebrow--brand {
-  font-family: var(--text-brand-label-font);
-  font-size: var(--text-brand-label-size);
-  line-height: var(--text-brand-label-line-height);
-  letter-spacing: var(--text-brand-label-tracking);
+  letter-spacing: var(--text-app-label-tracking);
+  text-transform: uppercase;
+  color: var(--ak-fg-60);
 }
 
-/* ───────────── keyboard hints ───────────── */
+/* ───────────── keyboard hints: one component everywhere ───────────── */
 
 .ak-kbd {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-0-5);
+  gap: 3px;
   font: inherit;
+  vertical-align: middle;
 }
 .ak-kbd__label {
   position: absolute;
@@ -113,30 +199,32 @@
 .ak-kbd__step {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-0-5);
+  gap: 3px;
 }
 .ak-kbd__then {
-  font-family: var(--text-app-caption-font);
-  font-size: var(--text-app-caption-size);
-  color: var(--fg-muted);
+  display: none;
 }
 .ak-kbd__key {
   min-width: 18px;
   height: 18px;
-  padding: 0 var(--space-0-5);
+  padding: 0 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--fg-border);
+  border: 1px solid var(--ak-line-strong);
+  border-bottom-width: 2px;
   border-radius: var(--radius-sm);
-  background: var(--ak-raised);
-  color: var(--fg-secondary);
+  background: var(--ak-surface);
+  color: var(--ak-fg-80);
   font-family: var(--text-app-code-font);
+  font-weight: 500;
   font-size: var(--text-app-caption-size);
+  font-variant-numeric: tabular-nums;
   line-height: 1;
+  white-space: nowrap;
 }
 
-/* ───────────── buttons ───────────── */
+/* ───────────── buttons: pills, flat ───────────── */
 
 .ak-button,
 .ak-icon-button {
@@ -154,11 +242,13 @@
   user-select: none;
   white-space: nowrap;
   transition:
-    background-color var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out),
-    opacity var(--duration-fast) var(--ease-out);
+    background-color var(--duration-instant) var(--ease-out),
+    border-color var(--duration-instant) var(--ease-out),
+    color var(--duration-instant) var(--ease-out),
+    transform var(--duration-instant) var(--ease-out);
+}
+.ak-button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 .ak-button:disabled,
 .ak-icon-button:disabled {
@@ -168,58 +258,87 @@
 .ak-button--sm {
   height: 28px;
   padding: 0 var(--space-1-5);
+  font-size: var(--text-app-meta-size);
 }
 .ak-button--md {
   height: 32px;
-  padding: 0 var(--space-2);
+  padding: 0 14px;
 }
 .ak-button--lg {
-  height: 44px;
-  padding: 0 var(--space-3);
-  font-size: var(--text-app-reading-size);
+  height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
 }
-.ak-button--primary {
-  background: var(--accent-solid);
+/* Ink: the everyday primary (Send, Save, Turn on). */
+.ak-button--primary,
+.ak-button--ink {
+  background: var(--foreground);
+  border-color: var(--foreground);
+  color: var(--background);
+}
+.ak-button--primary:hover:not(:disabled),
+.ak-button--ink:hover:not(:disabled) {
+  background: var(--ak-fg-80);
+  border-color: var(--ak-fg-80);
+}
+/* Brand: the accent fill, in exactly three places (sign-in, onboarding, billing upgrade; SPEC §2.3). */
+.ak-button--brand {
+  background: var(--accent);
+  border-color: var(--accent);
   color: var(--ak-on-accent);
-  box-shadow: var(--glow);
 }
-.ak-button--primary:hover:not(:disabled) {
-  opacity: 0.9;
+.ak-button--brand:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, var(--foreground));
 }
 .ak-button--secondary {
   background: transparent;
-  color: var(--fg-secondary);
-  border-color: var(--fg-border);
+  color: var(--fg-text);
+  border-color: var(--ak-line-strong);
 }
 .ak-button--secondary:hover:not(:disabled) {
-  color: var(--fg-text);
-  border-color: var(--fg-border-hover);
+  border-color: var(--ak-stroke);
 }
 .ak-button--ghost {
   background: transparent;
-  color: var(--fg-secondary);
+  color: var(--ak-fg-70);
 }
 .ak-button--ghost:hover:not(:disabled) {
-  background: var(--ak-raised);
+  background: var(--ak-surface);
   color: var(--fg-text);
 }
+/* Destructive: a secondary pill with an accent-text label, never a red fill. */
 .ak-button--danger {
   background: transparent;
   color: var(--accent-text);
-  border-color: var(--accent-mid);
+  border-color: var(--ak-line-strong);
 }
 .ak-button--danger:hover:not(:disabled) {
-  background: var(--accent-wash);
+  border-color: var(--accent-text);
 }
 .ak-button__kbd .ak-kbd__key {
-  border-color: currentColor;
+  height: 18px;
+  border-color: var(--ak-line-strong);
   background: transparent;
   color: inherit;
-  opacity: var(--opacity-fg-secondary);
 }
-/* Inside a filled button the hint is plain on-accent text: any dimming drops it under 4.5:1. */
-.ak-button--primary .ak-button__kbd .ak-kbd__key {
-  opacity: 1;
+.ak-button--sm .ak-button__kbd .ak-kbd__key {
+  min-width: 16px;
+  height: 16px;
+}
+/* Inverse keycaps on filled pills. */
+.ak-button--primary .ak-button__kbd .ak-kbd__key,
+.ak-button--ink .ak-button__kbd .ak-kbd__key {
+  border-color: color-mix(in srgb, var(--background) 35%, var(--foreground));
+  border-bottom-width: 1px;
+  color: color-mix(in srgb, var(--background) 85%, var(--foreground));
+}
+.ak-button--brand .ak-button__kbd .ak-kbd__key {
+  border-color: color-mix(in srgb, var(--on-accent) 40%, var(--accent));
+  border-bottom-width: 1px;
+  color: var(--ak-on-accent);
+}
+.ak-button:has(.ak-button__kbd) {
+  padding-right: 6px;
 }
 .ak-button__icon,
 .ak-icon-button__icon {
@@ -230,22 +349,26 @@
 .ak-icon-button {
   padding: 0;
   border-radius: var(--radius-md);
+  color: var(--ak-fg-60);
+}
+.ak-icon-button.ak-button--ghost:hover:not(:disabled) {
+  color: var(--fg-text);
 }
 .ak-icon-button--sm {
   width: 28px;
   height: 28px;
 }
 .ak-icon-button--md {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
 }
 .ak-icon-button--lg {
   width: 40px;
   height: 40px;
 }
 .ak-icon-button[aria-pressed="true"] {
-  color: var(--accent-text);
-  background: var(--accent-wash);
+  color: var(--fg-text);
+  background: var(--ak-surface-strong);
 }
 
 /* ───────────── spinner ───────────── */
@@ -258,8 +381,8 @@
   width: 100%;
   height: 100%;
   border-radius: var(--radius-full);
-  border: 2px solid var(--accent-tint);
-  border-top-color: var(--accent-text);
+  border: 1.5px solid var(--ak-line-strong);
+  border-top-color: var(--ak-fg-60);
   animation: ak-spin 800ms linear infinite;
 }
 .ak-spinner--sm {
@@ -267,36 +390,29 @@
   height: 14px;
 }
 .ak-spinner--md {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 .ak-spinner--lg {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
 }
 @keyframes ak-spin {
   to {
     transform: rotate(360deg);
   }
 }
-@keyframes ak-breathe {
-  50% {
-    opacity: var(--opacity-accent-glow);
-  }
-}
 
-/* ───────────── floating surfaces: tooltip, menu, dialog, palette, toast ───────────── */
+/* ───────────── level 1: tooltip, menu, dialog, palette, toast ───────────── */
 
 .ak-tooltip,
 .ak-menu,
 .ak-dialog,
-.ak-palette,
-.ak-toast {
-  background: var(--ak-surface);
+.ak-palette {
+  background: var(--background);
   color: var(--fg-text);
-  box-shadow: var(--ak-shadow);
-  backdrop-filter: blur(var(--card-blur));
-  -webkit-backdrop-filter: blur(var(--card-blur));
+  border: 1px solid var(--ak-line-strong);
+  box-shadow: var(--ak-pop);
   font-family: var(--text-app-body-font);
   font-size: var(--text-app-body-size);
 }
@@ -306,74 +422,79 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-0-5) var(--space-1);
+  height: 26px;
+  padding: 0 var(--space-1);
   border-radius: var(--radius-md);
   font-size: var(--text-app-meta-size);
-  animation: ak-fade-in var(--duration-fast) var(--ease-out);
+  color: var(--ak-fg-80);
+  animation: ak-pop-in var(--duration-quick) var(--ease-out);
 }
 
 .ak-menu {
   z-index: 60;
-  min-width: 200px;
+  min-width: 220px;
   padding: var(--space-0-5);
   border-radius: var(--radius-lg);
-  animation: ak-scale-in var(--duration-fast) var(--ease-out);
+  animation: ak-pop-in var(--duration-quick) var(--ease-out);
 }
 .ak-menu__item {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   height: 32px;
-  padding: 0 var(--space-1);
+  padding: 0 6px 0 10px;
   border-radius: var(--radius-md);
-  color: var(--fg-secondary);
+  color: var(--ak-fg-80);
   cursor: default;
   outline: none;
   user-select: none;
 }
 .ak-menu__item[data-highlighted] {
-  background: var(--accent-wash);
+  background: var(--ak-surface-strong);
   color: var(--fg-text);
 }
 .ak-menu__item[data-disabled] {
   opacity: var(--opacity-fg-muted);
 }
-.ak-menu__item--destructive {
+.ak-menu__item--destructive,
+.ak-menu__item--destructive[data-highlighted] {
   color: var(--accent-text);
 }
 .ak-menu__label {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ak-menu__icon,
 .ak-menu__check {
   display: inline-flex;
   width: 16px;
   justify-content: center;
-  color: var(--fg-muted);
+  color: var(--ak-fg-60);
 }
 .ak-menu__heading {
-  padding: var(--space-1) var(--space-1) var(--space-0-5);
-  text-transform: uppercase;
-  font-size: var(--text-app-label-size);
-  letter-spacing: var(--text-app-label-tracking);
-  font-weight: var(--text-app-label-weight);
-  color: var(--fg-muted);
+  padding: var(--space-1) 10px 6px;
+  font-size: var(--text-app-section-size);
+  font-weight: var(--text-app-section-weight);
+  color: var(--ak-fg-70);
 }
 .ak-menu__separator {
   height: 1px;
   margin: var(--space-0-5) 0;
-  background: var(--fg-border-subtle);
+  background: var(--ak-line);
 }
 
+/* Modal scrim: light, never a blur (SPEC §2.7). */
 .ak-dialog__overlay,
 .ak-palette__overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
   overflow: hidden;
-  background: rgb(var(--background-rgb) / 0.6);
-  backdrop-filter: blur(4px);
-  animation: ak-fade-in var(--duration-fast) var(--ease-out);
+  background: var(--ak-scrim);
+  animation: ak-fade-in var(--duration-quick) var(--ease-out);
 }
 .ak-dialog {
   position: fixed;
@@ -385,8 +506,8 @@
   max-height: calc(100vh - var(--space-8));
   overflow: auto;
   padding: var(--space-3);
-  border-radius: var(--radius-card);
-  animation: ak-scale-in var(--duration-fast) var(--ease-out);
+  border-radius: var(--radius-lg);
+  animation: ak-dialog-in var(--duration-quick) var(--ease-out);
 }
 .ak-dialog--sm {
   max-width: 400px;
@@ -395,7 +516,7 @@
   max-width: 560px;
 }
 .ak-dialog--lg {
-  max-width: var(--layout-content-max-width);
+  max-width: 880px;
 }
 /* Pinned while a long dialog scrolls (the dialog is the only scroll container). */
 .ak-dialog__close {
@@ -406,29 +527,31 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-1)) 0 var(--space-1);
-  border: 1px solid var(--fg-border-subtle);
-  border-radius: var(--radius-full);
-  background: var(--ak-surface);
-  color: var(--fg-secondary);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--ak-fg-60);
   cursor: pointer;
 }
 .ak-dialog__close:hover {
   color: var(--fg-text);
-  border-color: var(--fg-border);
+  background: var(--ak-surface);
 }
+/* Dialog titles are UI, not a voice: Geist 15/500 (Instrument Serif never sits in pickers or menus). */
 .ak-dialog__title {
   margin: 0 0 var(--space-1);
-  font-family: var(--text-app-heading-font);
-  font-size: var(--text-app-heading-size);
-  line-height: var(--text-app-heading-line-height);
-  font-weight: var(--text-app-heading-weight);
+  font-family: var(--text-app-body-font);
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--fg-text);
 }
 .ak-dialog__description {
   margin: 0 0 var(--space-2);
-  color: var(--fg-secondary);
+  color: var(--ak-fg-70);
 }
 .ak-dialog__footer {
   display: flex;
@@ -437,38 +560,42 @@
   margin-top: var(--space-3);
 }
 
-/* ───────────── command palette ───────────── */
+/* ───────────── command palette (landing .ib-palette) ───────────── */
 
 .ak-palette {
   position: fixed;
   z-index: 51;
-  top: 18vh;
+  top: 12vh;
   left: 50%;
   transform: translateX(-50%);
-  width: min(640px, calc(100vw - var(--space-4)));
+  width: min(560px, calc(100vw - var(--space-4)));
   display: flex;
   flex-direction: column;
-  max-height: 60vh;
-  border-radius: var(--radius-xl);
+  max-height: min(560px, 76vh);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  animation: ak-scale-in var(--duration-fast) var(--ease-out);
+  animation: ak-palette-in var(--duration-quick) var(--ease-out);
 }
 .ak-palette__search {
-  border-bottom: 1px solid var(--fg-border-subtle);
+  border-bottom: 1px solid var(--ak-line);
 }
 .ak-palette__input {
   width: 100%;
   height: 52px;
-  padding: 0 var(--space-2);
+  padding: 0 18px;
   border: 0;
   background: transparent;
   color: var(--fg-text);
-  font-family: var(--text-app-reading-font);
-  font-size: var(--text-app-reading-size);
+  caret-color: var(--dawn);
+  font-family: var(--text-app-body-font);
+  font-size: 16px;
+  outline: none;
+}
+.ak-palette__input:focus-visible {
   outline: none;
 }
 .ak-palette__input::placeholder {
-  color: var(--fg-muted);
+  color: var(--ak-fg-60);
 }
 .ak-palette__list {
   flex: 1;
@@ -477,27 +604,31 @@
   overscroll-behavior: contain;
 }
 .ak-palette__heading {
-  padding: var(--space-1) var(--space-1-5) var(--space-0-5);
-  text-transform: uppercase;
-  font-size: var(--text-app-label-size);
-  letter-spacing: var(--text-app-label-tracking);
-  font-weight: var(--text-app-label-weight);
-  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--space-1-5);
+  font-size: var(--text-app-section-size);
+  font-weight: var(--text-app-section-weight);
+  color: var(--ak-fg-60);
+}
+.ak-palette__section + .ak-palette__section {
+  margin-top: var(--space-0-5);
 }
 .ak-palette__item {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  height: 36px;
+  gap: var(--space-1-5);
+  height: 40px;
   padding: 0 var(--space-1-5);
   border-radius: var(--radius-md);
-  color: var(--fg-secondary);
+  color: var(--ak-fg-80);
+  font-size: 14px;
   cursor: default;
 }
 .ak-palette__item--active {
-  background: var(--accent-wash);
+  background: var(--ak-surface-strong);
   color: var(--fg-text);
-  box-shadow: inset 2px 0 0 var(--accent-text);
 }
 .ak-palette__item--disabled {
   opacity: var(--opacity-fg-muted);
@@ -510,56 +641,182 @@
 }
 .ak-palette__match {
   background: none;
-  color: var(--accent-text);
+  color: inherit;
+  font-weight: 500;
 }
 .ak-palette__hint {
-  color: var(--fg-muted);
+  color: var(--ak-fg-60);
   font-size: var(--text-app-meta-size);
 }
 .ak-palette__empty {
   margin: 0;
-  padding: var(--space-3) var(--space-2);
-  text-align: center;
-  color: var(--fg-muted);
+  padding: var(--space-2) var(--space-1-5);
+  color: var(--ak-fg-60);
 }
 .ak-palette__footer {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border-top: 1px solid var(--fg-border-subtle);
-  color: var(--fg-muted);
-  font-size: var(--text-app-caption-size);
+  height: 32px;
+  flex: none;
+  padding: 0 var(--space-2);
+  border-top: 1px solid var(--ak-line);
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-meta-size);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ak-palette__footer > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ak-palette__where {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ───────────── toasts ───────────── */
+/* ───────────── toasts: one ink pill, bottom-left of the list pane (SPEC §3.9) ───────────── */
 
-/* Bottom right, clear of the conversation list; on a phone, full width above any sticky action bar
-   (`--ak-toast-offset`, set by the page). */
 .ak-toasts {
   position: fixed;
   z-index: 80;
-  right: var(--space-3);
-  bottom: calc(var(--space-3) + var(--ak-toast-offset));
+  left: var(--ak-toast-left);
+  bottom: calc(var(--ak-toast-bottom) + var(--ak-toast-offset));
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-1);
-  width: min(420px, calc(100vw - var(--space-4)));
+  width: min(560px, calc(100vw - var(--ak-toast-left) - var(--space-2)));
   pointer-events: none;
 }
-/* Phones: toasts dock at the bottom, full width, above the safe area (and above any sticky action bar through
-   `--ak-toast-offset`), as slim bars, so they never cover the top bar, the search field or a thread's toolbar
-   (review round 3; the composer's Send is handled by the app, which knows its footer). */
-@media (max-width: 720px) {
+.ak-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  min-height: 36px;
+  padding: 4px 6px 4px 14px;
+  border-radius: 18px;
+  background: var(--foreground);
+  color: var(--background);
+  box-shadow: var(--ak-pop);
+  font-family: var(--text-app-body-font);
+  font-size: var(--text-app-body-size);
+  animation: ak-rise var(--duration-quick) var(--ease-out);
+}
+/* Errors carry the toast's own circled "!" (no red on the ink pill: dawn on ink is about 3:1). */
+.ak-toast {
+  position: relative;
+  overflow: hidden;
+}
+.ak-toast__progress {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 1px;
+  background: var(--ak-stroke);
+  transform-origin: left;
+  animation: ak-run-out linear forwards;
+}
+.ak-toasts:hover .ak-toast__progress,
+.ak-toasts:focus-within .ak-toast__progress {
+  animation-play-state: paused;
+}
+@keyframes ak-run-out {
+  to {
+    transform: scaleX(0);
+  }
+}
+.ak-toast--error::before {
+  content: "!";
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 1.25px solid currentColor;
+  border-radius: var(--radius-full);
+  font-family: var(--text-app-code-font);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+}
+.ak-toast__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 6px;
+  min-width: 0;
+}
+.ak-toast__title,
+.ak-toast__description {
+  margin: 0;
+}
+.ak-toast__description {
+  color: color-mix(in srgb, var(--background) 72%, var(--foreground));
+  font-size: var(--text-app-meta-size);
+}
+.ak-toast__description::before {
+  content: "· ";
+}
+.ak-toast__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+.ak-toast__action,
+.ak-toast__close {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--background);
+  font: inherit;
+  font-weight: var(--text-app-body-strong-weight);
+  cursor: pointer;
+}
+.ak-toast__action:hover,
+.ak-toast__close:hover {
+  background: color-mix(in srgb, var(--background) 14%, var(--foreground));
+}
+.ak-toast__action:focus-visible,
+.ak-toast__close:focus-visible {
+  outline: 2px solid var(--background);
+  outline-offset: 0;
+}
+.ak-toast__close {
+  width: 28px;
+  padding: 0;
+  justify-content: center;
+  color: color-mix(in srgb, var(--background) 72%, var(--foreground));
+}
+.ak-toast .ak-kbd__key {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--background) 35%, var(--foreground));
+  border-bottom-width: 1px;
+  color: color-mix(in srgb, var(--background) 85%, var(--foreground));
+}
+/* Phones: toasts dock at the bottom, full width, above the safe area (and any sticky action bar). */
+@media (max-width: 768px) {
   .ak-toasts {
-    top: auto;
     right: var(--space-2);
-    bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px) + var(--ak-toast-offset));
+    bottom: calc(var(--space-1-5) + env(safe-area-inset-bottom, 0px) + var(--ak-toast-offset));
     left: var(--space-2);
     width: auto;
   }
   .ak-toast {
     min-height: 44px;
-    padding: var(--space-1) var(--space-1-5);
+    width: 100%;
+    border-radius: 22px;
   }
 }
 /* Touch-first devices: no keycap hints in buttons and menus (the shortcuts list itself still shows them). */
@@ -569,91 +826,38 @@
     display: none;
   }
 }
-.ak-toast {
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1-5) var(--space-2);
-  border-radius: var(--radius-lg);
-  animation: ak-rise var(--duration-fast) var(--ease-out);
-}
-.ak-toast--error {
-  box-shadow:
-    var(--ak-shadow),
-    inset 3px 0 0 var(--accent-text);
-}
-.ak-toast--success {
-  box-shadow:
-    var(--ak-shadow),
-    inset 3px 0 0 var(--fg-border-hover);
-}
-.ak-toast__text {
-  flex: 1;
-  min-width: 0;
-}
-.ak-toast__title,
-.ak-toast__description {
-  margin: 0;
-}
-.ak-toast__description {
-  color: var(--fg-secondary);
-  font-size: var(--text-app-meta-size);
-}
-.ak-toast__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-0-5);
-}
-.ak-toast__action,
-.ak-toast__close {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-0-5);
-  height: 28px;
-  padding: 0 var(--space-1);
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--accent-text);
-  font: inherit;
-  font-weight: var(--text-app-body-strong-weight);
-  cursor: pointer;
-}
-.ak-toast__action:hover,
-.ak-toast__close:hover {
-  background: var(--accent-wash);
-}
-.ak-toast__close {
-  color: var(--fg-muted);
-}
 
-/* ───────────── lists ───────────── */
+/* ───────────── lists: the landing row (.ir) ───────────── */
 
 .ak-list {
   display: flex;
   flex-direction: column;
   outline: none;
 }
-/* The list keeps focus almost all the time: no frame around the whole column, the ring is on the active row
-   (which also carries the accent bar). A list without an active row shows a quiet frame so focus is never lost. */
+/* The list never draws a ring around itself: the dawn cursor bar is its focus (SPEC §2.8). A list without an
+   active row shows a hairline frame so focus is never invisible. */
 .ak-list:focus-visible {
-  box-shadow: inset 0 0 0 1px var(--fg-border);
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--ak-stroke);
 }
 .ak-list:focus-visible:has(.ak-row--active) {
   box-shadow: none;
 }
 .ak-row {
   --ak-row-height: var(--layout-row-height-comfortable);
-  display: flex;
+  --ak-row-sender: 168px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px var(--ak-row-sender) minmax(0, 1fr) auto 72px;
   align-items: center;
-  gap: var(--space-1-5);
+  column-gap: var(--space-1-5);
   height: var(--ak-row-height);
-  padding: 0 var(--space-2);
-  border-bottom: 1px solid var(--fg-border-subtle);
-  color: var(--fg-secondary);
+  padding: 0 var(--space-2) 0 var(--space-1-5);
+  border-bottom: 1px solid var(--ak-line);
+  color: var(--ak-fg-80);
   font-family: var(--text-app-body-font);
   font-size: var(--text-app-body-size);
+  line-height: 20px;
   cursor: default;
   user-select: none;
 }
@@ -665,32 +869,40 @@
 .ak-row--comfortable {
   --ak-row-height: var(--layout-row-height-comfortable);
 }
-.ak-row:hover {
-  background: var(--ak-raised);
+@media (hover: hover) {
+  .ak-row:not(.ak-row--active):hover {
+    background: var(--ak-surface);
+  }
 }
+/* Picked (x): a surface, and the gutter shows a check. */
 .ak-row--selected {
-  background: var(--accent-wash);
+  background: var(--ak-surface);
 }
+/* The keyboard cursor: the strong surface and a 2px dawn bar. When the keys belong to another pane the bar
+   drops to the stroke grey, so it is always clear which pane owns them. */
 .ak-row--active {
-  background: var(--accent-wash);
-  box-shadow: inset 2px 0 0 var(--accent-text);
+  background: var(--ak-surface-strong);
+  box-shadow: inset 2px 0 0 var(--ak-stroke);
+}
+.ak-list:focus .ak-row--active,
+.ak-list:focus-visible .ak-row--active {
+  box-shadow: inset 2px 0 0 var(--dawn);
 }
 .ak-row--unread {
   color: var(--fg-text);
 }
 .ak-row--pending {
-  opacity: var(--opacity-fg-secondary);
+  opacity: var(--opacity-fg-muted);
 }
-.ak-row__leading,
-.ak-row__trailing,
-.ak-row__meta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-0-5);
-  flex: none;
+.ak-row__leading {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: var(--fg-text);
 }
 .ak-row__title {
-  flex: 0 0 180px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -699,39 +911,61 @@
   font-weight: var(--text-app-body-strong-weight);
 }
 .ak-row__snippet {
-  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--fg-muted);
+  color: var(--ak-fg-60);
 }
-/* On the tinted active and selected rows the muted preview would fall under 4.5:1 (light mode). */
+/* On the surfaces, muted steps up to tertiary (AA, SPEC §2.1). */
 .ak-row--active .ak-row__snippet,
-.ak-row--selected .ak-row__snippet {
-  color: var(--fg-secondary);
+.ak-row--selected .ak-row__snippet,
+.ak-row--active .ak-row__meta,
+.ak-row--selected .ak-row__meta,
+.ak-row--active .ak-badge--label,
+.ak-row--selected .ak-badge--label {
+  color: var(--ak-fg-70);
+}
+@media (hover: hover) {
+  .ak-row:hover .ak-row__snippet,
+  .ak-row:hover .ak-row__meta,
+  .ak-row:hover .ak-badge--label,
+  .ak-row:hover .ak-row__trailing {
+    color: var(--ak-fg-70);
+  }
+}
+.ak-row__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ak-fg-60);
+}
+.ak-row__meta svg {
+  width: 14px;
+  height: 14px;
 }
 .ak-row__trailing {
-  color: var(--fg-muted);
-  font-size: var(--text-app-meta-size);
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  color: var(--ak-fg-60);
+  font-family: var(--text-app-code-font);
+  font-size: var(--text-app-code-size);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-/* Tinted rows: metadata at the secondary opacity too (4.49:1 at muted, light mode). */
 .ak-row--active .ak-row__trailing,
 .ak-row--selected .ak-row__trailing {
-  color: var(--fg-secondary);
+  color: var(--ak-fg-70);
 }
-/* The focused list draws its ring on the active row (see .ak-list:focus-visible). */
-.ak-list:focus-visible .ak-row--active {
-  box-shadow:
-    inset 2px 0 0 var(--accent-text),
-    inset 0 0 0 2px var(--ak-focus-color);
-}
+/* The unread marker: a 6px ink dot (never red, SPEC §2.4). */
 .ak-row__dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: var(--radius-full);
-  background: var(--accent-solid);
+  background: var(--foreground);
 }
 
 /* ───────────── avatar, badge ───────────── */
@@ -742,35 +976,27 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: var(--radius-full);
-  color: var(--fg-text);
-  font-family: var(--text-app-body-font);
-  font-weight: var(--text-app-body-strong-weight);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px var(--ak-line-strong);
+  color: var(--ak-fg-80);
+  font-family: var(--text-app-code-font);
+  font-weight: 500;
   user-select: none;
 }
-.ak-avatar--tint-0 {
-  background: var(--accent-tint);
-}
-.ak-avatar--tint-1 {
-  background: var(--accent-glow);
-}
-.ak-avatar--tint-2 {
-  background: var(--accent-wash);
-  box-shadow: inset 0 0 0 1px var(--accent-tint);
-}
 .ak-avatar--sm {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   font-size: 9px;
 }
 .ak-avatar--md {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   font-size: var(--text-app-caption-size);
 }
 .ak-avatar--lg {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   font-size: var(--text-app-body-size);
 }
 .ak-avatar__img {
@@ -779,143 +1005,62 @@
   object-fit: cover;
 }
 
+/* Counts are mono grey numbers; labels are mono caps chips (SPEC §3.1.4). */
 .ak-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 6px;
-  border-radius: var(--radius-full);
-  font-family: var(--text-app-caption-font);
+  justify-content: flex-end;
+  min-width: 0;
+  font-family: var(--text-app-code-font);
   font-size: var(--text-app-caption-size);
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  color: var(--ak-fg-60);
+  white-space: nowrap;
 }
 .ak-badge--label {
+  justify-content: center;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--ak-line-strong);
+  border-radius: var(--radius-sm);
+  font-family: var(--text-app-label-font);
+  font-weight: 400;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  letter-spacing: var(--text-app-label-tracking);
-  font-weight: var(--text-app-label-weight);
+  color: var(--ak-fg-60);
 }
-.ak-badge--accent {
-  background: var(--accent-solid);
-  color: var(--ak-on-accent);
+.ak-badge--label.ak-badge--accent {
+  border-color: var(--ak-stroke);
+  color: var(--fg-text);
 }
-.ak-badge--neutral {
-  background: var(--ak-raised);
-  color: var(--fg-secondary);
-}
-.ak-badge--outline {
-  border: 1px solid var(--fg-border);
-  color: var(--fg-secondary);
+.ak-badge--neutral.ak-badge--label {
+  background: var(--ak-surface);
 }
 
-/* ───────────── orbs ───────────── */
+/* ───────────── motion ───────────── */
 
-.ak-orbs {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-.ak-orb {
-  position: absolute;
-  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  filter: blur(var(--orb-blur));
-  opacity: var(--orb-opacity);
-  background: radial-gradient(
-    circle,
-    var(--accent-solid) 0%,
-    var(--accent-mid-strong) 30%,
-    rgb(var(--accent-rgb) / 0) 70%
-  );
-  will-change: transform, border-radius;
-}
-.ak-orb--1 {
-  width: 520px;
-  height: 520px;
-  top: -12%;
-  right: -6%;
-  animation:
-    ak-float-1 25s var(--ease-in-out) infinite,
-    ak-morph 18s var(--ease-in-out) infinite;
-}
-.ak-orb--2 {
-  width: 600px;
-  height: 600px;
-  bottom: -18%;
-  left: -10%;
-  animation:
-    ak-float-2 30s var(--ease-in-out) infinite,
-    ak-morph 22s var(--ease-in-out) infinite reverse;
-}
-.ak-orb--3 {
-  width: 400px;
-  height: 400px;
-  top: 40%;
-  left: 50%;
-  animation:
-    ak-float-3 20s var(--ease-in-out) infinite,
-    ak-morph 15s var(--ease-in-out) infinite;
-}
-.ak-orbs--subtle .ak-orb {
-  opacity: calc(var(--orb-opacity) * 0.6);
-}
-.ak-orbs[data-motion="reduce"] .ak-orb {
-  animation: none;
-}
-
-@keyframes ak-float-1 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(80px, -60px) scale(1.15);
-  }
-  66% {
-    transform: translate(-40px, 50px) scale(0.92);
-  }
-}
-@keyframes ak-float-2 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  40% {
-    transform: translate(-90px, 70px) scale(1.1);
-  }
-  70% {
-    transform: translate(60px, -50px) scale(0.9);
-  }
-}
-@keyframes ak-float-3 {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    transform: translate(calc(-50% + 60px), calc(-50% - 40px)) scale(1.2);
-  }
-}
-@keyframes ak-morph {
-  0%,
-  100% {
-    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  }
-  50% {
-    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-  }
-}
 @keyframes ak-fade-in {
   from {
     opacity: 0;
   }
 }
-@keyframes ak-scale-in {
+@keyframes ak-pop-in {
   from {
     opacity: 0;
-    scale: 0.97;
+    translate: 0 4px;
+  }
+}
+@keyframes ak-palette-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+@keyframes ak-dialog-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
   }
 }
 @keyframes ak-rise {
@@ -925,8 +1070,8 @@
   }
 }
 
+/* Reduced motion: no transforms; overlays appear at once (fades capped at 80ms elsewhere). */
 @media (prefers-reduced-motion: reduce) {
-  .ak-orb,
   .ak-tooltip,
   .ak-menu,
   .ak-dialog,
@@ -934,11 +1079,17 @@
   .ak-palette,
   .ak-palette__overlay,
   .ak-toast {
-    animation: none;
+    animation: ak-fade-in 80ms linear;
+  }
+  .ak-button:active:not(:disabled) {
+    transform: none;
+  }
+  .ak-toast__progress {
+    display: none;
   }
   .ak-spinner__ring {
-    animation: ak-breathe 1600ms ease-in-out infinite;
-    border-top-color: var(--accent-tint);
-    background: var(--accent-tint);
+    animation: none;
+    border-top-color: var(--ak-line-strong);
+    border-right-color: var(--ak-fg-60);
   }
 }

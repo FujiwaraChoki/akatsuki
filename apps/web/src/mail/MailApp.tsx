@@ -1,17 +1,20 @@
 // The mail client shell: sidebar, list (with split tabs and search) and reading pane, driven from the keyboard.
 // Every action is a shortcut from packages/shortcuts and a command palette entry (BRIEF quality bar).
+// First Light (SPEC §3.1): sidebar 216 | list | reader clamp(420px, 38vw, 720px), a 44px top bar (tabs, search,
+// compose) over list and reader, and a 28px status bar under all three.
 import { SPLIT_OTHER, SYS, type ThreadActions } from "@akatsuki/mail-model";
 import {
+  type AnchorRect,
   CommandPalette,
-  Eyebrow,
   errorMessage,
   IconButton,
+  Kbd,
   type PaletteItem,
   paletteItemsFromShortcuts,
   useToast,
   useUiConfig,
 } from "@akatsuki/ui";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { type CommandContext, extensions, scopeOverride, useExtensionsVersion } from "../app/extensions.ts";
 import { navigate, useLocation } from "../app/router.tsx";
 import {
@@ -45,7 +48,7 @@ import {
   IconMail,
   IconMailOpen,
   IconMenu,
-  IconPlus,
+  IconPencil,
   IconStar,
   IconTag,
   IconTrash,
@@ -69,7 +72,9 @@ import { ListPicker, type PickerItem } from "./ListPicker.tsx";
 import { openOriginalTab, originalPage } from "./original.ts";
 import { SearchBar } from "./SearchBar.tsx";
 import { countKeys, Sidebar, visibleLabels } from "./Sidebar.tsx";
-import { ThreadList } from "./ThreadList.tsx";
+import { StatusBar } from "./StatusBar.tsx";
+import { echo, noteCleared } from "./statusEcho.ts";
+import { type RowAction, rowDomId, ThreadList } from "./ThreadList.tsx";
 import { ThreadView } from "./ThreadView.tsx";
 import { TimePicker } from "./TimePicker.tsx";
 import { type BuildAction, useMailActions } from "./useMailActions.ts";
@@ -92,7 +97,8 @@ function readRecent(): string[] {
   }
 }
 
-type Picker = null | { kind: "label" | "move" | "goLabel" } | { kind: "snooze" | "remind" };
+/** A picker, optionally for rows other than the current targets (a hovered row's Snooze or Label). */
+type Picker = null | { kind: "label" | "move" | "goLabel" | "snooze" | "remind"; rows?: ThreadRow[] };
 
 export interface MailAppProps {
   route: MailRoute;
@@ -177,6 +183,7 @@ export function MailApp({ route, me }: MailAppProps) {
   const myEmails = useMemo(() => new Set(accounts.map((a) => a.email.toLowerCase())), [accounts]);
   const labelsByKey = useMemo(() => new Map(labels.map((l) => [l.labelKey, l])), [labels]);
   const actions = useMailActions({ accounts, labels });
+  const inboxView = route.name === "mail" && route.view.kind === "inbox";
 
   // ───────────── cursor, selection, scopes ─────────────
   const cursors = useRef(new Map<string, string>());
@@ -274,12 +281,14 @@ export function MailApp({ route, me }: MailAppProps) {
 
   // ───────────── targets and actions ─────────────
   const rowById = useMemo(() => new Map(rows.map((r) => [r._id, r])), [rows]);
+  const pickerRows = picker?.rows;
   const targets = useCallback((): ThreadRow[] => {
+    if (pickerRows) return pickerRows;
     if (selection.size > 0) return rows.filter((r) => selection.has(r._id));
     if (openId) return detail ? [detail.thread] : [];
     const r = cursorId ? rowById.get(cursorId as ThreadId) : undefined;
     return r ? [r] : [];
-  }, [selection, rows, openId, detail, cursorId, rowById]);
+  }, [pickerRows, selection, rows, openId, detail, cursorId, rowById]);
 
   /** After rows leave the view: move the cursor past them and auto-advance an open thread (Superhuman). */
   const advancePast = useCallback(
@@ -307,9 +316,17 @@ export function MailApp({ route, me }: MailAppProps) {
       const leave = actions.leaving(t, build, isSearch || isReminders ? null : listArgs);
       const restore = openId && leave.has(openId) ? location : undefined;
       actions.perform(t, build, title, restore ? { restore } : {});
+      // The status bar echoes it (SPEC §3.1.3); conversations leaving the inbox count toward the day's tally.
+      if (title)
+        echo(
+          t.length === 1
+            ? `${title(1).replace(/\.$/, "")} “${t[0]!.subject || "(no subject)"}”`
+            : title(t.length),
+        );
+      if (inboxView) noteCleared(leave.size);
       advancePast(leave);
     },
-    [targets, actions, isSearch, isReminders, listArgs, openId, location, advancePast],
+    [targets, actions, isSearch, isReminders, listArgs, openId, location, advancePast, inboxView],
   );
 
   const plural = (n: number, one: string, many: string) =>
@@ -378,6 +395,8 @@ export function MailApp({ route, me }: MailAppProps) {
       t.length === 1 ? "Snoozed." : `Snoozed ${t.length} conversations.`,
       restore ? { restore } : {},
     );
+    echo(`Snoozed until ${fullDate(at, tz)} · Z to undo`);
+    if (inboxView) noteCleared(leave.size);
     advancePast(leave);
   };
 
@@ -617,6 +636,34 @@ export function MailApp({ route, me }: MailAppProps) {
   }
 
   const anyDialog = paletteOpen || helpOpen || picker !== null;
+  // Pickers are popovers anchored under the row they act on (SPEC §3.7): the hovered row, else the cursor row,
+  // else the reader's header when a thread is open on a narrow screen.
+  const [anchor, setAnchor] = useState<AnchorRect | null>(null);
+  const pickerKind = picker?.kind ?? null;
+  const pickerFor = picker?.rows?.[0]?._id ?? openId ?? cursorId;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: measured once per opening
+  useLayoutEffect(() => {
+    if (!pickerKind || pickerKind === "goLabel") return setAnchor(null);
+    const row = pickerFor ? document.getElementById(rowDomId(pickerFor)) : null;
+    const el = row && row.getClientRects().length > 0 ? row : document.querySelector(".ak-thread__header");
+    const r = el?.getBoundingClientRect();
+    const sender = row?.querySelector(".ak-row__snippet")?.getBoundingClientRect();
+    setAnchor(
+      r ? { top: r.top, bottom: r.bottom, left: sender ? sender.left : r.left + 24, right: r.right } : null,
+    );
+  }, [pickerKind]);
+  const onRowAction = (id: string, a: RowAction) => {
+    const row = rowById.get(id as ThreadId);
+    if (!row) return;
+    if (a === "archive") {
+      if (actions.available("archive", [row]))
+        act(
+          (x) => x.archive(),
+          () => "Archived.",
+          [row],
+        );
+    } else setPicker({ kind: a === "snooze" ? "snooze" : "label", rows: [row] });
+  };
   // When a dialog closes and focus fell back to the page, the list takes it again, so keys and screen readers
   // keep working (the list announces its active row through aria-activedescendant).
   // Two ticks: a closing dialog gives focus back first (Radix does it in a timeout after the content unmounts,
@@ -820,6 +867,9 @@ export function MailApp({ route, me }: MailAppProps) {
         : view.kind === "reminders"
           ? "Reminders"
           : "Inbox";
+  const splitName =
+    view.kind === "inbox" && view.split ? tabs.find((t) => sameView(t.view, view))?.name : undefined;
+  const crumb = splitName ? `${title} · ${splitName}` : title;
   const empty = isSearch ? (
     <NoResults q={searchArgs?.q ?? ""} />
   ) : (
@@ -840,8 +890,94 @@ export function MailApp({ route, me }: MailAppProps) {
     />
   ) : null;
 
+  // The left of the top bar: the bulk bar while rows are picked, the search summary on /search, the split tabs
+  // in the inbox, else the mailbox name as the one selected tab (SPEC §3.1.2).
+  const topLeft =
+    selection.size > 0 ? (
+      <div className="ak-bulk" role="toolbar" aria-label={`${selection.size} selected`}>
+        <span className="ak-bulk__count">{selection.size} selected</span>
+        <span aria-hidden="true">·</span>
+        {canArchive && (
+          <button type="button" className="ak-bulk__act" onClick={archive}>
+            <Kbd shortcut="thread.archive" /> Archive
+          </button>
+        )}
+        <button type="button" className="ak-bulk__act" onClick={() => setPicker({ kind: "snooze" })}>
+          <Kbd shortcut="thread.snooze" /> Snooze
+        </button>
+        <button type="button" className="ak-bulk__act" onClick={() => setPicker({ kind: "label" })}>
+          <Kbd shortcut="thread.label" /> Label
+        </button>
+        <button type="button" className="ak-bulk__act" onClick={trash}>
+          <Kbd shortcut="thread.trash" /> Trash
+        </button>
+        <span className="ak-bulk__esc">
+          <Kbd shortcut="nav.back" /> to clear
+        </span>
+      </div>
+    ) : isSearch ? (
+      <div className="ak-searchnote">
+        <span className="ak-searchnote__what">
+          Search ·{" "}
+          {status === "loading" ? "searching" : `${rows.length}${status === "more" ? "+" : ""} results`}
+          {searchArgs ? ` for ${searchArgs.q}` : ""}
+        </span>
+        {search.unsupported.length > 0 && (
+          <span className="ak-searchnote__more">
+            needs the full mailbox ({search.unsupported.join(", ")})
+          </span>
+        )}
+        {searchArgs && (search.unsupported.length > 0 || search.status === "done") && (
+          <button
+            type="button"
+            className="ak-textbutton"
+            onClick={() => void runFullSearch()}
+            disabled={fullSearch?.busy}
+          >
+            {fullSearch?.busy ? "Searching the full mailbox…" : "Search the full mailbox"}
+          </button>
+        )}
+        <span className="ak-searchnote__esc">
+          <Kbd shortcut="nav.back" /> to clear
+        </span>
+      </div>
+    ) : inInbox ? (
+      <div className="ak-tabs" role="tablist" aria-label="Splits">
+        {tabs.map((t) => {
+          const selected = sameView(t.view, view);
+          const n = t.key === SYS.inbox ? undefined : counts?.[t.key];
+          return (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              tabIndex={-1}
+              className="ak-tab"
+              onClick={() => go(t.view)}
+            >
+              {t.name}
+              {n ? <span className="ak-tab__count">{n >= 100 ? "99+" : n}</span> : null}
+            </button>
+          );
+        })}
+        <Kbd shortcut="split.next" className="ak-tabs__key" />
+      </div>
+    ) : (
+      <div className="ak-tabs" role="presentation">
+        <span className="ak-tab" aria-current="page">
+          {title}
+        </span>
+      </div>
+    );
+
   return (
-    <div className="ak-shell" data-pane={openId ? "open" : "closed"} data-nav={navOpen ? "open" : undefined}>
+    <div
+      className="ak-shell"
+      data-pane={openId ? "open" : "closed"}
+      data-nav={navOpen ? "open" : undefined}
+      data-search={searchFocused ? "open" : undefined}
+    >
       <button type="button" className="ak-skiplink" onClick={focusList}>
         Skip to conversations
       </button>
@@ -855,6 +991,7 @@ export function MailApp({ route, me }: MailAppProps) {
         theme={theme.pref}
         onToggleTheme={() => setTheme(nextTheme(theme.pref))}
         onOpenPalette={() => setPaletteOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
         onSignOut={() => void backend.auth.signOut()}
         onConnect={() => navigate("/onboarding")}
         onOpenSettings={() => navigate("/settings")}
@@ -869,33 +1006,18 @@ export function MailApp({ route, me }: MailAppProps) {
         />
       )}
       <main className="ak-main" id="conversations">
-        <section className="ak-listpane" aria-label={title}>
-          <header className="ak-listpane__header">
-            <div className="ak-compactbar">
-              <IconButton
-                label="Menu"
-                icon={<IconMenu />}
-                aria-expanded={navOpen}
-                onClick={() => setNavOpen((o) => !o)}
-              />
-              <IconButton
-                label="Command palette"
-                icon={<IconCommand />}
-                onClick={() => setPaletteOpen(true)}
-              />
-              <IconButton
-                label="Compose"
-                icon={<IconPlus />}
-                shortcut="compose.new"
-                onClick={() => handlers["compose.new"]?.()}
-              />
-            </div>
-            <div className="ak-listpane__titlebar">
-              <h1 className="ak-listpane__title">
-                <Eyebrow>{title}</Eyebrow>
-              </h1>
-              {selection.size > 0 && <span className="ak-listpane__selected">{selection.size} selected</span>}
-            </div>
+        <header className="ak-topbar">
+          <div className="ak-topbar__phone">
+            <IconButton
+              label="Menu"
+              icon={<IconMenu />}
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen((o) => !o)}
+            />
+          </div>
+          <div className="ak-topbar__left">{topLeft}</div>
+          <div className="ak-topbar__right">
+            {toolbar}
             <SearchBar
               value={query}
               onChange={setQuery}
@@ -912,44 +1034,33 @@ export function MailApp({ route, me }: MailAppProps) {
                 recent: lastSearch,
               }}
             />
-            {inInbox && (
-              <div className="ak-tabs" role="tablist" aria-label="Splits">
-                {tabs.map((t) => {
-                  const selected = sameView(t.view, view);
-                  const n = t.key === SYS.inbox ? undefined : counts?.[t.key];
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      role="tab"
-                      aria-selected={selected}
-                      tabIndex={-1}
-                      className="ak-tab"
-                      onClick={() => go(t.view)}
-                    >
-                      {t.name}
-                      {n ? <span className="ak-tab__count">{n >= 100 ? "99+" : n}</span> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {isSearch && searchArgs && (search.unsupported.length > 0 || search.status === "done") && (
-              <div className="ak-searchnote">
-                {search.unsupported.length > 0 && (
-                  <span>Some of this query ({search.unsupported.join(", ")}) needs the full mailbox.</span>
-                )}
-                <button
-                  type="button"
-                  className="ak-link"
-                  onClick={() => void runFullSearch()}
-                  disabled={fullSearch?.busy}
-                >
-                  {fullSearch?.busy ? "Searching the full mailbox…" : "Search the full mailbox"}
-                </button>
-              </div>
-            )}
-          </header>
+            <button
+              type="button"
+              className="ak-hintbutton ak-topbar__compose"
+              aria-keyshortcuts="c"
+              onClick={() => handlers["compose.new"]?.()}
+            >
+              <IconPencil />
+              <span>Compose</span>
+              <Kbd shortcut="compose.new" />
+            </button>
+            <div className="ak-topbar__phone">
+              <IconButton
+                label="Command palette"
+                icon={<IconCommand />}
+                onClick={() => setPaletteOpen(true)}
+              />
+              <IconButton
+                label="Compose"
+                icon={<IconPencil />}
+                shortcut="compose.new"
+                onClick={() => handlers["compose.new"]?.()}
+              />
+            </div>
+          </div>
+        </header>
+        <section className="ak-listpane" aria-label={title}>
+          <h1 className="ak-visually-hidden">{title}</h1>
           <Banners accounts={accounts} onReconnect={(a) => void reconnect(a)} />
           <ThreadList
             rows={rows}
@@ -977,6 +1088,7 @@ export function MailApp({ route, me }: MailAppProps) {
                 return n;
               })
             }
+            onRowAction={onRowAction}
             listRef={listEl}
           />
         </section>
@@ -987,6 +1099,9 @@ export function MailApp({ route, me }: MailAppProps) {
                 <IconBack />
                 <span>Back to {title}</span>
               </button>
+              <Kbd shortcut="nav.back" />
+              {/* Narrow screens: the thread's actions sit here (wide screens have them in the top bar). */}
+              <div className="ak-thread__toolbar">{toolbar}</div>
             </div>
           )}
           <ErrorBoundary
@@ -1007,7 +1122,7 @@ export function MailApp({ route, me }: MailAppProps) {
                   multiAccount={accounts.length > 1}
                   showImagesTick={showImagesTick}
                   expandAllTick={expandAllTick}
-                  toolbar={toolbar}
+                  crumb={crumb}
                 />
               )
             ) : (
@@ -1016,6 +1131,13 @@ export function MailApp({ route, me }: MailAppProps) {
           </ErrorBoundary>
         </section>
       </main>
+      <StatusBar
+        title={crumb}
+        count={rows.length}
+        partial={status === "more" || status === "loading_more"}
+        accounts={accounts}
+        onReconnect={(a) => void reconnect(a)}
+      />
       <ErrorBoundary resetKey={openId ?? cursorId ?? ""} fallback={() => null}>
         <Prefetch rows={rows} anchor={openId ?? cursorId} />
       </ErrorBoundary>
@@ -1042,6 +1164,7 @@ export function MailApp({ route, me }: MailAppProps) {
         mode={picker?.kind === "remind" ? "remind" : "snooze"}
         count={t0.length}
         timezone={tz}
+        anchor={anchor}
         onOpenChange={(o) => !o && setPicker(null)}
         onPick={onPickTime}
       />
@@ -1057,6 +1180,8 @@ export function MailApp({ route, me }: MailAppProps) {
             : "Nothing matches."
         }
         items={pickerItems}
+        anchor={anchor}
+        checkboxes={picker?.kind === "label"}
         onOpenChange={(o) => !o && setPicker(null)}
         onPick={onPickItem}
         onCreate={

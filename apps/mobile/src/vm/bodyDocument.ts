@@ -38,7 +38,10 @@ export interface DocTheme {
   foreground: string;
   muted: string;
   border: string;
+  /** Kept for callers; links are ink with an underline now (design spec §4.4). */
   accent: string;
+  /** Body text (`secondary`, design spec §4.4); the foreground when absent. */
+  secondary?: string;
   /** Background behind sender-styled HTML (always light: email HTML assumes a white page). */
   paper: string;
   paperText: string;
@@ -210,24 +213,24 @@ export function messageBodyHtml(
 function styles(t: DocTheme): string {
   return `
 :root{color-scheme:${t.dark ? "dark" : "light"}}
-html,body{margin:0;padding:0;background:${t.background};color:${t.foreground};}
-body{font:15px/1.6 -apple-system,"Geist",Roboto,"Segoe UI",system-ui,sans-serif;-webkit-text-size-adjust:100%;word-wrap:break-word;overflow-wrap:anywhere;padding:0 16px 48px}
-a{color:${t.accent}}
+html,body{margin:0;padding:0;background:${t.background};color:${t.secondary ?? t.foreground};}
+body{font:16px/1.55 "Geist",-apple-system,Roboto,"Segoe UI",system-ui,sans-serif;-webkit-text-size-adjust:100%;word-wrap:break-word;overflow-wrap:anywhere;padding:0 16px 48px}
+a{color:${t.foreground};text-decoration:underline}
 details.msg{border-bottom:1px solid ${t.border};padding:12px 0}
 details.msg>summary{list-style:none;cursor:pointer;display:block}
 details.msg>summary::-webkit-details-marker{display:none}
-.who{font-weight:600;font-size:14px}
-.when{float:right;font-size:12px;color:${t.muted}}
+.who{font-weight:500;font-size:15px;color:${t.foreground}}
+.when{float:right;font:12px/1.5 "Geist Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:${t.muted}}
 .to{font-size:12px;color:${t.muted};margin-top:2px}
 .snip{font-size:13px;color:${t.muted};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 details.msg[open] .snip{display:none}
 details.msg:not([open]) .to{display:none}
 .body{margin-top:12px}
-.paper{background:${t.paper};color:${t.paperText};border-radius:12px;padding:${t.dark ? "12px" : "0"};overflow-x:auto}
+.paper{background:${t.paper};color:${t.paperText};border-radius:8px;padding:${t.dark ? "12px" : "0"};overflow-x:auto}
 .paper img{max-width:100%;height:auto}
 .paper table{max-width:100%}
-.text{white-space:pre-wrap;font-size:15px}
-details.quoted>summary{display:inline-block;list-style:none;cursor:pointer;color:${t.muted};border:1px solid ${t.border};border-radius:6px;padding:0 8px;margin:8px 0;font-size:12px;letter-spacing:2px}
+.text{white-space:pre-wrap;font-size:16px}
+details.quoted>summary{display:inline-block;list-style:none;cursor:pointer;color:${t.muted};border:1px solid ${t.border};border-radius:4px;padding:0 8px;margin:8px 0;font-size:12px;letter-spacing:2px}
 details.quoted>summary::-webkit-details-marker{display:none}
 .state{color:${t.muted};font-size:13px;padding:8px 0}
 ul.files{list-style:none;margin:12px 0 0;padding:0}

@@ -1,8 +1,8 @@
 # @akatsuki/ui
 
-Shared React primitives for the web app and the landing site, in the crimson dawn minimalism of the BRIEF:
-one accent, Instrument Serif headings, Geist UI text, uppercase tracked labels, slow crimson orbs, keyboard
-first. Styled **only** with `@akatsuki/tokens` CSS variables (a test fails on any colour literal or unknown
+Shared React primitives for the web app and the landing site, in the "First Light" direction
+(docs/DECISIONS.md D-480–D-489): ink on paper, hairlines for structure, red only where something needs your eye
+(the dawn marks and three brand buttons), Instrument Serif once per screen, Geist UI text, keyboard first. Styled **only** with `@akatsuki/tokens` CSS variables (a test fails on any colour literal or unknown
 variable). Built on Radix primitives (MIT) for focus management and ARIA.
 
 Mobile (React Native) does not use this package's components; it shares `errors.ts` copy
@@ -34,20 +34,20 @@ All accept `className` and the usual DOM props; refs are plain `ref` props (Reac
 
 | Component | Notes |
 |---|---|
-| `Button` | `variant` `primary` (crimson, glow) · `secondary` · `ghost` · `danger`; `size` `sm/md/lg`; `loading` (spinner, `aria-busy`, disabled); `shortcut` shows the key and sets `aria-keyshortcuts`; `icon`. `type="button"` by default. |
+| `Button` | flat pills: `variant` `primary`/`ink` (foreground fill) · `brand` (accent fill; sign-in, onboarding, billing only) · `secondary` · `ghost` · `danger` (accent-text label); `size` `sm/md/lg`; `loading` (spinner, `aria-busy`, disabled); `shortcut` shows the key and sets `aria-keyshortcuts`; `icon`. `type="button"` by default. |
 | `IconButton` | Required `label` (accessible name and tooltip), `icon`, `shortcut` (in the tooltip), `pressed` (`aria-pressed`), `tooltip={false}` to drop the tooltip. |
-| `Kbd` | `shortcut="thread.archive"` (preferred) or raw `keys="cmd+k"`. Per platform: "⌘K", "Ctrl+K", sequences as "G then I". Renders nothing for palette-only commands. |
+| `Kbd` | `shortcut="thread.archive"` (preferred) or raw `keys="cmd+k"`. Per platform; one keycap per key (`[Ctrl][K]`, `[G][I]`, macOS "⌘K"), read as "Ctrl+K" / "G then I". Renders nothing for palette-only commands. |
 | `Tooltip` | `content`, optional `shortcut`, one focusable child. Opens on hover (400 ms) and immediately on focus. |
 | `Menu`, `MenuTrigger`, `MenuContent`, `MenuItem`, `MenuCheckboxItem`, `MenuLabel`, `MenuSeparator`, `MenuGroup` | Radix dropdown: arrow keys, typeahead, Escape. `MenuItem` takes `shortcut`, `icon`, `destructive`, `onSelect`. |
-| `Dialog` (+ `DialogTrigger`, `DialogClose`) | `title` (required, Instrument Serif; `hideTitle` keeps it for screen readers), `description`, `footer`, `size`. Focus trap, Escape, focus return. |
-| `ToastProvider` / `useToast()` | `toast({ id?, title, description?, tone, action?, secondaryAction?, durationMs?, onDismiss? })` → id; `dismiss(id)`, `dismissAll()`. Same `id` replaces (op failures keyed by opId show once, §5.7). Errors are sticky and `role="alert"`; others `role="status"`, 5 s. Timers pause on hover/focus. `UNDO_TOAST_MS` = 10 s (§5.2). |
+| `Dialog` (+ `DialogTrigger`, `DialogClose`) | `title` (required, Geist 15/500; `hideTitle` keeps it for screen readers), `description`, `footer`, `size`; `anchor` + `width` make it an anchored popover (no scrim, flips above near the bottom). Focus trap, Escape, focus return. |
+| `ToastProvider` / `useToast()` | `toast({ id?, title, description?, tone, action?, secondaryAction?, durationMs?, onDismiss? })` → id; `dismiss(id)`, `dismissAll()`. Same `id` replaces (op failures keyed by opId show once, §5.7). Errors are sticky and `role="alert"`; others `role="status"`, 4 s. Timers pause on hover/focus. `UNDO_TOAST_MS` = 10 s (§5.2); undo toasts show a hairline running out. `singleInfo` (or `AkatsukiUiProvider singleInfoToast`): one info toast at a time, at most two errors above it. An ink pill, bottom-left of the list pane (`--ak-toast-left/-bottom`). |
 | `CommandPalette` | See below. |
 | `List`, `ListRow`, `ListRowLeading`, `ListRowTitle`, `ListRowSnippet`, `ListRowMeta`, `ListRowTrailing`, `UnreadDot` | Listbox of options for dense mail lists. `ListRow` has independent `active` (j/k cursor, `aria-current`), `selected` (x), `unread`, `pending` states and fixed heights from the density tokens (`compact` 32 px, `comfortable` 44 px), so lists virtualize. Focus stays on `List` (`activeId` → `aria-activedescendant`). |
-| `Avatar` | `name`, `email`, `src` (pass a proxied URL only), `size`. Initials on one of three accent tints chosen by a hash of the address; falls back to initials when the image fails. |
-| `Badge` | `count` (capped "99+", zero renders nothing, like `mail.unreadCounts`) or a label child (uppercase, tracked); `tone` `accent/neutral/outline`. |
-| `Spinner` | `role="status"` with `label`; breathes instead of spinning under reduced motion. |
-| `Orbs` | `variant` `hero` (3 orbs) or `subtle` (2). Decorative (`aria-hidden`), absolutely positioned: put it in a `position: relative` container. Still under `prefers-reduced-motion` (`data-motion="reduce"`); `usePrefersReducedMotion()` is exported. |
-| `Heading`, `Eyebrow` | `Heading` `variant` `subject` (opened thread), `heading`, `empty`, `display`; `accent`. `Eyebrow` is the uppercase tracked label (`app` 0.12em, `brand` 0.3em). |
+| `Avatar` | `name`, `email`, `src` (pass a proxied URL only), `size`. A mono letter tile (no tints); falls back to initials when the image fails. The mail views do not use it. |
+| `Badge` | `count` (mono grey, capped "99+", zero renders nothing, like `mail.unreadCounts`) or a label child (a mono caps chip); `tone` `accent` (ink) / `neutral` / `outline`. |
+| `Spinner` | `role="status"` with `label`; still (no rotation) under reduced motion. |
+| `usePrefersReducedMotion()` | Live `prefers-reduced-motion`. (The orbs are gone, D-480.) |
+| `Heading`, `Eyebrow`, `Crumb` | `Heading` `variant` `subject` (opened thread, 24 → 30 from 768px), `heading`, `empty`, `display`. `Eyebrow` is the sentence-case section label (12/500). `Crumb` is mono caps, for the reader crumb and the AI provenance line only. |
 
 ### Command palette
 
@@ -89,10 +89,15 @@ WireError, ConvexError or AiFeatureError. `maskAccount("sami@x.com")` → `sami@
 ## Styling rules
 
 - Class prefix `ak-`, BEM-ish (`ak-row__title`, `ak-button--primary`). Override with `className`, not new colours.
-- Only token variables; derived roles defined in `styles.css` are `--ak-on-accent` (text on the accent: the
-  light end of the theme in both modes), `--ak-surface`, `--ak-raised`, `--ak-shadow`, `--ak-focus`.
-- Focus is always visible (`--ak-focus` ring on `:focus-visible`).
-- Motion uses the token durations (0 ms under reduced motion); orbs, overlays and toasts stop animating.
+- Only token variables. The roles in `styles.css` (SPEC §2.3) are opaque mixes of the foreground over the
+  background: `--ak-fg-80/70/60` (secondary, tertiary, muted; muted steps up to tertiary on a surface),
+  `--ak-line`, `--ak-line-strong`, `--ak-stroke`, `--ak-surface`, `--ak-surface-strong`; plus `--ak-dot`
+  (`--dawn`), `--ak-on-accent`, `--ak-pop` (the level 1 shadow), `--ak-scrim`. `--ak-raised` and `--ak-shadow`
+  remain as aliases.
+- Focus is always visible: a 2px outline in the text colour (`--ak-focus-color`), 2px off the element (D-484).
+- Flat, then one lift: only tooltips, menus, dialogs, the palette and toasts are raised; never a blur.
+- Motion: product state changes are instant; overlays fade and rise 4px over 140ms; reduced motion keeps an 80ms
+  fade and no transforms.
 
 ## Tests
 

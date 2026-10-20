@@ -23,6 +23,10 @@
       "types": "./src/optimistic.ts",
       "default": "./src/optimistic.ts"
     },
+    "./snippets": {
+      "types": "./src/snippets.ts",
+      "default": "./src/snippets.ts"
+    },
     "./fixtures/*": "./fixtures/*"
   },
   "scripts": {

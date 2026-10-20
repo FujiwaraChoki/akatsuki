@@ -1,8 +1,10 @@
-// Modal dialogs (Radix): focus trap, Escape closes, focus returns to the trigger. The title is set in
-// Instrument Serif; pass `hideTitle` to keep it for screen readers only.
+// Modal dialogs (Radix): focus trap, Escape closes, focus returns to the trigger. Level 1 elevation on a light
+// scrim (no blur). The title is Geist 15/500; pass `hideTitle` to keep it for screen readers only.
+// `anchor` turns the dialog into an anchored popover (pickers: snooze, labels, send later): no scrim, placed
+// under a rectangle and flipped above it near the bottom edge (SPEC §3.7).
 import * as RadixDialog from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { cx } from "./config.tsx";
 
 export const DialogTrigger = (props: RadixDialog.DialogTriggerProps) => (
@@ -29,6 +31,31 @@ export interface DialogProps {
   onOpenAutoFocus?: (e: Event) => void;
   /** A visible Close button pinned to the top right, for long dialogs read by scrolling. */
   closeButton?: boolean;
+  /** Anchors the dialog as a popover under this rectangle (viewport coordinates), with no scrim. */
+  anchor?: AnchorRect | null;
+  /** Popover width in px (with `anchor`). */
+  width?: number;
+}
+
+export interface AnchorRect {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+/** Where an anchored popover goes: under the rectangle, or above it when the space below is short. */
+export function popoverPosition(
+  anchor: AnchorRect,
+  width: number,
+  viewport: { width: number; height: number },
+  minBelow = 340,
+): CSSProperties {
+  const left = Math.max(8, Math.min(anchor.left, viewport.width - width - 8));
+  const below = viewport.height - anchor.bottom;
+  return below >= minBelow || below >= anchor.top
+    ? { top: Math.round(anchor.bottom + 4), bottom: "auto", left: Math.round(left), width }
+    : { top: "auto", bottom: Math.round(viewport.height - anchor.top + 4), left: Math.round(left), width };
 }
 
 export function Dialog({
@@ -45,15 +72,24 @@ export function Dialog({
   className,
   onOpenAutoFocus,
   closeButton,
+  anchor,
+  width = 280,
 }: DialogProps) {
   const heading = <RadixDialog.Title className="ak-dialog__title">{title}</RadixDialog.Title>;
+  const pop = anchor
+    ? popoverPosition(anchor, width, {
+        width: typeof window === "undefined" ? 1440 : window.innerWidth,
+        height: typeof window === "undefined" ? 900 : window.innerHeight,
+      })
+    : undefined;
   return (
     <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger}
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="ak-dialog__overlay" />
+        {!pop && <RadixDialog.Overlay className="ak-dialog__overlay" />}
         <RadixDialog.Content
-          className={cx("ak-dialog", `ak-dialog--${size}`, className)}
+          className={cx("ak-dialog", pop ? "ak-dialog--pop" : `ak-dialog--${size}`, className)}
+          style={pop}
           onOpenAutoFocus={onOpenAutoFocus}
           // Without a description, tell Radix there is none (it warns otherwise).
           {...(description ? {} : { "aria-describedby": undefined })}

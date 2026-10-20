@@ -166,6 +166,8 @@ describe("compose with AI", () => {
     const dialog = await screen.findByRole("dialog", { name: "New message" });
     const body = within(dialog).getByLabelText("Message") as HTMLTextAreaElement;
     await user.type(body, "First sentence here. Second one is long.");
+    // First Light (D-487): the rewrite options live in the Write-with-AI popover, not a strip.
+    await user.click(within(dialog).getByRole("button", { name: "Rewrite and dictate" }));
     await user.click(within(dialog).getByRole("button", { name: "Shorter" }));
     await waitFor(() => expect(body.value).toBe("First sentence here."));
   });

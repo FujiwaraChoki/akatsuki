@@ -76,7 +76,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-sqlite",
     "expo-web-browser",
     "expo-localization",
-    // Attachments (§10.4): the photo library for photos and videos; no camera or microphone.
+    // Dictation (§12.1, D-461): the microphone, asked for on the first Record in the composer. No background
+    // recording or playback.
+    [
+      "expo-audio",
+      {
+        microphonePermission:
+          "Akatsuki records your voice only while you dictate a message, then turns it into text.",
+        enableBackgroundRecording: false,
+        enableBackgroundPlayback: false,
+      },
+    ],
+    // Attachments (§10.4): the photo library for photos and videos; no camera (the microphone is expo-audio's).
     [
       "expo-image-picker",
       {

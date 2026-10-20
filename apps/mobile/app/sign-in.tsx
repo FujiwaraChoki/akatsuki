@@ -3,9 +3,17 @@
 import { AUTH_COPY } from "@akatsuki/ui/copy";
 import { Redirect, router } from "expo-router";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, View } from "react-native";
-import { Orbs } from "../src/components/Orbs";
-import { Button, Field, Label, Screen, Txt } from "../src/components/ui";
+import {
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { Dot, DotHeadline, Horizon } from "../src/components/Brand";
+import { Button, Field, Screen, Txt } from "../src/components/ui";
 import { ENV } from "../src/env";
 import { authClient, sendMagicLink, sendOtp, signInSocial, verifyOtp } from "../src/lib/auth";
 import { useTheme } from "../src/theme/ThemeProvider";
@@ -18,6 +26,7 @@ const PROVIDER_TITLES = { google: "Continue with Google", microsoft: "Continue w
 
 export default function SignIn() {
   const t = useTheme();
+  const { height } = useWindowDimensions();
   const session = authClient!.useSession();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -80,34 +89,28 @@ export default function SignIn() {
 
   return (
     <Screen edges={["top", "bottom", "left", "right"]}>
-      <Orbs />
+      {/* The horizon (spec §2.10): static, behind the footer. */}
+      <Horizon style={{ top: Math.round(height * 0.78) - 64 }} />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
             flexGrow: 1,
-            justifyContent: "center",
-            padding: t.space[3],
+            paddingHorizontal: t.space[3],
+            paddingTop: t.space[3],
+            paddingBottom: t.space[3],
             gap: t.space[3],
             maxWidth: 480,
             width: "100%",
             alignSelf: "center",
           }}
         >
-          <View style={{ gap: t.space[1] }}>
-            <Txt
-              accessibilityRole="header"
-              style={{
-                fontFamily: t.text.heading.fontFamily,
-                fontSize: 56,
-                lineHeight: 60,
-                letterSpacing: -1,
-                color: t.colors.text,
-              }}
-            >
-              Akatsuki
+          <Dot size={12} />
+          <View style={{ gap: t.space["1_5"], marginTop: Math.round(height * 0.12) }}>
+            <DotHeadline text="Mail at the speed of thought." />
+            <Txt variant="reading" tone="tertiary" style={{ fontSize: 15 }}>
+              Sign in to Akatsuki with your email address.
             </Txt>
-            <Label>Fast, keyboard-first email</Label>
           </View>
 
           {step.kind === "email" ? (
@@ -133,7 +136,7 @@ export default function SignIn() {
               {/* The email code is the primary method on every client (web, desktop, mobile; D-399). */}
               <Button
                 title={AUTH_COPY.sendCode}
-                variant="primary"
+                variant="brand"
                 onPress={otp}
                 busy={busy === "otp"}
                 disabled={!valid}
@@ -147,7 +150,13 @@ export default function SignIn() {
               />
               {(ENV.env?.loginProviders ?? []).length > 0 ? (
                 <View style={{ gap: t.space[1], marginTop: t.space[1] }}>
-                  <Label>Or</Label>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: t.space[1] }}>
+                    <View style={{ flex: 1, height: 1, backgroundColor: t.colors.borderSubtle }} />
+                    <Txt variant="meta" tone="muted">
+                      or
+                    </Txt>
+                    <View style={{ flex: 1, height: 1, backgroundColor: t.colors.borderSubtle }} />
+                  </View>
                   {ENV.env!.loginProviders.map((p) => (
                     <Button key={p} title={PROVIDER_TITLES[p]} onPress={() => social(p)} busy={busy === p} />
                   ))}
@@ -209,7 +218,7 @@ export default function SignIn() {
                 error={error}
                 autoFocus
               />
-              <Button title={AUTH_COPY.verify} variant="primary" onPress={verify} busy={busy === "verify"} />
+              <Button title={AUTH_COPY.verify} variant="brand" onPress={verify} busy={busy === "verify"} />
               <Button
                 title={cooldown > 0 ? `Send a new code in ${cooldown} s` : AUTH_COPY.resendCode}
                 variant="ghost"
@@ -224,6 +233,7 @@ export default function SignIn() {
             </View>
           ) : null}
 
+          <View style={{ flex: 1 }} />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.space[2] }}>
             <Pressable accessibilityRole="link" onPress={() => Linking.openURL("https://akatsuki.vc/terms")}>
               <Txt variant="meta" tone="muted">
@@ -239,6 +249,9 @@ export default function SignIn() {
               </Txt>
             </Pressable>
           </View>
+          <Txt variant="caption" tone="muted" style={{ marginTop: -t.space[2] }}>
+            Open source, free for personal use.
+          </Txt>
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>

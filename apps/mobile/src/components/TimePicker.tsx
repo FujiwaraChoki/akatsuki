@@ -1,7 +1,7 @@
 // Snooze / remind / send-later picker: presets first (one tap), then a custom day and half-hour slot. Times are
 // computed in the user's zone by vm/snooze.ts.
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 import { useTheme } from "../theme/ThemeProvider";
 import { customTime, type DayOption, dayOptions, slotLabel, TIME_SLOTS, type TimePreset } from "../vm/snooze";
 import { wallTime } from "../vm/zoned";
@@ -30,7 +30,7 @@ export function TimePicker({
   const choice = customTime(day, slot, now, timeZone);
 
   return (
-    <View style={{ gap: t.space[1] }}>
+    <View style={{ gap: 0 }}>
       {presets.map((p, i) => (
         <Pressable
           key={p.id}
@@ -42,23 +42,38 @@ export function TimePicker({
             alignItems: "center",
             minHeight: 52,
             paddingHorizontal: t.space[2],
-            borderRadius: t.radius.md,
-            backgroundColor: pressed ? t.colors.selected : "transparent",
+            gap: t.space[1],
+            backgroundColor: pressed ? t.colors.surfaceStrong : "transparent",
           })}
         >
-          <Txt variant="caption" tone="muted" style={{ width: 20 }}>
-            {i + 1}
-          </Txt>
-          <Txt variant="body" style={{ flex: 1 }}>
+          <Txt variant="body" style={{ flex: 1, fontSize: 16 }}>
             {p.label}
           </Txt>
-          <Txt variant="meta" tone="muted">
+          <Txt variant="code" tone="muted" style={{ fontSize: 13 }}>
             {p.hint}
           </Txt>
+          {Platform.OS === "ios" && Platform.isPad ? (
+            <Txt variant="code" tone="muted" style={{ width: 16, textAlign: "right" }}>
+              {i + 1}
+            </Txt>
+          ) : null}
         </Pressable>
       ))}
       {!custom ? (
-        <Button title="Pick a date and time" variant="ghost" onPress={() => setCustom(true)} />
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setCustom(true)}
+          style={({ pressed }) => ({
+            minHeight: 52,
+            paddingHorizontal: t.space[2],
+            justifyContent: "center",
+            backgroundColor: pressed ? t.colors.surfaceStrong : "transparent",
+          })}
+        >
+          <Txt variant="body" tone="tertiary" style={{ fontSize: 16 }}>
+            Pick a date and time…
+          </Txt>
+        </Pressable>
       ) : (
         <View style={{ gap: t.space[1], paddingTop: t.space[1] }}>
           <Label style={{ paddingHorizontal: t.space[2] }}>Day</Label>

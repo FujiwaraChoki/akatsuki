@@ -7,7 +7,12 @@
 // Keys (packages/shortcuts, compose scope): Ctrl/⌘ Enter send, Ctrl/⌘ Shift L send later, Ctrl/⌘ ; snippet,
 // Ctrl/⌘ Shift A attach, Ctrl/⌘ Shift C / B cc / bcc, Ctrl/⌘ J write with AI, Ctrl/⌘ Shift , discard, Escape
 // close. Every one of them is also in the command palette while the composer is open.
-import { Button, Eyebrow, errorMessage, IconButton, Kbd, Spinner, useToast } from "@akatsuki/ui";
+//
+// First Light (SPEC §3.4): compose takes the reader slot (the list stays usable beside it); a reply expands at the
+// foot of the thread, full reader width. One anatomy: a 13/500 title, 36px hairline field rows, the body in the
+// reading size with a dawn caret, then an ink Send, Send later and Write with AI. Rewrite and dictation sit in the
+// Write-with-AI popover; follow-up, read receipt, snippets and discard in More.
+import { type AnchorRect, Button, errorMessage, IconButton, Kbd, Spinner, useToast } from "@akatsuki/ui";
 import {
   type ChangeEvent,
   type CSSProperties,
@@ -28,7 +33,7 @@ import { type UseAi, useAi, useAiStream } from "../ai/useAi.ts";
 import { voiceFor } from "../ai/voice.ts";
 import { useBackend, useBodies } from "../backend/context.tsx";
 import type { IdentityView, MailAccountView, MessageMeta, MeView } from "../backend/types.ts";
-import { IconClose, IconDraft, IconPaperclip, IconTrash } from "../components/Icons.tsx";
+import { IconChevronDown, IconClose, IconDots, IconPaperclip } from "../components/Icons.tsx";
 import { fileSize } from "../lib/format.ts";
 import { deviceId, uuidv7 } from "../lib/ids.ts";
 import { defaultStore, type KvStore } from "../lib/kv.ts";
@@ -110,6 +115,9 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
   const [showQuote, setShowQuote] = useState(false);
   const [picker, setPicker] = useState<null | "snippet" | "later">(null);
   const [aiBar, setAiBar] = useState<null | "write">(null);
+  const [panel, setPanel] = useState<null | "rewrite" | "more">(null);
+  const laterRef = useRef<HTMLButtonElement>(null);
+  const [laterAnchor, setLaterAnchor] = useState<AnchorRect | null>(null);
   const [instruction, setInstruction] = useState("");
   const [aiUndo, setAiUndo] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -503,10 +511,11 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
   // ───────────── keyboard ─────────────
   const handlers: Record<string, () => void> = {
     "compose.send": () => void send(),
-    "compose.sendLater": () => setPicker("later"),
+    "compose.sendLater": () => openLater(),
     "compose.discard": () => void discard(),
     "compose.close": () => {
       if (picker) return setPicker(null);
+      if (panel) return setPanel(null);
       if (aiBusy) return stream.cancel();
       if (aiBar) return setAiBar(null);
       void close();
@@ -565,14 +574,25 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
 
   const statusText = status === "pending" && saver.current().version === 0 ? "" : STATUS_TEXT[status];
 
+  function openLater() {
+    const r = laterRef.current?.getBoundingClientRect();
+    setLaterAnchor(r ? { top: r.top, bottom: r.bottom, left: r.left, right: r.right } : null);
+    setPicker("later");
+  }
+
   return (
     <section
       ref={rootRef}
       className="ak-compose"
-      data-docked={dock ? "" : undefined}
+      data-docked={dock?.kind}
       style={
         dock
-          ? ({ "--ak-dock-left": `${dock.left}px`, "--ak-dock-width": `${dock.width}px` } as CSSProperties)
+          ? ({
+              "--ak-dock-left": `${dock.left}px`,
+              "--ak-dock-top": `${dock.top}px`,
+              "--ak-dock-width": `${dock.width}px`,
+              "--ak-dock-height": `${dock.height}px`,
+            } as CSSProperties)
           : undefined
       }
       role="dialog"
@@ -593,7 +613,7 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
       onDrop={onDrop}
     >
       <header className="ak-compose__header">
-        <Eyebrow>{MODE_TITLE[d.mode]}</Eyebrow>
+        <h2 className="ak-compose__title">{MODE_TITLE[d.mode]}</h2>
         <span className="ak-compose__status" aria-live="polite" data-status={status}>
           {statusText}
           {status === "error" && (
@@ -602,12 +622,9 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
             </button>
           )}
         </span>
-        <IconButton
-          label="Close"
-          icon={<IconClose />}
-          shortcut="compose.close"
-          onClick={() => void close()}
-        />
+        <button type="button" className="ak-compose__close" aria-label="Close" onClick={() => void close()}>
+          <Kbd shortcut="compose.close" />
+        </button>
       </header>
 
       {status === "conflict" && (
@@ -622,7 +639,7 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
         </div>
       )}
 
-      <div className="ak-compose__fields">
+      <div className="ak-compose__fields" data-from={fromOptions.length > 1 || undefined}>
         {fromOptions.length > 1 && (
           <div className="ak-compose__row">
             <label className="ak-compose__label" htmlFor="ak-compose-from">
@@ -655,13 +672,13 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
         {(!d.showCc || !d.showBcc) && (
           <div className="ak-compose__more">
             {!d.showCc && (
-              <button type="button" className="ak-link" onClick={handlers["compose.cc"]}>
-                Cc <Kbd shortcut="compose.cc" />
+              <button type="button" className="ak-compose__ccbcc" onClick={handlers["compose.cc"]}>
+                Cc
               </button>
             )}
             {!d.showBcc && (
-              <button type="button" className="ak-link" onClick={handlers["compose.bcc"]}>
-                Bcc <Kbd shortcut="compose.bcc" />
+              <button type="button" className="ak-compose__ccbcc" onClick={handlers["compose.bcc"]}>
+                Bcc
               </button>
             )}
           </div>
@@ -679,46 +696,6 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
           />
         </div>
       </div>
-
-      {aiBar === "write" && (
-        <div className="ak-compose__ai">
-          <label className="ak-compose__label" htmlFor="ak-compose-ai">
-            Write with AI
-          </label>
-          <div className="ak-compose__ai-row">
-            <input
-              id="ak-compose-ai"
-              ref={aiInputRef}
-              className="ak-input"
-              placeholder="Say yes and suggest Thursday at 10"
-              value={instruction}
-              onChange={(e) => setInstruction(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.ctrlKey && !e.metaKey) {
-                  e.preventDefault();
-                  void runWrite();
-                }
-              }}
-              disabled={aiBusy}
-            />
-            {aiBusy ? (
-              <Button size="sm" onClick={stream.cancel}>
-                Stop
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={() => void runWrite()}
-                disabled={ai.status("compose") !== "ready"}
-              >
-                Write
-              </Button>
-            )}
-          </div>
-          <EgressNote ai={ai} feature="compose" />
-        </div>
-      )}
 
       <div className="ak-compose__body">
         <label htmlFor="ak-compose-body" className="ak-visually-hidden">
@@ -810,27 +787,146 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
         </p>
       )}
 
-      <div className="ak-compose__tools" role="toolbar" aria-label="Writing tools">
-        <Button size="sm" variant="ghost" shortcut="compose.aiWrite" onClick={handlers["compose.aiWrite"]}>
+      {aiBar === "write" && (
+        <div className="ak-compose__ai">
+          <label className="ak-visually-hidden" htmlFor="ak-compose-ai">
+            Write with AI
+          </label>
+          <div className="ak-compose__ai-row">
+            <input
+              id="ak-compose-ai"
+              ref={aiInputRef}
+              className="ak-compose__ai-input"
+              placeholder="Tell it what to write"
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.ctrlKey && !e.metaKey) {
+                  e.preventDefault();
+                  void runWrite();
+                }
+              }}
+              disabled={aiBusy}
+            />
+            {aiBusy ? (
+              <Button size="sm" onClick={stream.cancel}>
+                Stop
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => void runWrite()}
+                disabled={ai.status("compose") !== "ready"}
+              >
+                Write
+              </Button>
+            )}
+          </div>
+          <EgressNote ai={ai} feature="compose" />
+        </div>
+      )}
+
+      {panel === "rewrite" && (
+        <fieldset className="ak-compose__panel">
+          <legend className="ak-visually-hidden">Rewrite and dictate</legend>
+          <RewriteButtons ai={ai} disabled={aiBusy || !d.body.trim()} onRewrite={runRewrite} />
+          {dictationSupported() && (
+            <button
+              type="button"
+              className="ak-compose__panel-item"
+              aria-pressed={dictation.state.status === "recording"}
+              onClick={dictation.toggle}
+              disabled={ai.status("dictation") !== "ready" || dictation.state.status === "transcribing"}
+            >
+              {dictation.state.status === "recording" && <span className="ak-rec" aria-hidden="true" />}
+              {dictation.state.status === "recording" ? "Listening… · Stop dictation" : "Dictate"}
+            </button>
+          )}
+          <EgressNote ai={ai} feature="rewrite" />
+        </fieldset>
+      )}
+      {panel === "more" && (
+        <fieldset className="ak-compose__panel ak-compose__panel--more">
+          <legend className="ak-visually-hidden">More</legend>
+          <label className="ak-compose__followup">
+            <span>Remind me if no reply</span>
+            <select
+              className="ak-input ak-input--select"
+              aria-label="Follow-up reminder"
+              value={d.followUp ?? "off"}
+              onChange={(e) =>
+                edit({ followUp: e.target.value === "off" ? null : (e.target.value as FollowUp) })
+              }
+            >
+              {FOLLOW_UPS.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {prefs.readReceipts.enabled && (
+            <label
+              className="ak-check ak-compose__receipt"
+              title="Unreliable: Apple Mail Privacy Protection opens every message."
+            >
+              <input
+                type="checkbox"
+                checked={d.readReceipt}
+                onChange={(e) => edit({ readReceipt: e.target.checked })}
+              />
+              Read receipt
+            </label>
+          )}
+          <button
+            type="button"
+            className="ak-compose__panel-item"
+            onClick={() => {
+              setPanel(null);
+              setPicker("snippet");
+            }}
+          >
+            Insert snippet <Kbd shortcut="compose.snippet" />
+          </button>
+          <button
+            type="button"
+            className="ak-compose__panel-item ak-compose__panel-item--danger"
+            onClick={() => void discard()}
+          >
+            Discard draft <Kbd shortcut="compose.discard" />
+          </button>
+        </fieldset>
+      )}
+
+      <footer className="ak-compose__footer">
+        <Button variant="ink" shortcut="compose.send" onClick={() => void send()}>
+          Send
+        </Button>
+        <Button ref={laterRef} variant="secondary" shortcut="compose.sendLater" onClick={openLater}>
+          Send later
+        </Button>
+        <Button
+          variant="ghost"
+          shortcut="compose.aiWrite"
+          className="ak-compose__write"
+          onClick={handlers["compose.aiWrite"]}
+        >
           Write with AI
         </Button>
-        <RewriteButtons ai={ai} disabled={aiBusy || !d.body.trim()} onRewrite={runRewrite} />
-        {dictationSupported() && (
-          <Button
-            size="sm"
-            variant="ghost"
-            aria-pressed={dictation.state.status === "recording"}
-            onClick={dictation.toggle}
-            loading={dictation.state.status === "transcribing"}
-            disabled={ai.status("dictation") !== "ready"}
-          >
-            {dictation.state.status === "recording" ? "Stop dictation" : "Dictate"}
-          </Button>
-        )}
+        <button
+          type="button"
+          className="ak-compose__toggle"
+          aria-label="Rewrite and dictate"
+          aria-expanded={panel === "rewrite"}
+          onClick={() => setPanel((p) => (p === "rewrite" ? null : "rewrite"))}
+        >
+          <IconChevronDown />
+        </button>
         {aiUndo !== null && !aiBusy && (
           <button
             type="button"
-            className="ak-link"
+            className="ak-textbutton ak-compose__undo"
             onClick={() => {
               edit({ body: aiUndo });
               setAiUndo(null);
@@ -839,9 +935,25 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
             Undo AI change
           </button>
         )}
-      </div>
+        <span className="ak-compose__spacer" />
+        <IconButton
+          label="Attach files"
+          icon={<IconPaperclip />}
+          shortcut="compose.attach"
+          onClick={() => fileRef.current?.click()}
+        />
+        <IconButton
+          label="More"
+          icon={<IconDots />}
+          aria-expanded={panel === "more"}
+          pressed={panel === "more"}
+          onClick={() => setPanel((p) => (p === "more" ? null : "more"))}
+        />
+        <input ref={fileRef} type="file" multiple hidden onChange={onFiles} aria-label="Attach files" />
+      </footer>
       {(aiBusy || dictation.state.status !== "idle") && (
         <EgressNote
+          className="ak-compose__where"
           ai={ai}
           feature={
             dictation.state.status !== "idle"
@@ -853,66 +965,10 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
         />
       )}
 
-      <footer className="ak-compose__footer">
-        <Button variant="primary" shortcut="compose.send" onClick={() => void send()}>
-          Send
-        </Button>
-        <Button variant="secondary" shortcut="compose.sendLater" onClick={() => setPicker("later")}>
-          Send later
-        </Button>
-        <label className="ak-compose__followup">
-          <span className="ak-visually-hidden">Follow-up reminder</span>
-          <select
-            className="ak-input ak-input--select"
-            value={d.followUp ?? "off"}
-            onChange={(e) =>
-              edit({ followUp: e.target.value === "off" ? null : (e.target.value as FollowUp) })
-            }
-          >
-            {FOLLOW_UPS.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {prefs.readReceipts.enabled && (
-          <label
-            className="ak-check ak-compose__receipt"
-            title="Unreliable: Apple Mail Privacy Protection opens every message."
-          >
-            <input
-              type="checkbox"
-              checked={d.readReceipt}
-              onChange={(e) => edit({ readReceipt: e.target.checked })}
-            />
-            Read receipt
-          </label>
-        )}
-        <span className="ak-compose__spacer" />
-        <IconButton
-          label="Attach files"
-          icon={<IconPaperclip />}
-          shortcut="compose.attach"
-          onClick={() => fileRef.current?.click()}
-        />
-        <IconButton
-          label="Insert snippet"
-          icon={<IconDraft />}
-          shortcut="compose.snippet"
-          onClick={() => setPicker("snippet")}
-        />
-        <IconButton
-          label="Discard draft"
-          icon={<IconTrash />}
-          shortcut="compose.discard"
-          onClick={() => void discard()}
-        />
-        <input ref={fileRef} type="file" multiple hidden onChange={onFiles} aria-label="Attach files" />
-      </footer>
-
       <ListPicker
         open={picker === "snippet"}
+        width={400}
+        anchor={laterAnchor}
         title="Insert snippet"
         placeholder="Snippet"
         items={snippetItems}
@@ -927,6 +983,7 @@ export function Composer({ initial, me, accounts, identities }: ComposerProps) {
       />
       <TimePicker
         open={picker === "later"}
+        anchor={laterAnchor}
         mode="send"
         count={1}
         timezone={tz}
@@ -958,15 +1015,15 @@ function RewriteButtons({
           ["fix", "Fix grammar"],
         ] as const
       ).map(([style, label]) => (
-        <Button
+        <button
           key={style}
-          size="sm"
-          variant="ghost"
+          type="button"
+          className="ak-compose__panel-item"
           disabled={disabled || !ready}
           onClick={() => onRewrite(style)}
         >
           {label}
-        </Button>
+        </button>
       ))}
     </fieldset>
   );
@@ -981,31 +1038,57 @@ function focusList() {
 
 export type { Addr };
 
-/** The split view is wide enough to show the reading pane next to the list (app.css, 1100 px). */
-const SPLIT_QUERY = "(min-width: 1100px)";
+/** Above phone width the composer docks into the reading pane (app.css); below it is a full-screen sheet. */
+const DOCK_QUERY = "(min-width: 769px)";
+
+interface Dock {
+  /** `slot`: new mail takes the whole reader slot; `bottom`: a reply expands at the foot of the thread. */
+  kind: "slot" | "bottom";
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
 
 /**
- * Replies, reply-all and forwards dock to the bottom of the reading pane in the split view instead of floating
- * over it: the composer takes the pane's width, the pane gets that much bottom padding and scrolls to the end,
- * so the newest message (the one being answered) stays readable above it. New messages keep the floating
- * window. The composer's height is published as `--ak-compose-h` so toasts sit above it.
+ * Where the composer sits (SPEC §3.4). New mail takes the reader slot (the list stays usable on the left); replies,
+ * reply-all and forwards expand at the bottom of the open thread, full reader width, and the pane gets that much
+ * bottom padding and scrolls to the end, so the message being answered stays readable above it. With no reading
+ * pane on screen (two panes, no thread open), new mail is a sheet on the right (CSS). The composer's height is
+ * published as `--ak-compose-h` so toasts can keep clear of it on phones.
  */
 function useReplyDock(mode: LocalDraft["mode"], rootRef: { current: HTMLElement | null }) {
-  const [dock, setDock] = useState<{ left: number; width: number } | null>(null);
+  const [dock, setDock] = useState<Dock | null>(null);
   useLayoutEffect(() => {
-    if (mode === "new" || typeof matchMedia !== "function") return;
-    const pane = document.querySelector<HTMLElement>(".ak-reading");
-    if (!pane) return;
-    const mq = matchMedia(SPLIT_QUERY);
+    if (typeof matchMedia !== "function") return;
+    const mq = matchMedia(DOCK_QUERY);
     const update = () => {
-      const r = pane.getBoundingClientRect();
-      const next =
-        mq.matches && r.width > 0 ? { left: Math.round(r.left), width: Math.round(r.width) } : null;
-      setDock((cur) => (cur?.left === next?.left && cur?.width === next?.width ? cur : next));
+      const pane = document.querySelector<HTMLElement>(".ak-reading");
+      const r = pane?.getBoundingClientRect();
+      const next: Dock | null =
+        mq.matches && r && r.width > 0
+          ? {
+              kind: mode === "new" ? "slot" : "bottom",
+              left: Math.round(r.left),
+              top: Math.round(r.top),
+              width: Math.round(r.width),
+              height: Math.round(r.height),
+            }
+          : null;
+      setDock((cur) =>
+        cur?.kind === next?.kind &&
+        cur?.left === next?.left &&
+        cur?.top === next?.top &&
+        cur?.width === next?.width &&
+        cur?.height === next?.height
+          ? cur
+          : next,
+      );
     };
     update();
+    const pane = document.querySelector<HTMLElement>(".ak-reading");
     const ro = typeof ResizeObserver === "function" ? new ResizeObserver(update) : null;
-    ro?.observe(pane);
+    if (pane) ro?.observe(pane);
     mq.addEventListener?.("change", update);
     window.addEventListener("resize", update);
     return () => {
@@ -1014,7 +1097,7 @@ function useReplyDock(mode: LocalDraft["mode"], rootRef: { current: HTMLElement 
       window.removeEventListener("resize", update);
     };
   }, [mode]);
-  const docked = dock !== null;
+  const docked = dock?.kind === "bottom";
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;

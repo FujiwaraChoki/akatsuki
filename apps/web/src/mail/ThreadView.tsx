@@ -1,16 +1,18 @@
 // The reading pane: an open thread (ARCHITECTURE §4.2 `mail.getThread`, §7.2 bodies, §14.3 rendering).
 // Headers come live from Convex; bodies stream from the worker once per thread and are cached on the device.
+// First Light (SPEC §3.1.5): a mono caps crumb, the serif subject with its chips inline, a from-line, and messages
+// without cards: collapsed 40px rows and expanded messages separated by hairlines. No avatars.
 import { SYS } from "@akatsuki/mail-model";
-import { Avatar, Badge, Button, Heading, Spinner } from "@akatsuki/ui";
+import { Badge, Crumb, Heading, Kbd, Spinner } from "@akatsuki/ui";
 import { splitQuoted } from "@akatsuki/wire";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TriageChip } from "../ai/TriageChip.tsx";
 import { extensions } from "../app/extensions.ts";
 import { useBackend, useBodies, useSyncOrigin } from "../backend/context.tsx";
 import type { LabelView, MessageBody, MessageMeta, Prefs, ThreadDetail } from "../backend/types.ts";
 import { ErrorState } from "../components/ErrorState.tsx";
-import { IconImage, IconPaperclip } from "../components/Icons.tsx";
-import { displayName, fileSize, fullDate } from "../lib/format.ts";
+import { IconPaperclip, IconStar } from "../components/Icons.tsx";
+import { displayName, fileSize, fullDate, messageWhen } from "../lib/format.ts";
 import { useTheme } from "../lib/theme.ts";
 import type { BodyLoader, BodyState } from "./bodyCache.ts";
 import { isPlainLooking, prepareHtml, textParagraphs } from "./bodyHtml.ts";
@@ -59,7 +61,8 @@ export interface ThreadViewProps {
   showImagesTick: number;
   /** Bumped by the "Expand all messages" command (shift+x). */
   expandAllTick: number;
-  toolbar: ReactNode;
+  /** The mono caps crumb: where the thread was opened from ("Inbox", "Inbox · VIP"). */
+  crumb: string;
 }
 
 export function ThreadView({
@@ -70,7 +73,7 @@ export function ThreadView({
   multiAccount,
   showImagesTick,
   expandAllTick,
-  toolbar,
+  crumb,
 }: ThreadViewProps) {
   const loader = useBodies();
   const { states: bodies, retry } = useThreadBodies(loader, detail);
@@ -102,28 +105,40 @@ export function ThreadView({
       (l): l is LabelView => l !== undefined && !l.hidden && l.kind !== "system" && l.role === undefined,
     );
   const footers = extensions().filter((e) => e.threadFooter);
+  const first = messages[0];
+  const crumbText = messages.length > 1 ? `${crumb} · ${messages.length} messages` : crumb;
 
   return (
     <article className="ak-thread" aria-labelledby={`subject-${thread._id}`}>
       <header className="ak-thread__header">
-        <div className="ak-thread__toolbar">{toolbar}</div>
-        <Heading level={1} variant="subject" id={`subject-${thread._id}`} className="ak-thread__subject">
-          {thread.subject || "(no subject)"}
-        </Heading>
-        <div className="ak-thread__meta">
-          {thread.labelKeys.includes(SYS.starred) && <Badge tone="accent">Starred</Badge>}
-          <TriageChip triage={thread.triage} />
-          {thread.snoozedUntil && (
-            <Badge tone="neutral">Snoozed until {fullDate(thread.snoozedUntil, timezone)}</Badge>
-          )}
-          {labels.map((l) => (
-            <Badge key={l._id} tone="outline">
-              {l.name}
-            </Badge>
-          ))}
-          {multiAccount && <span className="ak-thread__account">{account.email}</span>}
-          {thread.pendingOpCount > 0 && <span className="ak-thread__pending">Saving…</span>}
+        <Crumb className="ak-thread__crumb">{crumbText}</Crumb>
+        <div className="ak-thread__title">
+          <Heading level={1} variant="subject" id={`subject-${thread._id}`} className="ak-thread__subject">
+            {thread.subject || "(no subject)"}
+          </Heading>
+          <span className="ak-thread__chips">
+            <TriageChip triage={thread.triage} />
+            {labels.map((l) => (
+              <Badge key={l._id} tone="outline">
+                {l.name}
+              </Badge>
+            ))}
+          </span>
         </div>
+        <p className="ak-thread__meta">
+          {thread.labelKeys.includes(SYS.starred) && (
+            <span className="ak-thread__star">
+              <IconStar filled />
+              <span className="ak-visually-hidden">Starred</span>
+            </span>
+          )}
+          <span>{displayName(first?.from)}</span>
+          {first && <span> · {fromLineTo(first)}</span>}
+          {first && <span> · {messageWhen(first.date, Date.now(), timezone)}</span>}
+          {thread.snoozedUntil && <span> · Snoozed until {fullDate(thread.snoozedUntil, timezone)}</span>}
+          {multiAccount && <span className="ak-thread__account"> · {account.email}</span>}
+          {thread.pendingOpCount > 0 && <span className="ak-thread__pending"> · Saving…</span>}
+        </p>
       </header>
       {detail.truncated && (
         <p className="ak-thread__truncated">Older messages in this conversation are not shown.</p>
@@ -158,6 +173,15 @@ export function ThreadView({
       })}
     </article>
   );
+}
+
+/** "to me", "to Lena", "to Lena and 2 others": the from-line's recipient part. */
+function fromLineTo(m: MessageMeta): string {
+  const to = [...m.to, ...m.cc];
+  if (to.length === 0) return "to undisclosed recipients";
+  const first = to[0]!;
+  const name = first.name?.trim() ? first.name.trim().split(/\s+/)[0]! : first.email;
+  return to.length === 1 ? `to ${name}` : `to ${name} and ${to.length - 1} other${to.length > 2 ? "s" : ""}`;
 }
 
 function defaultExpanded(messages: MessageMeta[]): Set<string> {
@@ -199,17 +223,18 @@ function MessageView({
       aria-label={`Message from ${displayName(from)}`}
     >
       <button type="button" className="ak-message__head" onClick={onToggle} aria-expanded={expanded}>
-        <Avatar name={from?.name} email={from?.email ?? "?"} size="md" />
-        <span className="ak-message__who">
-          <span className="ak-message__from">{displayName(from)}</span>
-          {expanded ? (
-            <span className="ak-message__to">to {recipients || "undisclosed recipients"}</span>
-          ) : (
-            <span className="ak-message__snippet">{meta.snippet}</span>
-          )}
-        </span>
-        <time className="ak-message__date" dateTime={new Date(meta.date).toISOString()}>
-          {fullDate(meta.date, timezone)}
+        <span className="ak-message__from">{displayName(from)}</span>
+        {expanded ? (
+          <span className="ak-message__to">to {recipients || "undisclosed recipients"}</span>
+        ) : (
+          <span className="ak-message__snippet">{meta.snippet}</span>
+        )}
+        <time
+          className="ak-message__date"
+          dateTime={new Date(meta.date).toISOString()}
+          title={fullDate(meta.date, timezone)}
+        >
+          {messageWhen(meta.date, Date.now(), timezone)}
         </time>
       </button>
       {expanded && (
@@ -326,26 +351,30 @@ function ReadyBody({
   return (
     <>
       {blocked > 0 && !allowImages && (
-        <div className="ak-images-banner" role="note">
-          <IconImage />
+        // One quiet line, no tinted box (SPEC §3.1.5).
+        <p className="ak-images-banner" role="note">
           <span>
-            {blocked === 1 ? "1 image is" : `${blocked} images are`} hidden to protect your privacy.
+            {blocked === 1 ? "1 image" : `${blocked} images`} hidden to protect your privacy
             {body.trackersRemoved > 0 &&
-              ` ${body.trackersRemoved} tracker${body.trackersRemoved === 1 ? " was" : "s were"} removed.`}
+              ` · ${body.trackersRemoved} tracker${body.trackersRemoved === 1 ? "" : "s"} removed`}
           </span>
-          <Button size="sm" variant="secondary" shortcut="thread.showImages" onClick={onShowImages}>
-            Show images
-          </Button>
+          <span aria-hidden="true"> · </span>
+          <button type="button" className="ak-textbutton" onClick={onShowImages}>
+            Show images <Kbd shortcut="thread.showImages" />
+          </button>
           {sender && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => void m.setSenderPref({ sender, allowRemoteImages: true })}
-            >
-              Always from this sender
-            </Button>
+            <>
+              <span aria-hidden="true"> · </span>
+              <button
+                type="button"
+                className="ak-textbutton"
+                onClick={() => void m.setSenderPref({ sender, allowRemoteImages: true })}
+              >
+                Always from this sender
+              </button>
+            </>
           )}
-        </div>
+        </p>
       )}
       {prepared ? (
         <MessageFrame
@@ -353,6 +382,7 @@ function ReadyBody({
           syncOrigin={syncOrigin}
           title={`Message from ${displayName(meta.from)}`}
           mode={theme.mode === "dark" && plainLooking ? "dark" : "light"}
+          paper={theme.mode === "dark" && !plainLooking}
         />
       ) : (
         <div className="ak-textbody">

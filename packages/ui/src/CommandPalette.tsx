@@ -1,6 +1,8 @@
 // The command palette (BRIEF: every action reachable from it). A modal combobox over a listbox: fuzzy match on
 // label and keywords, sections, shortcut hints from packages/shortcuts, keyboard-first (the palette.* bindings:
-// up/down or ctrl+p/ctrl+n, Enter, Escape), mouse friendly, orbs behind it.
+// up/down or ctrl+p/ctrl+n, Enter, Escape), mouse friendly. First Light (SPEC §3.5): 560 wide on a light scrim,
+// 40px rows, sentence-case groups, keycaps side by side, and a footer with the keys and, for an AI command, where
+// its data goes.
 import { type Keymap, type Platform, paletteCommands, type ShortcutId } from "@akatsuki/shortcuts";
 import * as RadixDialog from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -8,7 +10,6 @@ import { type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useRef, 
 import { cx, eventMatchesShortcut, useUiConfig } from "./config.tsx";
 import { fuzzyMatch, highlightRuns } from "./fuzzy.ts";
 import { Kbd } from "./Kbd.tsx";
-import { Orbs } from "./Orbs.tsx";
 
 export interface PaletteItem {
   /** Unique; a shortcut id for commands from packages/shortcuts. */
@@ -22,6 +23,8 @@ export interface PaletteItem {
   shortcut?: ShortcutId;
   /** Free-form hint on the right when there is no shortcut (e.g. an account address). */
   hint?: string;
+  /** Shown in the footer while this item is highlighted (an AI command's "Runs on … · Stays on this device"). */
+  where?: string;
   icon?: ReactNode;
   disabled?: boolean;
   run: () => void;
@@ -110,7 +113,7 @@ export function CommandPalette({
   open,
   onOpenChange,
   items,
-  placeholder = "Type a command or search",
+  placeholder = "Type a command or search mail",
   emptyText = "No matching commands.",
   recent,
   onRun,
@@ -179,9 +182,7 @@ export function CommandPalette({
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="ak-palette__overlay">
-          <Orbs variant="subtle" />
-        </RadixDialog.Overlay>
+        <RadixDialog.Overlay className="ak-palette__overlay" />
         <RadixDialog.Content
           className="ak-palette"
           aria-describedby={undefined}
@@ -290,14 +291,16 @@ export function CommandPalette({
           </div>
           <div className="ak-palette__footer" aria-hidden="true">
             <span>
-              <Kbd shortcut="palette.prev" /> <Kbd shortcut="palette.next" /> to move
+              <Kbd shortcut="palette.prev" />
+              <Kbd shortcut="palette.next" /> move
             </span>
             <span>
-              <Kbd shortcut="palette.run" /> to run
+              <Kbd shortcut="palette.run" /> run
             </span>
             <span>
-              <Kbd shortcut="palette.close" /> to close
+              <Kbd shortcut="palette.close" /> close
             </span>
+            {activeItem?.where && <span className="ak-palette__where">{activeItem.where}</span>}
           </div>
         </RadixDialog.Content>
       </RadixDialog.Portal>

@@ -1,16 +1,21 @@
 // Search (§11): the shared grammar parsed on the device for chips and errors, `search.threads` on Convex for
 // headers and snippets, and "Search the full mailbox" through the worker's provider search for the rest.
+// "Search with AI" (§11 NL search, feature `nl_search`) turns a sentence into the same grammar, shown as an
+// editable query with the model's explanation and where the sentence went; it never runs anything else.
 
+import { AiFeatureError, nlSearchToQuery } from "@akatsuki/ai";
 import type { Id } from "@akatsuki/convex";
 import { api } from "@akatsuki/convex";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { router } from "expo-router";
 import { type ComponentRef, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, TextInput, View } from "react-native";
+import { EgressLine } from "../../src/components/Egress";
 import { EmptyState } from "../../src/components/EmptyState";
 import { HeaderButton } from "../../src/components/Header";
 import { openThread, ThreadList } from "../../src/components/ThreadList";
-import { Button, Chip, Row, Screen, Spinner, Txt } from "../../src/components/ui";
+import { Button, Chip, NO_OUTLINE, Row, Screen, Spinner, Txt } from "../../src/components/ui";
+import { aiStatusText, useAiEnv } from "../../src/lib/ai";
 import { worker } from "../../src/lib/clients";
 import { errorText } from "../../src/lib/errors";
 import { useShortcuts } from "../../src/state/keyboard";
@@ -51,6 +56,43 @@ export default function Search() {
     ids: string[];
     error?: string;
   }>({ state: "idle", ids: [] });
+
+  const ai = useAiEnv();
+  const splits = useQuery(api.splits.list, mail.entitled ? {} : "skip");
+  const [nl, setNl] = useState<{ state: "idle" | "busy" | "done" | "error"; text?: string; from?: string }>({
+    state: "idle",
+  });
+  const askAi = async () => {
+    const sentence = text.trim();
+    if (!sentence) return;
+    let status: Awaited<ReturnType<typeof ai.check>>;
+    try {
+      status = await ai.check("nl_search");
+    } catch (e) {
+      setNl({ state: "error", text: errorText(e) });
+      return;
+    }
+    if (status !== "ready") {
+      setNl({ state: "error", text: aiStatusText(status) });
+      return;
+    }
+    setNl({ state: "busy" });
+    try {
+      const out = await nlSearchToQuery(
+        {
+          query: sentence,
+          timezone: mail.timeZone,
+          labels: [...new Set(mail.labels.filter((l) => l.labelKey.startsWith("l:")).map((l) => l.name))],
+          splits: (splits ?? []).map((sp) => sp.name),
+        },
+        await ai.context(),
+      );
+      setText(out.query);
+      setNl({ state: "done", text: out.explanation, from: sentence });
+    } catch (e) {
+      setNl({ state: "error", text: e instanceof AiFeatureError ? e.message : errorText(e) });
+    }
+  };
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -98,6 +140,8 @@ export default function Search() {
   };
 
   useShortcuts("search", {
+    "search.ai": () => void askAi(),
+    "search.fullMailbox": () => void searchFullMailbox(),
     "search.close": () => router.back(),
     "search.submit": () => {
       setQuery(text);
@@ -106,8 +150,34 @@ export default function Search() {
   });
 
   const notice = unsupportedNotice(unsupported);
+  const nlEgress = ai.egress("nl_search");
+  const aiRow =
+    !model.empty && (nl.state !== "idle" || /\s/.test(text.trim())) ? (
+      <View style={{ paddingHorizontal: t.space[2], gap: t.space["0_5"] }}>
+        {nl.state === "done" ? (
+          <Txt variant="meta" tone="secondary">
+            {`From “${nl.from}”: ${nl.text}`}
+          </Txt>
+        ) : nl.state === "error" ? (
+          <Txt variant="meta" tone="error">
+            {nl.text}
+          </Txt>
+        ) : (
+          <Button
+            title="Search with AI"
+            variant="ghost"
+            compact
+            busy={nl.state === "busy"}
+            accessibilityLabel="Turn this sentence into a search with AI"
+            onPress={() => void askAi()}
+          />
+        )}
+        {nlEgress && nl.state !== "error" ? <EgressLine text={nlEgress} /> : null}
+      </View>
+    ) : null;
   const header = (
     <View style={{ gap: t.space[1], paddingBottom: t.space[1] }}>
+      {aiRow}
       {model.chips.length > 0 ? (
         <ScrollView
           horizontal
@@ -178,11 +248,14 @@ export default function Search() {
           ref={input}
           accessibilityLabel="Search mail"
           value={text}
-          onChangeText={setText}
+          onChangeText={(v) => {
+            setText(v);
+            if (nl.state !== "busy") setNl({ state: "idle" });
+          }}
           onSubmitEditing={() => setQuery(text)}
           placeholder="Search: from:ana is:unread budget"
           placeholderTextColor={t.colors.muted}
-          selectionColor={t.colors.accent}
+          selectionColor={t.colors.dawn}
           autoFocus
           autoCapitalize="none"
           autoCorrect={false}
@@ -199,6 +272,7 @@ export default function Search() {
               borderRadius: t.radius.md,
               backgroundColor: t.colors.surface,
             },
+            NO_OUTLINE,
           ]}
         />
         <HeaderButton label="Cancel" onPress={() => router.back()} />
@@ -213,7 +287,12 @@ export default function Search() {
           }}
         >
           {OPERATOR_HINTS.map((h) => (
-            <Chip key={h.label} label={h.label} onPress={() => setText((q) => insertOperator(q, h.insert))} />
+            <Chip
+              key={h.label}
+              mono
+              label={h.label}
+              onPress={() => setText((q) => insertOperator(q, h.insert))}
+            />
           ))}
         </View>
       ) : (

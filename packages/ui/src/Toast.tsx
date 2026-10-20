@@ -1,4 +1,5 @@
 // Toasts: action results, op failures (§5.7: once per opId, with Retry and Dismiss) and Undo (10 s, §5.2).
+// First Light (SPEC §3.9): an ink pill, bottom-left of the list pane, never over the reader.
 // A toast with an `id` replaces the one already shown under that id, so a failure keyed by opId never stacks.
 // Errors are announced assertively, everything else politely. Timers pause while the pointer or focus is
 // inside the toast region.
@@ -42,6 +43,8 @@ export interface ToastOptions {
 
 interface ToastState extends ToastOptions {
   id: string;
+  /** The auto-dismiss delay this toast was shown with (`null`: sticky). */
+  ms?: number | null;
 }
 
 export interface ToastApi {
@@ -55,11 +58,21 @@ const ToastContext = createContext<ToastApi | null>(null);
 
 /** Default Undo window (§5.2: clients offer Undo for 10 s after any action). */
 export const UNDO_TOAST_MS = 10_000;
-export const DEFAULT_TOAST_MS = 5_000;
+/** Info toasts leave after 4 s (First Light, SPEC §3.9). */
+export const DEFAULT_TOAST_MS = 4_000;
 
 let seq = 0;
 
-export function ToastProvider({ children, max = 3 }: { children: ReactNode; max?: number }) {
+export function ToastProvider({
+  children,
+  max = 3,
+  singleInfo = false,
+}: {
+  children: ReactNode;
+  max?: number;
+  /** First Light (SPEC §3.9): at most one info toast (a new one replaces it) and at most two errors above it. */
+  singleInfo?: boolean;
+}) {
   const [toasts, setToasts] = useState<ToastState[]>([]);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const paused = useRef(false);
@@ -105,13 +118,18 @@ export function ToastProvider({ children, max = 3 }: { children: ReactNode; max?
       const tone = options.tone ?? "neutral";
       const duration =
         options.durationMs === undefined ? (tone === "error" ? null : DEFAULT_TOAST_MS) : options.durationMs;
-      const next: ToastState = { ...options, id, tone };
+      const next: ToastState = { ...options, id, tone, ms: duration };
       live.current.set(id, next);
       // Over the limit, the oldest toasts leave (Map order is insertion order; a replaced id keeps its place).
       const evicted: ToastState[] = [];
+      if (singleInfo) {
+        const isError = (x: ToastState) => x.tone === "error";
+        const same = [...live.current.values()].filter((x) => x.id !== id && isError(x) === isError(next));
+        evicted.push(...same.slice(0, Math.max(0, same.length - (isError(next) ? 1 : 0))));
+      }
       for (const old of live.current.values()) {
         if (live.current.size - evicted.length <= max) break;
-        evicted.push(old);
+        if (!evicted.includes(old)) evicted.push(old);
       }
       for (const old of evicted) {
         live.current.delete(old.id);
@@ -126,7 +144,7 @@ export function ToastProvider({ children, max = 3 }: { children: ReactNode; max?
       } else schedule(id, duration);
       return id;
     },
-    [clearTimer, max, schedule],
+    [clearTimer, max, schedule, singleInfo],
   );
 
   const dismissAll = useCallback(() => {
@@ -174,7 +192,10 @@ export function ToastProvider({ children, max = 3 }: { children: ReactNode; max?
         onFocus={pause}
         onBlur={resume}
       >
-        {toasts.map((t) => (
+        {(singleInfo
+          ? [...toasts].sort((a, b) => Number(b.tone === "error") - Number(a.tone === "error"))
+          : toasts
+        ).map((t) => (
           <div
             key={t.id}
             className={cx("ak-toast", `ak-toast--${t.tone}`)}
@@ -213,6 +234,14 @@ export function ToastProvider({ children, max = 3 }: { children: ReactNode; max?
                 <span aria-hidden="true">×</span>
               </button>
             </div>
+            {/* An undo window shows as a hairline running out along the toast's foot (SPEC §3.4). */}
+            {t.ms && [t.action, t.secondaryAction].some((a) => a?.shortcut === "undo") && (
+              <span
+                className="ak-toast__progress"
+                aria-hidden="true"
+                style={{ animationDuration: `${t.ms}ms` }}
+              />
+            )}
           </div>
         ))}
       </section>

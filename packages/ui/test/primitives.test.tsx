@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
@@ -15,11 +15,11 @@ import {
   ListRow,
   ListRowSnippet,
   ListRowTitle,
-  Orbs,
   Spinner,
   tintOf,
   UiConfigProvider,
   UnreadDot,
+  usePrefersReducedMotion,
 } from "../src/index.ts";
 import { setReducedMotion } from "./setup.ts";
 
@@ -199,20 +199,11 @@ describe("List rows", () => {
   });
 });
 
-describe("Orbs", () => {
-  it("are decorative and stop for reduced motion", async () => {
-    const { container } = render(<Orbs variant="hero" />);
-    const orbs = container.querySelector(".ak-orbs")!;
-    expect(orbs.getAttribute("aria-hidden")).toBe("true");
-    expect(orbs.querySelectorAll(".ak-orb")).toHaveLength(3);
-    expect(orbs.getAttribute("data-motion")).toBe("full");
+describe("usePrefersReducedMotion", () => {
+  it("follows the reduced-motion preference live (the orbs are gone, First Light D-480)", async () => {
+    const { result } = renderHook(() => usePrefersReducedMotion());
+    expect(result.current).toBe(false);
     await act(async () => setReducedMotion(true));
-    expect(orbs.getAttribute("data-motion")).toBe("reduce");
-  });
-
-  it("can be forced still", () => {
-    const { container } = render(<Orbs reducedMotion />);
-    expect(container.querySelector(".ak-orbs")!.getAttribute("data-motion")).toBe("reduce");
-    expect(container.querySelectorAll(".ak-orb")).toHaveLength(2);
+    expect(result.current).toBe(true);
   });
 });

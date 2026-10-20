@@ -1,4 +1,5 @@
-// Buttons. Primary carries the crimson glow (BRIEF "subtle crimson glow on primary actions"); a `shortcut`
+// Buttons: flat pills (First Light, D-483). `primary` is ink (the everyday primary: Send, Save, Turn on);
+// `brand` is the accent fill, used in exactly three places (sign-in, onboarding, the billing upgrade). A `shortcut`
 // renders its key hint and sets `aria-keyshortcuts`.
 import type { ShortcutId } from "@akatsuki/shortcuts";
 import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
@@ -7,7 +8,7 @@ import { Kbd } from "./Kbd.tsx";
 import { Spinner } from "./Spinner.tsx";
 import { Tooltip } from "./Tooltip.tsx";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "ink" | "brand" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -62,7 +63,7 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   label: string;
   icon: ReactNode;
   shortcut?: ShortcutId;
-  variant?: Exclude<ButtonVariant, "primary">;
+  variant?: Exclude<ButtonVariant, "primary" | "ink" | "brand">;
   size?: ButtonSize;
   /** Set false to drop the tooltip (e.g. inside a toolbar that shows labels). */
   tooltip?: boolean;

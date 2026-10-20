@@ -66,6 +66,60 @@
     },
 
     {
+      "id": "ops.retry",
+      "label": "Retry failed action",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["failed", "error", "again", "try again"],
+      "keys": { "default": [] }
+    },
+    {
+      "id": "labels.create",
+      "label": "Create label",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["new label", "add label", "tag"],
+      "keys": { "default": [] }
+    },
+    {
+      "id": "labels.rename",
+      "label": "Rename label",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["edit label", "label name"],
+      "keys": { "default": [] }
+    },
+    {
+      "id": "labels.remove",
+      "label": "Delete label",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["remove label", "delete tag"],
+      "keys": { "default": [] }
+    },
+    {
+      "id": "sends.scheduled",
+      "label": "Show scheduled messages",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["send later", "scheduled", "outbox", "reschedule"],
+      "keys": { "default": [] }
+    },
+    {
+      "id": "compose.continueDraft",
+      "label": "Continue a draft",
+      "group": "General",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["resume", "unsent", "draft", "restore"],
+      "keys": { "default": [] }
+    },
+    {
       "id": "go.inbox",
       "label": "Go to Inbox",
       "group": "Navigation",
@@ -401,6 +455,15 @@
     },
 
     {
+      "id": "ai.extractActions",
+      "label": "Find action items",
+      "group": "AI",
+      "scope": "thread",
+      "palette": true,
+      "keywords": ["todo", "tasks", "deadlines", "extract actions"],
+      "keys": { "default": [] }
+    },
+    {
       "id": "compose.send",
       "label": "Send",
       "group": "Compose",
@@ -478,6 +541,42 @@
       "keys": { "default": ["ctrl+j"], "mac": ["cmd+j"] }
     },
 
+    {
+      "id": "compose.rewrite",
+      "label": "Rewrite with AI",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keywords": ["shorter", "friendlier", "formal", "fix grammar", "tone", "polish"],
+      "keys": { "default": [] }
+    },
+    {
+      "id": "compose.dictate",
+      "label": "Dictate",
+      "group": "Compose",
+      "scope": "compose",
+      "palette": true,
+      "keywords": ["voice", "speech", "microphone", "transcribe", "record"],
+      "keys": { "default": [] }
+    },
+    {
+      "id": "search.fullMailbox",
+      "label": "Search the full mailbox",
+      "group": "Search",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["provider", "server", "everything", "older mail"],
+      "keys": { "default": [] }
+    },
+    {
+      "id": "search.ai",
+      "label": "Search with AI",
+      "group": "Search",
+      "scope": "global",
+      "palette": true,
+      "keywords": ["natural language", "ask", "find"],
+      "keys": { "default": [] }
+    },
     {
       "id": "search.close",
       "label": "Close search",

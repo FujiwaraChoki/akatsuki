@@ -1,4 +1,5 @@
-// Badges: unread counts (capped like `mail.unreadCounts`, which stops at 100) and uppercase tracked labels.
+// Badges: unread counts (capped like `mail.unreadCounts`, which stops at 100) as mono grey numbers, and labels as
+// mono caps chips (First Light: no red counts, no filled pills).
 import type { HTMLAttributes } from "react";
 import { cx } from "./config.tsx";
 

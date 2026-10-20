@@ -1,5 +1,6 @@
 // Command palette: every action the app implements, from the shared key map (packages/shortcuts), filtered for the
-// screen underneath; plus pickers for "Go to label", "Label" and "Move to folder".
+// screen underneath; plus pickers for "Go to label", "Label" and "Move to folder" (for one conversation, or for a
+// multi-select when opened with `bulk=1`; the targets come from state/targets.ts).
 import type { Id } from "@akatsuki/convex";
 import { api } from "@akatsuki/convex";
 import { SYS } from "@akatsuki/mail-model";
@@ -9,14 +10,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Orbs } from "../../src/components/Orbs";
-import { Txt } from "../../src/components/ui";
+import { NO_OUTLINE, Txt } from "../../src/components/ui";
 import { errorText } from "../../src/lib/errors";
 import { newClientId } from "../../src/lib/ids";
 import { signOutEverywhereOnDevice } from "../../src/lib/session";
 import { useThreadActions } from "../../src/state/actions";
 import { useKeyboard, useShortcuts } from "../../src/state/keyboard";
 import { useMail } from "../../src/state/mail";
+import { finishPickerTargets, pickerTargets } from "../../src/state/targets";
 import { showToast } from "../../src/state/toasts";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { mobileCommands } from "../../src/vm/keyboard";
@@ -43,7 +44,13 @@ export default function Palette() {
     threadId?: string;
     accountId?: string;
     scopes?: string;
+    bulk?: string;
   }>();
+  // A multi-select's conversations (captured once; the list clears its selection when the picker acts).
+  const bulk = useRef(params.bulk === "1" ? pickerTargets() : []).current;
+  const bulkAccounts = useMemo(() => new Set(bulk.map((b) => b.accountId)), [bulk]);
+  const singleAccount =
+    bulk.length > 0 ? (bulkAccounts.size === 1 ? bulk[0]!.accountId : null) : params.accountId;
   const mode: Mode =
     params.mode === "labels" || params.mode === "label" || params.mode === "move" ? params.mode : "commands";
   const [query, setQuery] = useState("");
@@ -72,7 +79,9 @@ export default function Palette() {
         }),
       ];
     }
-    const accountLabels = mail.labels.filter((l) => !params.accountId || l.accountId === params.accountId);
+    const accountLabels = mail.labels.filter((l) =>
+      bulk.length > 0 ? bulkAccounts.has(l.accountId) : !params.accountId || l.accountId === params.accountId,
+    );
     if (mode === "move") {
       return [
         { id: SYS.inbox, label: "Inbox", group: "Folders", hint: null },
@@ -97,6 +106,8 @@ export default function Palette() {
     mail.labels,
     mail.accountById,
     params.accountId,
+    bulk.length,
+    bulkAccounts,
     mail.prefs?.theme,
     mail.prefs?.density,
   ]);
@@ -115,16 +126,17 @@ export default function Palette() {
     if (rest === "settings") return router.push("/settings");
     if (rest === "settings.ai") return router.push("/settings/ai");
     if (rest === "settings.shortcuts") return router.push("/settings/shortcuts");
+    if (rest === "settings.snippets") return router.push("/settings/snippets");
     if (rest === "mailboxes") return router.push("/mailboxes");
     if (rest === "signOut") void signOutEverywhereOnDevice().then(() => router.replace("/sign-in"));
   };
 
   const filtered = useMemo(
     () =>
-      mode === "label" && params.threadId
+      mode === "label" && (params.threadId || bulk.length > 0) && singleAccount
         ? withCreateLabel(filterPalette(items, query), items, query)
         : filterPalette(items, query),
-    [items, query, mode, params.threadId],
+    [items, query, mode, params.threadId, bulk.length, singleAccount],
   );
   const createLabel = useMutation(api.labels.create);
 
@@ -143,6 +155,10 @@ export default function Palette() {
       router.navigate({ pathname: "/inbox", params: { labelKey: item.id, title: item.label } });
       return;
     }
+    if (bulk.length > 0) {
+      chooseBulk(item);
+      return;
+    }
     if (!params.threadId || !params.accountId) return;
     const thread = { _id: params.threadId, accountId: params.accountId };
     if (item.id === CREATE_LABEL_ID) {
@@ -155,6 +171,24 @@ export default function Palette() {
     }
     if (mode === "move") actions.moveTo(thread, item.id, item.label);
     else actions.labelAction(thread, item.id.slice(2), true);
+  };
+
+  /** Label or move a multi-select. A label or folder belongs to one mailbox; Inbox works for all of them. */
+  const chooseBulk = (item: PaletteItem) => {
+    const name = query.trim();
+    if (item.id === CREATE_LABEL_ID) {
+      if (!singleAccount) return;
+      createLabel({ clientOpId: newClientId(), accountId: singleAccount as Id<"mailAccounts">, name })
+        .then(({ labelId }) => actions.labelMany(bulk, labelId, singleAccount))
+        .catch((err) => showToast({ id: "label-create", text: errorText(err), tone: "error" }));
+    } else if (mode === "move" && item.id === SYS.inbox) actions.moveMany(bulk, SYS.inbox, "Inbox");
+    else {
+      const label = mail.labels.find((l) => l.labelKey === item.id);
+      if (!label) return;
+      if (mode === "move") actions.moveMany(bulk, item.id, item.label, label.accountId);
+      else actions.labelMany(bulk, label._id, label.accountId);
+    }
+    finishPickerTargets();
   };
 
   useShortcuts("palette", {
@@ -170,8 +204,12 @@ export default function Palette() {
       : mode === "labels"
         ? "Go to label"
         : mode === "move"
-          ? "Move to folder"
-          : "Add a label";
+          ? bulk.length > 0
+            ? `Move ${bulk.length} to folder`
+            : "Move to folder"
+          : bulk.length > 0
+            ? `Label ${bulk.length} conversations`
+            : "Add a label";
 
   return (
     <View
@@ -179,10 +217,9 @@ export default function Palette() {
         flex: 1,
         paddingTop: insets.top + t.space[4],
         paddingHorizontal: t.space[2],
-        backgroundColor: t.colors.veil,
+        backgroundColor: t.colors.scrimLight,
       }}
     >
-      <Orbs intensity={0.7} />
       <Pressable
         accessibilityLabel="Close command palette"
         onPress={() => router.back()}
@@ -200,7 +237,7 @@ export default function Palette() {
           borderWidth: 1,
           borderColor: t.colors.border,
           overflow: "hidden",
-          boxShadow: `0 0 ${t.effect.glowBlur}px ${t.colors.accentGlow}`,
+          boxShadow: t.shadow.pop,
         }}
       >
         <TextInput
@@ -213,7 +250,8 @@ export default function Palette() {
           onSubmitEditing={() => choose(filtered[cursor])}
           placeholder={placeholder}
           placeholderTextColor={t.colors.muted}
-          selectionColor={t.colors.accent}
+          selectionColor={t.colors.dawn}
+          cursorColor={t.colors.dawn}
           autoFocus
           autoCapitalize="none"
           autoCorrect={false}
@@ -227,6 +265,7 @@ export default function Palette() {
               borderBottomWidth: 1,
               borderBottomColor: t.colors.borderSubtle,
             },
+            NO_OUTLINE,
           ]}
         />
         <FlatList
@@ -255,7 +294,7 @@ export default function Palette() {
               <Txt variant="body" style={{ flex: 1 }} numberOfLines={1}>
                 {item.label}
               </Txt>
-              <Txt variant="label" tone="muted">
+              <Txt variant="meta" tone="muted">
                 {item.group}
               </Txt>
               {item.hint ? (

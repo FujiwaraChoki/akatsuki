@@ -2,12 +2,29 @@
 // conversation, the two features web and desktop have there. Pure parts: whether a feature can run with the
 // user's settings on this device (the same states and copy as web's `aiStatus`), and the transcript input built
 // from the bodies the thread screen already holds. Nothing here talks to a network.
-import { type AiSettings, KEYLESS_KINDS, resolveFeature, type ThreadForTranscript } from "@akatsuki/ai";
+import {
+  type AiFeature,
+  type AiSettings,
+  KEYLESS_KINDS,
+  resolveFeature,
+  type ThreadForTranscript,
+} from "@akatsuki/ai";
 import { splitQuoted } from "@akatsuki/wire";
 
 export type ThreadAiFeature = "summarize" | "instant_reply";
 
-export type ThreadAiStatus = "ready" | "consent" | "off" | "no_model" | "no_key" | "not_entitled" | "no_api";
+export type ThreadAiStatus =
+  | "ready"
+  | "consent"
+  | "off"
+  | "no_model"
+  | "no_key"
+  | "not_entitled"
+  | "no_api"
+  | "no_dictation";
+
+/** Provider kinds that can transcribe audio (packages/ai `transcriptionModelFor`, plus the managed provider). */
+const TRANSCRIBING_KINDS: ReadonlySet<string> = new Set(["akatsuki", "openai", "openai_compatible"]);
 
 /** The same sentences as the web client (apps/web/src/ai/useAi.ts STATUS_COPY). */
 export const THREAD_AI_COPY: Record<Exclude<ThreadAiStatus, "ready">, string> = {
@@ -17,6 +34,8 @@ export const THREAD_AI_COPY: Record<Exclude<ThreadAiStatus, "ready">, string> = 
   no_key: "Key not set on this device. Add it in Settings, AI.",
   not_entitled: "Akatsuki AI is part of Pro. Use your own key or a local model instead.",
   no_api: "Akatsuki AI is not configured in this build.",
+  no_dictation:
+    "This provider cannot transcribe audio. Choose Akatsuki AI, OpenAI or a Whisper server for Dictation in Settings, AI.",
 };
 
 export interface ThreadAiEnv {
@@ -34,9 +53,22 @@ export function threadAiStatus(
   feature: ThreadAiFeature,
   env: ThreadAiEnv,
 ): { status: ThreadAiStatus; profileId?: string } {
+  return aiFeatureStatus(feature, env);
+}
+
+/** The same check for any feature (compose, rewrite, nl_search, dictation …). */
+export function aiFeatureStatus(
+  feature: AiFeature,
+  env: ThreadAiEnv,
+): { status: ThreadAiStatus; profileId?: string } {
   if (!env.settings.consent.grantedAt) return { status: "consent" };
   const r = resolveFeature(feature, env.settings);
   if (r.status === "off") return { status: "off" };
+  if (feature === "dictation") {
+    const profile =
+      r.status === "ok" ? r.profile : env.settings.profiles.find((p) => p.profileId === r.profileId);
+    if (!profile || !TRANSCRIBING_KINDS.has(profile.kind)) return { status: "no_dictation" };
+  }
   if (r.status === "error") return { status: "no_model" };
   if (r.managed) {
     if (!env.managedAi) return { status: "not_entitled" };

@@ -14,16 +14,19 @@ export function MessageFrame({
   syncOrigin,
   title,
   mode = "light",
+  paper = false,
 }: {
   html: string;
   syncOrigin: string | null;
   title: string;
   /** Dark only for messages that set no colours of their own (`isPlainLooking`, D-399). */
   mode?: "light" | "dark";
+  /** The frame shows as a light page on the dark theme: it keeps an inset (`frameCss`). */
+  paper?: boolean;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState<number | null>(null);
-  const srcdoc = useMemo(() => buildSrcdoc(html, syncOrigin, mode), [html, syncOrigin, mode]);
+  const srcdoc = useMemo(() => buildSrcdoc(html, syncOrigin, mode, paper), [html, syncOrigin, mode, paper]);
 
   useLayoutEffect(() => {
     const el = frame.current;
@@ -34,7 +37,7 @@ export function MessageFrame({
     host.setAttribute("aria-hidden", "true");
     (host as HTMLElement & { inert: boolean }).inert = true;
     const root = host.attachShadow({ mode: "closed" });
-    root.innerHTML = `<style>${frameCss(".m")}</style><div class="m">${measurementHtml(html)}</div>`;
+    root.innerHTML = `<style>${frameCss(".m", "light", paper)}</style><div class="m">${measurementHtml(html)}</div>`;
     const body = root.querySelector(".m") as HTMLElement;
     document.body.appendChild(host);
     const measure = () => {
@@ -56,7 +59,7 @@ export function MessageFrame({
       ro?.disconnect();
       host.remove();
     };
-  }, [html]);
+  }, [html, paper]);
 
   return (
     <iframe

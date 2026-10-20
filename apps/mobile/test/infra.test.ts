@@ -104,7 +104,12 @@ describe("keyboard", () => {
       kind: "match",
       id: "palette.open",
     });
-    expect(m.handle(toKeyEventLike({ key: "KeyX", character: "x" }), list)).toEqual({ kind: "none" }); // select.toggle
+    expect(m.handle(toKeyEventLike({ key: "KeyX", character: "x" }), list)).toEqual({
+      kind: "match",
+      id: "select.toggle",
+    });
+    // Shortcuts mobile lacks are ignored (Open original has no key; checked through the unsupported list).
+    expect(MOBILE_UNSUPPORTED.has("thread.openOriginal")).toBe(true);
     // Single letters do nothing while typing in the composer.
     expect(
       m.handle(toKeyEventLike({ key: "KeyE", character: "e" }), new Set(["compose"] as const)).kind,
@@ -122,7 +127,7 @@ describe("keyboard", () => {
     expect(ids).toContain("thread.archive");
     expect(ids).toContain("go.inbox");
     expect(ids).not.toContain("compose.send");
-    expect(ids).not.toContain("select.all");
+    expect(ids).toContain("select.all");
     expect(list.find((c) => c.id === "settings.open")?.hint).toBe("⌘,");
     const compose = mobileCommands("linux", "superhuman", new Set(["compose"])).map((c) => c.id);
     expect(compose).toContain("compose.send");
@@ -244,15 +249,27 @@ describe("theme", () => {
     const dark = makeTheme("dark");
     expect(light.colors.background).toBe(color.light.background);
     expect(dark.colors.accent).toBe(color.dark.accent);
-    expect(dark.colors.onAccent).toBe(color.dark.foreground);
+    // First Light (D-431): text on accent fills is white in both themes; neutrals are fg over bg, opaque.
+    expect(dark.colors.onAccent).toBe(color.dark.onAccent);
+    expect(light.colors.surface).toBe("#F6F6F6");
+    expect(light.colors.surfaceStrong).toBe("#EFEFEF");
+    expect(dark.colors.surface).toBe("#131313");
+    expect(dark.colors.tertiary).toBe("#A9A9A9");
+    expect(light.colors.dawn).toBe(dark.colors.dawn);
     // Dark accent text is lifted to about 5.5:1 on the background (D-301): 50/50 with the foreground.
     expect(dark.colors.accentText).toBe(color.dark.accentText);
     expect(color.dark.accentText).toBe("#B77777");
     expect(light.colors.accentText).toBe(color.light.accent);
-    expect(light.colors.muted).toBe("rgba(23, 23, 23, 0.6)");
-    expect(light.text.label).toMatchObject({ textTransform: "uppercase", fontSize: 11, letterSpacing: 1.32 });
+    expect(light.colors.muted).toBe("#747474");
+    // Group headers are sentence case; mono caps survive only as the crumb (spec §2.1).
+    expect(light.text.label.textTransform).toBeUndefined();
+    expect(light.text.crumb).toMatchObject({ textTransform: "uppercase", fontSize: 11, letterSpacing: 1.32 });
+    expect(light.text.crumb.fontFamily).toBe("GeistMono-Medium");
+    expect(light.text.body.fontSize).toBe(15);
+    expect(light.text.reading).toMatchObject({ fontSize: 16, lineHeight: 25 });
     expect(light.text.subject.fontFamily).toBe("InstrumentSerif");
-    expect(textStyle("bodyStrong").fontFamily).toBe("Geist-SemiBold");
+    // The weight comes from the tokens (First Light: 500 for strong body text, D-482).
+    expect(textStyle("bodyStrong").fontFamily).toBe(fontFamily("sans", tokens.text.app.bodyStrong.weight));
     expect(fontFamily("serif", 700)).toBe("InstrumentSerif");
     expect(resolveMode("system", "dark")).toBe("dark");
     expect(resolveMode("light", "dark")).toBe("light");

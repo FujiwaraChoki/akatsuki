@@ -10,14 +10,24 @@ export interface AkatsukiUiProviderProps {
   keymap?: Keymap;
   /** Most toasts visible at once. */
   maxToasts?: number;
+  /** One info toast at a time, errors (max two) above it (SPEC §3.9). */
+  singleInfoToast?: boolean;
   children: ReactNode;
 }
 
 /** Wrap the app once: shortcut hints follow platform and keymap, and `useToast()` works. */
-export function AkatsukiUiProvider({ platform, keymap, maxToasts, children }: AkatsukiUiProviderProps) {
+export function AkatsukiUiProvider({
+  platform,
+  keymap,
+  maxToasts,
+  singleInfoToast,
+  children,
+}: AkatsukiUiProviderProps) {
   return (
     <UiConfigProvider platform={platform} keymap={keymap}>
-      <ToastProvider max={maxToasts}>{children}</ToastProvider>
+      <ToastProvider max={maxToasts} singleInfo={singleInfoToast}>
+        {children}
+      </ToastProvider>
     </UiConfigProvider>
   );
 }

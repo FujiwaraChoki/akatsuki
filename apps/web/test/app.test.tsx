@@ -302,7 +302,8 @@ describe("mail", () => {
     act(() => {
       backend.store.apply("bulk-trash", ids as never, { kind: "trash" });
     });
-    expect(await screen.findByRole("heading", { name: "Inbox zero." })).toBeTruthy();
+    // First Light (SPEC §3.3): "Inbox zero", no period (only the sign-in headline ends on the dot).
+    expect(await screen.findByRole("heading", { name: "Inbox zero" })).toBeTruthy();
   });
 
   it("lists every shortcut with ?", async () => {

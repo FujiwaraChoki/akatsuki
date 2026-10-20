@@ -1,14 +1,17 @@
 // AI provider settings (§12.2, §12.7): consent, the provider used for AI features, BYO keys kept only in this
 // phone's secure storage, and a clear label of where data goes for each provider.
-import type { AiProfile, AiSettings, ProviderKind } from "@akatsuki/ai";
+
+import type { AiFeature, AiProfile, AiSettings, ProviderKind } from "@akatsuki/ai";
 import { api } from "@akatsuki/convex";
 import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Modal, ScrollView, Switch, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { ActionMenu } from "../../../src/components/ActionMenu";
+import { EgressLine } from "../../../src/components/Egress";
 import { Header, HeaderButton } from "../../../src/components/Header";
-import { Button, Field, Label, Row, Screen, Section, Txt } from "../../../src/components/ui";
+import { SheetModal } from "../../../src/components/SheetModal";
+import { Button, Field, Label, Row, Screen, Section, Toggle, Txt } from "../../../src/components/ui";
 import { testConnection } from "../../../src/lib/aiTest";
 import { getDeviceId } from "../../../src/lib/device";
 import { errorText } from "../../../src/lib/errors";
@@ -21,12 +24,16 @@ import { showToast } from "../../../src/state/toasts";
 import { useTheme } from "../../../src/theme/ThemeProvider";
 import {
   CONSENT_VERSION,
+  canTranscribe,
   consentText,
   defaultModel,
   defaultProfile,
   draftFromProfile,
   draftProblems,
   egressView,
+  FEATURE_ROWS,
+  featureRoute,
+  featureRouteSummary,
   keyStatus,
   keyStatusText,
   keyStorageName,
@@ -37,29 +44,15 @@ import {
   profileFromDraft,
   providerChoice,
   removeProfile,
+  routeChoices,
+  setFeatureRoute,
   settingsOrEmpty,
   upsertProfile,
   withKeyOnDevice,
 } from "../../../src/vm/aiSettings";
 
-function EgressBadge({ text, local }: { text: string; local: boolean }) {
-  const t = useTheme();
-  return (
-    <View
-      accessibilityLabel={`Data: ${text}`}
-      style={{
-        alignSelf: "flex-start",
-        paddingHorizontal: t.space[1],
-        paddingVertical: 2,
-        borderRadius: t.radius.sm,
-        backgroundColor: local ? t.colors.surface : t.colors.accentWash,
-      }}
-    >
-      <Txt variant="caption" tone={local ? "secondary" : "accent"}>
-        {text}
-      </Txt>
-    </View>
-  );
+function EgressBadge({ text }: { text: string; local?: boolean }) {
+  return <EgressLine text={text} full />;
 }
 
 function ProfileEditor({
@@ -158,13 +151,13 @@ function ProfileEditor({
   };
 
   return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <SheetModal visible presentationStyle="pageSheet" onRequestClose={onClose}>
       <ScrollView
         style={{ backgroundColor: t.colors.background }}
         contentContainerStyle={{ padding: t.space[2], gap: t.space[2], paddingBottom: t.space[6] }}
         keyboardShouldPersistTaps="handled"
       >
-        <Txt variant="heading">{choice.title}</Txt>
+        <Txt variant="title">{choice.title}</Txt>
         <Txt variant="body" tone="secondary">
           {choice.description}
         </Txt>
@@ -219,16 +212,29 @@ function ProfileEditor({
               autoCapitalize="none"
               autoCorrect={false}
             />
+            {canTranscribe(d.kind) ? (
+              <Field
+                label={
+                  d.kind === "openai"
+                    ? "Dictation model (optional)"
+                    : "Dictation model (for a Whisper server)"
+                }
+                value={d.transcriptionModel}
+                onChangeText={(v) => setD({ ...d, transcriptionModel: v })}
+                placeholder={defaultModel(d.kind, "transcription") ?? "whisper-1"}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            ) : null}
           </>
         ) : null}
         <Row
           title="Use for all AI features"
           right={
-            <Switch
+            <Toggle
               accessibilityLabel="Use for all AI features"
               value={makeDefault}
               onValueChange={setMakeDefault}
-              trackColor={{ true: t.colors.accent, false: t.colors.border }}
             />
           }
         />
@@ -247,7 +253,7 @@ function ProfileEditor({
         {existing ? <Button title="Remove this provider" variant="ghost" onPress={remove} /> : null}
         <Button title="Cancel" variant="ghost" onPress={onClose} />
       </ScrollView>
-    </Modal>
+    </SheetModal>
   );
 }
 
@@ -261,6 +267,7 @@ export default function AiSettingsScreen() {
   const [localKeys, setLocalKeys] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<{ draft: ProfileDraft; existing?: AiProfile } | null>(null);
   const [picker, setPicker] = useState(false);
+  const [routing, setRouting] = useState<AiFeature | null>(null);
   const managedAiAllowed = mail.me?.entitlement.managedAi === true;
   const current = defaultProfile(settings);
   useShortcuts("list", { "nav.back": () => router.back() });
@@ -310,26 +317,20 @@ export default function AiSettingsScreen() {
             title="Allow AI features"
             detail="Summaries, suggested replies, writing help and smart search. Each runs only when you use it."
             right={
-              <Switch
-                accessibilityLabel="Allow AI features"
-                value={consented}
-                onValueChange={setConsent}
-                trackColor={{ true: t.colors.accent, false: t.colors.border }}
-              />
+              <Toggle accessibilityLabel="Allow AI features" value={consented} onValueChange={setConsent} />
             }
           />
           <Row
             title="Sort new mail automatically"
             detail="Sends the sender, subject and preview of new mail to the provider to sort it into splits."
             right={
-              <Switch
+              <Toggle
                 accessibilityLabel="Sort new mail automatically"
                 value={settings.consent.autoTriage}
                 disabled={!consented}
                 onValueChange={(v) => {
                   save({ consent: { ...settings.consent, autoTriage: v } }).catch(() => {});
                 }}
-                trackColor={{ true: t.colors.accent, false: t.colors.border }}
               />
             }
           />
@@ -347,8 +348,6 @@ export default function AiSettingsScreen() {
                   paddingHorizontal: t.space[2],
                   paddingVertical: t.space["1_5"],
                   gap: t.space["0_5"],
-                  borderBottomWidth: 1,
-                  borderBottomColor: t.colors.borderSubtle,
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: t.space[1] }}>
@@ -375,6 +374,25 @@ export default function AiSettingsScreen() {
             <Button title="Add a provider" onPress={() => setPicker(true)} />
           </View>
         </Section>
+        {settings.profiles.length > 0 ? (
+          <Section
+            title="Per feature"
+            footer="Send one feature to a different provider, for example dictation to OpenAI or a Whisper server on your network."
+          >
+            {FEATURE_ROWS.map((row) => {
+              const sum = featureRouteSummary(settings, row.feature);
+              return (
+                <Row
+                  key={row.feature}
+                  title={row.label}
+                  detail={sum.egress ? `${sum.provider} · ${sum.egress}` : sum.provider}
+                  onPress={() => setRouting(row.feature)}
+                  accessibilityHint="Choose the provider for this feature"
+                />
+              );
+            })}
+          </Section>
+        ) : null}
         <View style={{ paddingHorizontal: t.space[2], marginTop: t.space[2], gap: t.space[1] }}>
           <Label>Where data goes</Label>
           <Txt variant="meta" tone="muted">
@@ -394,6 +412,38 @@ export default function AiSettingsScreen() {
           label: c.title,
           onPress: () => setEditing({ draft: newDraft(newUuidV4(), c.kind as ProviderKind) }),
         }))}
+      />
+      <ActionMenu
+        visible={routing !== null}
+        onClose={() => setRouting(null)}
+        title={FEATURE_ROWS.find((r) => r.feature === routing)?.label}
+        items={
+          routing
+            ? [
+                {
+                  key: "default",
+                  label: featureRoute(settings, routing) ? "Same as default" : "Same as default (in use)",
+                  onPress: () => {
+                    save({ routes: setFeatureRoute(settings, routing, null) }).catch((err) =>
+                      showToast({ id: "ai-route", text: errorText(err), tone: "error" }),
+                    );
+                  },
+                },
+                ...routeChoices(settings, routing).map((p) => ({
+                  key: p.profileId,
+                  label:
+                    featureRoute(settings, routing)?.profileId === p.profileId
+                      ? `${p.label} (in use)`
+                      : p.label,
+                  onPress: () => {
+                    save({ routes: setFeatureRoute(settings, routing, p.profileId) }).catch((err) =>
+                      showToast({ id: "ai-route", text: errorText(err), tone: "error" }),
+                    );
+                  },
+                })),
+              ]
+            : []
+        }
       />
       {editing && deviceId ? (
         <ProfileEditor

@@ -22,3 +22,10 @@ export async function secureDelete(key: string): Promise<void> {
 }
 
 export const SECURE_STORE_NAME = "this browser tab's memory (not saved)";
+
+/** The web preview keeps values in memory, which cannot fail. */
+export function useSecureFailure(): null {
+  return null;
+}
+
+export function resetSecureFailure(): void {}

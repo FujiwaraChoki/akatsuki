@@ -43,7 +43,7 @@ export function App({
     }
   };
   return (
-    <AkatsukiUiProvider keymap={keymap}>
+    <AkatsukiUiProvider keymap={keymap} singleInfoToast>
       <KeymapCtx.Provider value={update}>
         <BackendProvider backend={backend} syncOrigin={syncOrigin} bodyCache={bodyCache}>
           <ErrorBoundary fallback={(e, reset) => <FatalError error={e} onRetry={reset} />}>

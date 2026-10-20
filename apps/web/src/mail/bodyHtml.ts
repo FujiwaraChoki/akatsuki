@@ -146,18 +146,21 @@ export function prepareHtml(html: string, opts: PrepareOptions): Prepared {
 /**
  * The frame's base styles. Mail HTML is laid out on the light "paper" palette in both themes (D-266), because
  * most senders assume dark text on white. `root` is the body selector (a class when measuring off-frame).
+ * `paper`: the frame shows as a page of its own (light paper on the dark theme) and keeps an inset; otherwise the
+ * text lines up with the reader (First Light: the reading size, 15/1.6 at the secondary tone, ink links).
  */
-export function frameCss(root = "body", mode: "light" | "dark" = "light"): string {
+export function frameCss(root = "body", mode: "light" | "dark" = "light", paper = false): string {
   const p = color[mode];
   const ph = `rgb(${p.rgb.foreground.join(" ")} / 0.25)`;
+  const text = `rgb(${p.rgb.foreground.join(" ")} / 0.8)`;
   return [
     root === "body" ? `html{color-scheme:${mode}}` : "",
-    `${root}{margin:0;padding:16px 20px;background:${p.background};color:${p.foreground};font-family:${FRAME_FONTS};font-size:14px;line-height:1.55;overflow-wrap:anywhere;word-break:break-word}`,
+    `${root}{margin:0;padding:${paper ? "16px 20px" : "2px 0 4px"};background:${p.background};color:${text};font-family:${FRAME_FONTS};font-size:15px;line-height:1.6;overflow-wrap:anywhere;word-break:break-word}`,
     // Alt text of an unloaded image must not inherit the body's break-anywhere wrapping (it would stack one
     // character per line inside the image box and inflate the line).
     `${root} img{max-width:100%;height:auto;word-break:normal;overflow-wrap:normal}`,
     `${root} table{max-width:100%}`,
-    `${root} a{color:${p.accentText}}`,
+    `${root} a{color:${p.foreground};text-decoration:underline;text-underline-offset:3px}`,
     // A remote image that is not loaded: a sized, quiet box instead of the browser's broken-image glyph.
     `${root} .ak-img-ph{display:inline-block;box-sizing:border-box;max-width:100%;min-width:16px;min-height:16px;vertical-align:middle;border:1px dashed ${ph};border-radius:4px}`,
     `${root} blockquote{margin:0 0 0 8px;padding-left:12px;border-left:2px solid currentColor;opacity:.75}`,
@@ -170,13 +173,14 @@ export function buildSrcdoc(
   innerHtml: string,
   syncOrigin: string | null,
   mode: "light" | "dark" = "light",
+  paper = false,
 ): string {
   return (
     "<!doctype html><html><head>" +
     `<meta http-equiv="Content-Security-Policy" content="${bodyCsp(syncOrigin)}">` +
     '<meta charset="utf-8"><meta name="referrer" content="no-referrer">' +
     '<base target="_blank">' +
-    `<style>${frameCss("body", mode)}</style>` +
+    `<style>${frameCss("body", mode, paper)}</style>` +
     `</head><body>${innerHtml}</body></html>`
   );
 }

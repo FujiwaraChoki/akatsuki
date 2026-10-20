@@ -2,6 +2,7 @@
 // BYO keys live only in this device's SecureStore under `ai.<profileId>`, and `keyOnDevices` records which
 // devices hold one. Egress labels come from packages/ai (`egressText`), the one implementation of §12.2.
 import {
+  type AiFeature,
   type AiProfile,
   type AiRoute,
   type AiSettings,
@@ -129,6 +130,13 @@ export interface ProfileDraft {
   model: string;
   /** Model for the fast tier ("" = routing default or the default-tier model). */
   fastModel: string;
+  /** Dictation model for OpenAI and OpenAI-compatible servers ("" = routing default). */
+  transcriptionModel: string;
+}
+
+/** Kinds that can transcribe audio and so take a dictation model. */
+export function canTranscribe(kind: ProviderKind): boolean {
+  return kind === "akatsuki" || kind === "openai" || kind === "openai_compatible";
 }
 
 export function draftFromProfile(p: AiProfile): ProfileDraft {
@@ -139,11 +147,20 @@ export function draftFromProfile(p: AiProfile): ProfileDraft {
     baseUrl: p.baseUrl ?? "",
     model: p.models.default ?? "",
     fastModel: p.models.fast ?? "",
+    transcriptionModel: p.models.transcription ?? "",
   };
 }
 
 export function newDraft(profileId: string, kind: ProviderKind): ProfileDraft {
-  return { profileId, kind, label: providerChoice(kind).title, baseUrl: "", model: "", fastModel: "" };
+  return {
+    profileId,
+    kind,
+    label: providerChoice(kind).title,
+    baseUrl: "",
+    model: "",
+    fastModel: "",
+    transcriptionModel: "",
+  };
 }
 
 /** Validation errors for a draft, in display order. */
@@ -184,6 +201,8 @@ export function profileFromDraft(d: ProfileDraft, existing?: AiProfile): AiProfi
   if (d.model.trim()) models.default = d.model.trim();
   if (d.fastModel.trim()) models.fast = d.fastModel.trim();
   else if (d.model.trim() && defaultModel(d.kind, "fast") === undefined) models.fast = d.model.trim();
+  if (d.transcriptionModel.trim() && canTranscribe(d.kind) && d.kind !== "akatsuki")
+    models.transcription = d.transcriptionModel.trim();
   const profile: AiProfile = {
     profileId: d.profileId,
     label: d.label.trim(),
@@ -296,4 +315,56 @@ export function connectionTest(profile: AiProfile): ConnectionTest {
   }
   const model = profile.models.fast ?? profile.models.default ?? defaultModel(profile.kind, "fast") ?? "";
   return { kind: "generate", model };
+}
+
+// ───────────── per-feature routes (§12.2 `routes[]`) ─────────────
+
+/** The features a user can route to a provider of their own choosing, in settings order (web's table). */
+export const FEATURE_ROWS: readonly { feature: AiFeature; label: string }[] = [
+  { feature: "summarize", label: "Summaries" },
+  { feature: "instant_reply", label: "Suggested replies" },
+  { feature: "compose", label: "Write with AI" },
+  { feature: "rewrite", label: "Rewrite" },
+  { feature: "nl_search", label: "Search with AI" },
+  { feature: "triage", label: "Auto-triage" },
+  { feature: "dictation", label: "Dictation" },
+];
+
+/** Profiles that can serve a feature (dictation needs a provider with a transcription API). */
+export function routeChoices(settings: AiSettings, feature: AiFeature): AiProfile[] {
+  return settings.profiles.filter((p) => feature !== "dictation" || canTranscribe(p.kind));
+}
+
+/** The feature's own enabled route, if it has one (else it follows the default route). */
+export function featureRoute(settings: AiSettings, feature: AiFeature): AiRoute | undefined {
+  return settings.routes.find((r) => r.feature === feature && r.enabled);
+}
+
+/** Routes with `feature` sent to `profileId` (null = follow the default route again). */
+export function setFeatureRoute(
+  settings: Pick<AiSettings, "routes">,
+  feature: AiFeature,
+  profileId: string | null,
+  model?: string,
+): AiRoute[] {
+  const rest = settings.routes.filter((r) => r.feature !== feature);
+  if (!profileId) return rest;
+  const m = model?.trim();
+  return [...rest, { feature, profileId, enabled: true, ...(m ? { model: m } : {}) }];
+}
+
+/** The settings row text of a feature: which provider runs it, and where its data goes. */
+export function featureRouteSummary(
+  settings: AiSettings,
+  feature: AiFeature,
+): { provider: string; egress: string | null; own: boolean } {
+  const own = featureRoute(settings, feature);
+  const route = own ?? settings.routes.find((r) => r.feature === "default" && r.enabled);
+  const profile = route && settings.profiles.find((p) => p.profileId === route.profileId);
+  if (!profile) return { provider: "Off", egress: null, own: false };
+  return {
+    provider: own ? profile.label : `Same as default (${profile.label})`,
+    egress: egressText(profile, feature),
+    own: !!own,
+  };
 }

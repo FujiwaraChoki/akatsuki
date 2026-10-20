@@ -3,14 +3,16 @@
 
 import type { Id } from "@akatsuki/convex";
 import { api } from "@akatsuki/convex";
+import { discoverImapSettings } from "@akatsuki/wire";
 import { useMutation, useQuery } from "convex/react";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
-import { Alert, Modal, ScrollView, Switch, View } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 import { Header, HeaderButton } from "../../../src/components/Header";
-import { Button, Chip, Choice, Field, Row, Screen, Section, Txt } from "../../../src/components/ui";
+import { SheetModal } from "../../../src/components/SheetModal";
+import { Button, Chip, Choice, Field, Row, Screen, Section, Toggle, Txt } from "../../../src/components/ui";
 import { authClient } from "../../../src/lib/auth";
 import { api as apiClient, worker } from "../../../src/lib/clients";
 import { appVersion, deviceName, getDeviceId } from "../../../src/lib/device";
@@ -22,6 +24,18 @@ import { useMail } from "../../../src/state/mail";
 import { showToast } from "../../../src/state/toasts";
 import { useTheme } from "../../../src/theme/ThemeProvider";
 import { defaultProfile, egressView, settingsOrEmpty } from "../../../src/vm/aiSettings";
+import {
+  applyDiscovery,
+  discoveryNote,
+  domainToDetect,
+  EMPTY_IMAP_FORM,
+  editImapField,
+  type ImapForm as ImapFormState,
+  imapConnectBody,
+  imapProblems,
+  tlsLabel,
+  toggleTls,
+} from "../../../src/vm/imapForm";
 import {
   FULL_MODE_WARNING,
   NOTIFICATION_MODES,
@@ -36,33 +50,44 @@ const UNDO_CHOICES = [0, 5, 10, 20, 30];
 
 function ImapForm({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const t = useTheme();
-  const [f, setF] = useState({
-    email: "",
-    username: "",
-    password: "",
-    imapHost: "",
-    imapPort: "993",
-    smtpHost: "",
-    smtpPort: "465",
-  });
+  const [f, setF] = useState<ImapFormState>(EMPTY_IMAP_FORM);
   const [busy, setBusy] = useState(false);
+  const [detecting, setDetecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
+  const edit = (k: Parameters<typeof editImapField>[1]) => (v: string) => {
+    setError(null);
+    setF((x) => editImapField(x, k, v));
+  };
+
+  // Autodetect (§6.7 step 5): 600 ms after the address stops changing, ask the worker, else guess.
+  const { email: typedEmail, detectedFor } = f;
+  useEffect(() => {
+    const domain = domainToDetect({ email: typedEmail, detectedFor });
+    if (!domain || !visible) return;
+    const email = typedEmail;
+    let live = true;
+    const id = setTimeout(() => {
+      setDetecting(true);
+      discoverImapSettings(email, worker ? () => worker!.discoverImap(email.trim()) : null)
+        .then((d) => {
+          if (live && d) setF((x) => (x.email === email ? applyDiscovery(x, d, domain) : x));
+        })
+        .finally(() => live && setDetecting(false));
+    }, 600);
+    return () => {
+      live = false;
+      clearTimeout(id);
+    };
+  }, [typedEmail, detectedFor, visible]);
+
+  const problems = imapProblems(f);
   const submit = async () => {
-    if (!worker) return;
+    if (!worker || problems.length > 0) return;
     setBusy(true);
     setError(null);
     try {
-      const imapPort = Number(f.imapPort);
-      const smtpPort = Number(f.smtpPort);
-      await worker.connectImap({
-        email: f.email.trim().toLowerCase(),
-        username: f.username.trim() || f.email.trim(),
-        password: f.password,
-        imap: { host: f.imapHost.trim(), port: imapPort, tls: imapPort === 143 ? "starttls" : "implicit" },
-        smtp: { host: f.smtpHost.trim(), port: smtpPort, tls: smtpPort === 587 ? "starttls" : "implicit" },
-      });
-      setF((x) => ({ ...x, password: "" }));
+      await worker.connectImap(imapConnectBody(f));
+      setF(EMPTY_IMAP_FORM);
       onClose();
       showToast({ id: "imap", text: "Mailbox connected. The first sync is running." });
     } catch (err) {
@@ -71,14 +96,15 @@ function ImapForm({ visible, onClose }: { visible: boolean; onClose: () => void 
       setBusy(false);
     }
   };
+  const note = discoveryNote(f);
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <SheetModal visible={visible} presentationStyle="pageSheet" onRequestClose={onClose}>
       <ScrollView
         style={{ backgroundColor: t.colors.background }}
         contentContainerStyle={{ padding: t.space[2], gap: t.space[2] }}
         keyboardShouldPersistTaps="handled"
       >
-        <Txt variant="heading">Connect IMAP</Txt>
+        <Txt variant="title">Connect IMAP</Txt>
         <Txt variant="meta" tone="muted">
           Your password goes to the Akatsuki sync server once over TLS, is encrypted there, and never comes
           back to any device.
@@ -86,62 +112,93 @@ function ImapForm({ visible, onClose }: { visible: boolean; onClose: () => void 
         <Field
           label="Email"
           value={f.email}
-          onChangeText={set("email")}
+          onChangeText={edit("email")}
           autoCapitalize="none"
+          autoCorrect={false}
           keyboardType="email-address"
-        />
-        <Field
-          label="Username"
-          value={f.username}
-          onChangeText={set("username")}
-          autoCapitalize="none"
-          placeholder="Usually the email address"
+          textContentType="emailAddress"
         />
         <Field
           label="Password"
           value={f.password}
-          onChangeText={set("password")}
+          onChangeText={edit("password")}
           secureTextEntry
           autoCapitalize="none"
           textContentType="password"
         />
+        {detecting ? (
+          <Txt variant="meta" tone="muted" accessibilityLiveRegion="polite">
+            Looking up the servers for this address…
+          </Txt>
+        ) : note ? (
+          <Txt
+            variant="meta"
+            tone={f.appPasswordRequired ? "secondary" : "muted"}
+            accessibilityLiveRegion="polite"
+          >
+            {note}
+          </Txt>
+        ) : null}
+        <Field
+          label="Username"
+          value={f.username}
+          onChangeText={edit("username")}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="Usually the email address"
+        />
         <Field
           label="IMAP server"
           value={f.imapHost}
-          onChangeText={set("imapHost")}
+          onChangeText={edit("imapHost")}
           autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
           placeholder="imap.example.com"
         />
         <Field
           label="IMAP port"
           value={f.imapPort}
-          onChangeText={set("imapPort")}
+          onChangeText={edit("imapPort")}
           keyboardType="number-pad"
         />
+        <Chip label={`Security: ${tlsLabel(f.imapTls)}`} onPress={() => setF((x) => toggleTls(x, "imap"))} />
         <Field
           label="SMTP server"
           value={f.smtpHost}
-          onChangeText={set("smtpHost")}
+          onChangeText={edit("smtpHost")}
           autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
           placeholder="smtp.example.com"
         />
         <Field
           label="SMTP port"
           value={f.smtpPort}
-          onChangeText={set("smtpPort")}
+          onChangeText={edit("smtpPort")}
           keyboardType="number-pad"
-          error={error}
         />
+        <Chip label={`Security: ${tlsLabel(f.smtpTls)}`} onPress={() => setF((x) => toggleTls(x, "smtp"))} />
+        {error ? (
+          <Txt variant="meta" tone="error" accessibilityLiveRegion="polite">
+            {error}
+          </Txt>
+        ) : null}
         <Button
           title="Connect"
           variant="primary"
           busy={busy}
           onPress={submit}
-          disabled={!f.email || !f.password || !f.imapHost || !f.smtpHost}
+          disabled={problems.length > 0}
         />
+        {problems.length > 0 && (f.email || f.password) ? (
+          <Txt variant="meta" tone="muted">
+            {problems[0]}
+          </Txt>
+        ) : null}
         <Button title="Cancel" variant="ghost" onPress={onClose} />
       </ScrollView>
-    </Modal>
+    </SheetModal>
   );
 }
 
@@ -304,7 +361,7 @@ export default function Settings() {
       <ScrollView contentContainerStyle={{ paddingBottom: t.space[8] }}>
         <Section title="Account">
           <Row
-            title={mail.me?.name ?? mail.me?.email ?? "Signed in"}
+            title={mail.me?.name || mail.me?.email || "Signed in"}
             detail={mail.me?.name ? mail.me.email : null}
           />
           <Row title="Sign out" onPress={signOut} />
@@ -393,6 +450,20 @@ export default function Settings() {
           <Row title="Keyboard shortcuts" onPress={() => router.push("/settings/shortcuts")} />
         </Section>
 
+        <Section title="Mail">
+          <Row
+            title="Labels"
+            detail="Rename or delete your labels"
+            onPress={() => router.push("/settings/labels")}
+          />
+          <Row
+            title="Snippets"
+            detail="Reusable text for the composer"
+            onPress={() => router.push("/settings/snippets")}
+          />
+          <Row title="Scheduled messages" onPress={() => router.push("/scheduled")} />
+        </Section>
+
         <Section title="Undo send" footer="How long Undo stays available after you press Send.">
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.space[1], padding: t.space[2] }}>
             {UNDO_CHOICES.map((s) => (
@@ -411,13 +482,12 @@ export default function Settings() {
             title="Load remote images"
             detail="Images load through the Akatsuki image proxy, so senders do not see your address or location."
             right={
-              <Switch
+              <Toggle
                 accessibilityLabel="Load remote images"
                 value={prefs?.remoteImages === "proxy"}
                 onValueChange={(v) => {
                   void patch({ remoteImages: v ? "proxy" : "block" });
                 }}
-                trackColor={{ true: t.colors.accent, false: t.colors.border }}
               />
             }
           />
@@ -425,13 +495,12 @@ export default function Settings() {
             title="Keep messages on this phone"
             detail="Opened and prefetched messages are cached here (up to 300 MB) for speed and offline reading."
             right={
-              <Switch
+              <Toggle
                 accessibilityLabel="Keep messages on this phone"
                 value={prefs?.cacheBodiesOnDevice ?? true}
                 onValueChange={(v) => {
                   void patch({ cacheBodiesOnDevice: v });
                 }}
-                trackColor={{ true: t.colors.accent, false: t.colors.border }}
               />
             }
           />

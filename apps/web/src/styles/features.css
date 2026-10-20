@@ -1,6 +1,8 @@
+/* biome-ignore-all lint/style/noDescendingSpecificity: rules are ordered by component; a later, less specific rule is scoped by a media query or a state and never meets the earlier one */
 /*
- * Part-2 styles: composer, AI, reminders, settings. Same rules as app.css: ONLY @akatsuki/tokens variables and
- * the --ak-* roles of @akatsuki/ui (test/styles.test.ts enforces it for this file too). Class prefix ak-.
+ * Part-2 styles: sign-in and onboarding, composer, AI, reminders, settings. Same rules as app.css: ONLY
+ * @akatsuki/tokens variables and the --ak-* roles of @akatsuki/ui (test/styles.test.ts enforces it for this file
+ * too). Class prefix ak-. First Light (SPEC §3.2, §3.4, §3.8, §3.10): no cards, no tints, ink controls.
  */
 
 /* ───────────── shared controls ───────────── */
@@ -9,33 +11,42 @@
   width: 100%;
   min-height: 88px;
   padding: var(--space-1) var(--space-1-5);
-  border: 1px solid var(--fg-border);
+  border: 1px solid var(--ak-line-strong);
   border-radius: var(--radius-md);
   background: var(--background);
   color: var(--fg-text);
+  caret-color: var(--dawn);
   font-family: var(--text-app-body-font);
   font-size: 14px;
   line-height: var(--text-app-body-line-height);
   resize: vertical;
 }
-.ak-textarea:focus-visible {
+.ak-textarea:hover {
+  border-color: var(--ak-stroke);
+}
+.ak-textarea:focus-visible,
+.ak-textarea:focus {
   outline: none;
   border-color: var(--ak-focus-color);
-  box-shadow: var(--ak-focus-field);
 }
 
+/* Recipient chips: 24px pills, a hairline, ink text, a muted ×. */
 .ak-chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-0-5);
+  gap: 2px;
   max-width: 100%;
-  height: 26px;
-  padding: 0 var(--space-0-5) 0 var(--space-1);
-  border: 1px solid var(--fg-border);
+  height: 24px;
+  padding: 0 2px 0 var(--space-1);
+  border: 1px solid var(--ak-line-strong);
   border-radius: var(--radius-full);
-  background: var(--ak-raised);
+  background: var(--background);
   color: var(--fg-text);
-  font-size: var(--text-app-meta-size);
+  font-size: var(--text-app-body-size);
+}
+.ak-recipients[data-invalid] .ak-chip:last-of-type {
+  border-color: var(--accent-text);
+  color: var(--accent-text);
 }
 .ak-chip__text {
   overflow: hidden;
@@ -51,74 +62,68 @@
   border: 0;
   border-radius: var(--radius-full);
   background: transparent;
-  color: var(--fg-muted);
+  color: var(--ak-fg-60);
   cursor: pointer;
 }
 .ak-chip__remove:hover,
 .ak-chip__remove:focus-visible {
-  background: var(--accent-tint);
+  background: var(--ak-surface-strong);
   color: var(--fg-text);
-  outline: none;
-}
-.ak-chip__remove:focus-visible {
-  box-shadow: var(--ak-focus);
 }
 .ak-chip__remove svg {
   width: 12px;
   height: 12px;
 }
 
+/* Switch: 28×16, on is ink, off the input stroke, a 12px paper knob. */
 .ak-switch {
   position: relative;
   flex: none;
-  width: 36px;
-  height: 20px;
+  width: 28px;
+  height: 16px;
   padding: 0;
-  border: 1px solid var(--fg-border-hover);
+  border: 0;
   border-radius: var(--radius-full);
-  background: var(--ak-raised);
+  background: var(--ak-line-strong);
   cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-out);
 }
 .ak-switch__thumb {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: var(--radius-full);
-  background: var(--fg-secondary);
-  transition: transform var(--duration-fast) var(--ease-out);
+  background: var(--background);
 }
 .ak-switch--on {
-  border-color: var(--accent-text);
-  background: var(--accent-solid);
+  background: var(--foreground);
 }
 .ak-switch--on .ak-switch__thumb {
-  transform: translateX(16px);
-  background: var(--ak-on-accent);
-}
-.ak-switch:focus-visible {
-  outline: none;
-  box-shadow: var(--ak-focus);
+  transform: translateX(12px);
 }
 .ak-switch:disabled {
-  opacity: 0.5;
+  opacity: var(--opacity-fg-muted);
   cursor: default;
 }
 
+/* Segmented: a 28px frame on the surface; the selected segment is paper with a hairline ring. */
 .ak-segmented {
   display: inline-flex;
   flex-wrap: wrap;
+  gap: 2px;
   padding: 2px;
-  border: 1px solid var(--fg-border);
+  border: 1px solid var(--ak-line-strong);
   border-radius: var(--radius-md);
-  background: var(--ak-raised);
+  background: var(--ak-surface);
 }
 .ak-segmented__option {
-  padding: var(--space-0-5) var(--space-1-5);
-  border-radius: var(--radius-sm);
-  color: var(--fg-secondary);
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--ak-fg-70);
   font-size: var(--text-app-meta-size);
   cursor: pointer;
 }
@@ -128,28 +133,35 @@
 .ak-segmented__option--on {
   background: var(--background);
   color: var(--fg-text);
-  box-shadow: 0 1px 2px rgb(var(--foreground-rgb) / 0.12);
+  box-shadow: 0 0 0 1px var(--ak-line);
 }
 .ak-segmented__option:has(:focus-visible) {
-  box-shadow: var(--ak-focus);
+  outline: 2px solid var(--ak-focus-color);
+  outline-offset: 1px;
 }
 
+/* Where AI data goes: the full sentence, 12 tertiary (the mono caps form sits on the AI blocks). */
 .ak-egress {
   margin: var(--space-0-5) 0 0;
   min-height: 1em;
-  color: var(--fg-muted);
-  font-size: var(--text-app-caption-size);
-  line-height: var(--text-app-caption-line-height);
+  color: var(--ak-fg-70);
+  font-size: var(--text-app-meta-size);
+  line-height: var(--text-app-meta-line-height);
+}
+.ak-egress--off {
+  color: var(--ak-fg-60);
 }
 .ak-egress--off a {
-  color: var(--accent-text);
+  color: var(--fg-text);
+  text-decoration: underline;
+  text-decoration-color: var(--ak-stroke);
+  text-underline-offset: 3px;
 }
-
-.ak-triage {
-  font-size: 10px;
-}
-.ak-triage--reply {
-  letter-spacing: var(--text-app-label-tracking);
+/* Inline links in AI notes are at least 24 px tall (WCAG 2.5.8). */
+.ak-egress a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 
 .ak-rot-up {
@@ -159,13 +171,50 @@
   transform: rotate(90deg);
 }
 
+/* Meters are ink on the input stroke (never the browser's green). */
 .ak-meter {
   width: 160px;
-  height: 8px;
-  accent-color: var(--accent-solid);
+  height: 6px;
+  appearance: none;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--ak-line-strong);
+}
+.ak-meter::-webkit-meter-bar {
+  height: 6px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--ak-line-strong);
+}
+.ak-meter::-webkit-meter-optimum-value,
+.ak-meter::-webkit-meter-suboptimum-value,
+.ak-meter::-webkit-meter-even-less-good-value {
+  border-radius: var(--radius-full);
+  background: var(--foreground);
+}
+.ak-meter::-moz-meter-bar {
+  border-radius: var(--radius-full);
+  background: var(--foreground);
+}
+
+/* The recording dot (one of the red marks): dawn, breathing while it records; still under reduced motion. */
+.ak-rec {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: var(--radius-full);
+  background: var(--dawn);
+  animation: ak-rec 1.2s ease-in-out infinite alternate;
+}
+@keyframes ak-rec {
+  to {
+    opacity: 0.4;
+  }
 }
 
 fieldset.ak-compose__rewrite,
+fieldset.ak-compose__panel,
 fieldset.ak-ai__replies,
 fieldset.ak-thread__reply {
   min-width: 0;
@@ -174,145 +223,542 @@ fieldset.ak-thread__reply {
   border: 0;
 }
 
-/* ───────────── composer ───────────── */
+/* ───────────── sign-in and onboarding (SPEC §3.2): no card, one column, the horizon ───────────── */
 
+.ak-auth,
+.ak-onboarding {
+  --ak-auth-pad: var(--space-3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0 var(--ak-auth-pad);
+  overflow: auto;
+  background: var(--background);
+  color: var(--fg-text);
+  font-family: var(--text-app-body-font);
+  font-size: var(--text-app-body-size);
+  line-height: var(--text-app-body-line-height);
+  isolation: isolate;
+}
+/* The dot: 12px, top-left 24/24, back to akatsuki.vc. */
+.ak-auth__dot {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: -6px;
+  border-radius: var(--radius-full);
+}
+.ak-auth__dot::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background: var(--ak-dot);
+}
+.ak-auth__column,
+.ak-onboarding__inner {
+  position: relative;
+  z-index: 1;
+  flex: 1 0 auto;
+  width: min(360px, 100%);
+  margin: 0 auto;
+  padding: max(var(--space-6), calc(26vh - 80px)) 0 var(--space-8);
+}
+/* The horizon sits at 72% of the page, or under the form when the form is taller. */
+.ak-auth__column {
+  min-height: 72vh;
+}
+.ak-onboarding__inner {
+  width: min(520px, 100%);
+}
+.ak-auth__headline {
+  margin: 0;
+  font-family: var(--text-brand-title-font);
+  font-size: var(--text-brand-title-size);
+  font-weight: var(--text-brand-title-weight);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--fg-text);
+  text-wrap: balance;
+}
+/* The one app headline that ends on the dot: a dawn circle 0.16em wide, sitting on the baseline. */
+.ak-auth__period {
+  position: relative;
+  color: transparent;
+}
+.ak-auth__period::after {
+  content: "";
+  position: absolute;
+  left: 0.03em;
+  bottom: 0.2em;
+  width: 0.16em;
+  height: 0.16em;
+  border-radius: var(--radius-full);
+  background: var(--ak-dot);
+}
+.ak-auth__headline--step {
+  font-size: var(--text-app-empty-size);
+  line-height: var(--text-app-empty-line-height);
+  letter-spacing: var(--text-app-empty-tracking);
+}
+.ak-auth__lead {
+  max-width: 36ch;
+  margin: var(--space-2) 0 var(--space-1);
+  color: var(--ak-fg-70);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.ak-auth__note {
+  margin: var(--space-1-5) 0 var(--space-1);
+  color: var(--ak-fg-70);
+  font-size: var(--text-app-body-size);
+}
+.ak-auth__note strong {
+  color: var(--fg-text);
+  font-weight: var(--text-app-body-strong-weight);
+}
+.ak-auth__actions {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.ak-auth__actions .ak-button--lg {
+  width: 100%;
+}
+/* Quiet text buttons: "Send a sign-in link instead", "I'll do this later". */
+.ak-auth__text {
+  justify-self: center;
+  min-height: 28px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--ak-fg-70);
+  font-size: var(--text-app-body-size);
+  cursor: pointer;
+}
+.ak-auth__text:hover {
+  color: var(--fg-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ak-auth__text:disabled {
+  color: var(--ak-fg-60);
+  cursor: progress;
+}
+.ak-auth__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin: var(--space-2) 0;
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-meta-size);
+}
+.ak-auth__divider::before,
+.ak-auth__divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--ak-line);
+}
+.ak-auth__social {
+  display: grid;
+  gap: var(--space-1);
+}
+.ak-auth__social .ak-button {
+  width: 100%;
+}
+.ak-auth__error,
+.ak-onboarding__error {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: var(--space-1) 0 0;
+  color: var(--accent-text);
+  font-size: var(--text-app-meta-size);
+}
+.ak-auth__bang,
+.ak-ai__bang {
+  font-weight: 600;
+}
+.ak-auth__demo {
+  margin: var(--space-3) 0 0;
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-meta-size);
+}
+.ak-auth__horizon {
+  position: relative;
+  flex: none;
+  margin: -64px calc(-1 * var(--ak-auth-pad)) 0;
+}
+.ak-auth__footer {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  margin: 0;
+  padding: var(--space-2) 0 var(--space-3);
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-meta-size);
+  text-align: center;
+}
+/* The code: six mono cells over one real field (fill and paste still work, the caret is drawn). */
+.ak-code {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 44px);
+  justify-content: space-between;
+  margin-top: var(--space-2);
+}
+.ak-code__input {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 1px;
+  outline: none;
+}
+.ak-code__input::selection {
+  background: transparent;
+}
+.ak-code__cell {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 52px;
+  border: 1px solid var(--ak-line-strong);
+  border-radius: var(--radius-md);
+  color: var(--fg-text);
+  font-family: var(--font-mono);
+  font-size: 20px;
+}
+.ak-code:hover .ak-code__cell {
+  border-color: var(--ak-stroke);
+}
+.ak-code:focus-within .ak-code__cell[data-current] {
+  border-color: var(--ak-focus-color);
+}
+.ak-code:focus-within .ak-code__cell[data-current]:not([data-filled])::after {
+  content: "";
+  width: 1px;
+  height: 22px;
+  background: var(--dawn);
+  animation: ak-caret 1s steps(1) infinite;
+}
+.ak-code[data-invalid] .ak-code__cell {
+  border-color: var(--accent-text);
+}
+@keyframes ak-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+.ak-onboarding__title {
+  margin: 0;
+}
+.ak-onboarding__title--step {
+  font-size: var(--text-app-empty-size);
+  line-height: var(--text-app-empty-line-height);
+}
+.ak-onboarding__lede {
+  max-width: 44ch;
+  margin: var(--space-2) 0 var(--space-4);
+  color: var(--ak-fg-70);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.ak-onboarding__skip {
+  display: block;
+  margin: var(--space-3) auto 0;
+}
+/* Providers: the landing's ruled specimen rows. */
+.ak-connect {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ak-line);
+}
+.ak-connect > li {
+  border-bottom: 1px solid var(--ak-line);
+}
+.ak-connect__card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-1) var(--space-1-5);
+  border: 0;
+  background: none;
+  color: var(--fg-text);
+  text-align: left;
+  cursor: pointer;
+}
+.ak-connect__card:hover {
+  background: var(--ak-surface);
+}
+.ak-connect__card:focus-visible {
+  outline-offset: -2px;
+}
+.ak-connect__card:disabled {
+  opacity: var(--opacity-fg-muted);
+  cursor: progress;
+}
+.ak-connect__text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+.ak-connect__title {
+  font-size: 15px;
+  font-weight: var(--text-app-body-strong-weight);
+}
+.ak-connect__detail {
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-body-size);
+}
+.ak-connect__card:hover .ak-connect__detail {
+  color: var(--ak-fg-70);
+}
+.ak-connect__arrow {
+  color: var(--ak-fg-60);
+}
+.ak-imap {
+  width: 100%;
+}
+.ak-imap__status {
+  min-height: 1.5em;
+  margin: var(--space-1) 0;
+  color: var(--ak-fg-70);
+  font-size: var(--text-app-meta-size);
+}
+.ak-imap__toggle {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--fg-text);
+  font-size: var(--text-app-meta-size);
+  text-decoration: underline;
+  text-decoration-color: var(--ak-stroke);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ak-imap__servers {
+  margin-top: var(--space-1);
+}
+.ak-imap__privacy {
+  margin-top: var(--space-2);
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-meta-size);
+}
+.ak-endpoint {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ak-endpoint__row {
+  display: flex;
+  gap: var(--space-1);
+}
+@media (max-width: 599px) {
+  .ak-auth,
+  .ak-onboarding {
+    --ak-auth-pad: 20px;
+  }
+  .ak-auth__headline {
+    font-size: 40px;
+  }
+  .ak-auth__headline--step {
+    font-size: 30px;
+  }
+  .ak-code {
+    grid-template-columns: repeat(6, minmax(0, 44px));
+  }
+  .ak-code__cell {
+    width: auto;
+  }
+}
+
+/* ───────────── composer (landing .ib-compose) ───────────── */
+
+/* Without a reading pane on screen (two panes, nothing open): a sheet on the right, between the bars. */
 .ak-compose {
   position: fixed;
   z-index: 40;
-  right: var(--space-3);
-  bottom: var(--space-3);
+  top: var(--layout-toolbar-height);
+  right: 0;
+  bottom: var(--layout-status-bar-height);
   display: flex;
   flex-direction: column;
-  width: min(680px, calc(100vw - 2 * var(--space-3)));
-  max-height: calc(100vh - 2 * var(--space-3));
-  border: 1px solid var(--fg-border);
-  border-radius: var(--radius-lg);
+  width: min(560px, calc(100vw - var(--ak-sidebar-width)));
+  padding: var(--space-2) var(--space-3) var(--space-1-5);
+  border-left: 1px solid var(--ak-line);
   background: var(--background);
-  box-shadow: var(--ak-shadow);
   overflow: hidden;
-  animation: ak-compose-in var(--duration-fast) var(--ease-out);
+  animation: ak-sheet-in 160ms var(--ease-out);
 }
-/* Replies in the split view: docked to the bottom of the reading pane (Composer.tsx useReplyDock), which gets
-   the composer's height as bottom padding so the newest message stays readable above it. */
-/* Defaults for the values Composer.tsx sets inline while a composer is open. */
 :root {
   --ak-compose-h: 0px;
   --ak-compose-foot-h: 64px;
 }
 .ak-compose {
   --ak-dock-left: auto;
+  --ak-dock-top: auto;
   --ak-dock-width: auto;
+  --ak-dock-height: auto;
 }
 .ak-reading {
   --ak-dock-h: 0px;
 }
-.ak-compose[data-docked] {
+/* New mail takes the reader slot. */
+.ak-compose[data-docked="slot"] {
+  top: var(--ak-dock-top);
   left: var(--ak-dock-left);
   right: auto;
-  bottom: 0;
+  bottom: auto;
   width: var(--ak-dock-width);
-  max-height: min(50vh, 520px);
-  border-bottom: 0;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  height: var(--ak-dock-height);
+}
+/* A reply expands at the foot of the thread, full reader width. */
+.ak-compose[data-docked="bottom"] {
+  top: auto;
+  left: var(--ak-dock-left);
+  right: auto;
+  bottom: var(--layout-status-bar-height);
+  width: var(--ak-dock-width);
+  max-height: min(56vh, 560px);
+  padding-top: var(--space-1-5);
+  border-left: 0;
+  border-top: 1px solid var(--ak-line-strong);
+  animation: ak-pop-in var(--duration-quick) var(--ease-out);
 }
 .ak-reading[data-docked] {
   padding-bottom: var(--ak-dock-h, 0px);
 }
-/* Phones: the composer is a full-screen sheet, not a card over the inbox. */
-@media (max-width: 600px) {
+.ak-reading[data-docked] .ak-thread__reply {
+  visibility: hidden;
+}
+/* Phones: the composer is a full-screen sheet. */
+@media (max-width: 768px) {
   .ak-compose,
   .ak-compose[data-docked] {
     inset: 0;
     width: 100%;
+    height: auto;
     max-height: none;
+    padding: var(--space-2) var(--space-2) calc(var(--space-1-5) + env(safe-area-inset-bottom));
     border: 0;
-    border-radius: 0;
-    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 .ak-compose[data-dragging] {
-  border-color: var(--accent-mid);
-  box-shadow: 0 0 0 4px var(--accent-tint);
-}
-@keyframes ak-compose-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
+  box-shadow: inset 0 0 0 2px var(--ak-stroke);
 }
 .ak-compose__header {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
-  border-bottom: 1px solid var(--fg-border-subtle);
+  padding-bottom: var(--space-1);
+}
+.ak-compose__title {
+  margin: 0;
+  color: var(--fg-text);
+  font-size: var(--text-app-body-size);
+  font-weight: var(--text-app-body-strong-weight);
 }
 .ak-compose__status {
   display: inline-flex;
   gap: var(--space-1);
   margin-left: auto;
-  color: var(--fg-muted);
-  font-size: var(--text-app-caption-size);
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-meta-size);
 }
 .ak-compose__status[data-status="error"],
 .ak-compose__status[data-status="conflict"] {
   color: var(--accent-text);
 }
+.ak-compose__close {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+}
+.ak-compose__close:hover .ak-kbd__key {
+  border-color: var(--ak-stroke);
+  color: var(--fg-text);
+}
 .ak-compose__conflict {
   flex-wrap: wrap;
   justify-content: flex-start;
+  padding-left: 0;
 }
 .ak-compose__fields {
+  position: relative;
   display: flex;
+  flex: none;
   flex-direction: column;
-  padding: 0 var(--space-2);
 }
 .ak-compose__row,
 .ak-recipients {
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  min-height: 40px;
-  border-bottom: 1px solid var(--fg-border-subtle);
+  gap: 0;
+  min-height: 36px;
+  border-bottom: 1px solid var(--ak-line);
 }
 .ak-recipients {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: flex-start;
 }
 .ak-compose__label {
   flex: none;
   width: 56px;
-  font-family: var(--text-app-label-font);
-  font-size: var(--text-app-label-size);
-  letter-spacing: var(--text-app-label-tracking);
-  text-transform: uppercase;
-  color: var(--fg-muted);
+  line-height: 34px;
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-body-size);
 }
 .ak-compose__subject,
 .ak-recipients__input {
   flex: 1;
   min-width: 140px;
-  height: 36px;
+  height: 34px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--fg-text);
+  caret-color: var(--dawn);
   font-family: var(--text-app-body-font);
-  font-size: 14px;
+  font-size: var(--text-app-body-size);
 }
 .ak-compose__subject:focus-visible,
 .ak-recipients__input:focus-visible,
-.ak-compose__text:focus-visible {
+.ak-compose__text:focus-visible,
+.ak-compose__ai-input:focus-visible {
   outline: none;
-  box-shadow: none;
 }
 .ak-compose__row:focus-within,
 .ak-recipients:focus-within {
-  border-bottom-color: var(--ak-focus-color);
-  box-shadow: inset 0 -1px 0 var(--ak-focus-color);
+  border-bottom-color: var(--ak-stroke);
 }
 .ak-compose__from {
   flex: 1;
-  height: 32px;
+  height: 28px;
   border-color: transparent;
 }
 .ak-recipients__box {
@@ -322,46 +768,69 @@ fieldset.ak-thread__reply {
   align-items: center;
   gap: var(--space-0-5);
   min-width: 0;
-  padding: var(--space-0-5) 0;
+  padding: 5px 72px 5px 0;
 }
 .ak-recipients__list {
   position: absolute;
   display: flex;
   flex-direction: column;
   z-index: 2;
-  top: 100%;
+  top: calc(100% + 4px);
   left: 56px;
   right: 0;
   margin: 0;
   padding: var(--space-0-5);
   list-style: none;
-  border: 1px solid var(--fg-border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--ak-line-strong);
+  border-radius: var(--radius-lg);
   background: var(--background);
-  box-shadow: var(--ak-shadow);
+  box-shadow: var(--ak-pop);
 }
 .ak-recipients__option {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-1);
-  padding: var(--space-0-5) var(--space-1);
-  border-radius: var(--radius-sm);
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  color: var(--ak-fg-80);
   cursor: pointer;
 }
 .ak-recipients__option--active,
 .ak-recipients__option:hover {
-  background: var(--accent-wash);
+  background: var(--ak-surface-strong);
+  color: var(--fg-text);
 }
 .ak-recipients__email {
-  color: var(--fg-muted);
+  color: var(--ak-fg-70);
   font-size: var(--text-app-meta-size);
 }
+/* "Cc Bcc": quiet text buttons on the To row's right. */
 .ak-compose__more {
+  position: absolute;
+  top: 0;
+  right: 0;
   display: flex;
-  gap: var(--space-2);
-  justify-content: flex-end;
-  padding: var(--space-0-5) 0;
+  align-items: center;
+  gap: var(--space-1);
+  height: 36px;
+}
+.ak-compose__fields[data-from] .ak-compose__more {
+  top: 37px;
+}
+.ak-compose__ccbcc {
+  height: 24px;
+  padding: 0 var(--space-0-5);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ak-fg-60);
   font-size: var(--text-app-meta-size);
+  cursor: pointer;
+}
+.ak-compose__ccbcc:hover {
+  color: var(--fg-text);
 }
 .ak-compose__body {
   display: flex;
@@ -369,31 +838,38 @@ fieldset.ak-thread__reply {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1-5) 0 var(--space-1);
 }
 .ak-compose__text {
   flex: 1;
-  min-height: 200px;
+  min-height: 160px;
   width: 100%;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--fg-text);
+  caret-color: var(--dawn);
   font-family: var(--text-app-reading-font);
   font-size: var(--text-app-reading-size);
   line-height: var(--text-app-reading-line-height);
   resize: none;
 }
+.ak-compose__text::placeholder {
+  color: var(--ak-fg-60);
+}
 /* Docked, the reply is compact (the conversation above stays the larger part); it grows as the text does. */
-.ak-compose[data-docked] .ak-compose__text {
+.ak-compose[data-docked="bottom"] .ak-compose__text {
   min-height: 96px;
 }
+/* AI text streams in tertiary until it is accepted. */
 .ak-compose__text[aria-busy="true"] {
-  color: var(--fg-secondary);
+  color: var(--ak-fg-70);
 }
 .ak-compose__signature {
   margin-top: var(--space-1);
-  color: var(--fg-muted);
-  font-size: var(--text-app-meta-size);
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-reading-size);
+  line-height: var(--text-app-reading-line-height);
   white-space: pre-line;
 }
 .ak-compose__quote {
@@ -404,8 +880,8 @@ fieldset.ak-thread__reply {
   overflow: auto;
   margin: var(--space-1) 0 0;
   padding-left: var(--space-1-5);
-  border-left: 2px solid var(--fg-border);
-  color: var(--fg-secondary);
+  border-left: 2px solid var(--ak-line-strong);
+  color: var(--ak-fg-70);
   font-family: var(--text-app-body-font);
   font-size: var(--text-app-meta-size);
   white-space: pre-wrap;
@@ -414,33 +890,55 @@ fieldset.ak-thread__reply {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--fg-muted);
+  color: var(--ak-fg-60);
   font-size: var(--text-app-meta-size);
 }
+/* Write with AI: a 36px prompt row above the footer. */
 .ak-compose__ai {
-  padding: var(--space-1) var(--space-2);
-  border-bottom: 1px solid var(--fg-border-subtle);
-  background: var(--accent-wash);
+  flex: none;
+  padding: var(--space-0-5) 0;
+  border-top: 1px solid var(--ak-line);
 }
 .ak-compose__ai-row {
   display: flex;
-  gap: var(--space-1);
   align-items: center;
+  gap: var(--space-1);
+  height: 36px;
+}
+.ak-compose__ai-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-text);
+  caret-color: var(--dawn);
+  font-family: var(--text-app-body-font);
+  font-size: var(--text-app-body-size);
+}
+.ak-compose__ai-input::placeholder {
+  color: var(--ak-fg-60);
+}
+.ak-compose__ai .ak-egress {
+  margin: 0;
 }
 .ak-compose__files {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   gap: var(--space-1);
   margin: 0;
-  padding: var(--space-1) var(--space-2);
+  padding: 0 0 var(--space-1);
   list-style: none;
 }
 .ak-compose__file {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-0-5) var(--space-1);
-  border: 1px solid var(--fg-border);
+  height: 28px;
+  padding: 0 2px 0 var(--space-1);
+  border: 1px solid var(--ak-line-strong);
   border-radius: var(--radius-md);
   font-size: var(--text-app-meta-size);
 }
@@ -450,61 +948,237 @@ fieldset.ak-thread__reply {
 .ak-compose__file svg {
   width: 14px;
   height: 14px;
+  color: var(--ak-fg-60);
 }
 .ak-compose__error {
-  margin: var(--space-0-5) var(--space-2);
+  margin: var(--space-0-5) 0;
   color: var(--accent-text);
   font-size: var(--text-app-meta-size);
 }
-.ak-compose__tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-0-5);
-  padding: var(--space-0-5) var(--space-1-5);
-  border-top: 1px solid var(--fg-border-subtle);
+/* The Write-with-AI and More popovers stand on the footer (level 1). */
+.ak-compose__panel {
+  position: absolute;
+  z-index: 3;
+  left: var(--space-3);
+  bottom: calc(var(--space-1-5) + 44px);
+  display: grid;
+  gap: 1px;
+  width: 260px;
+  padding: var(--space-0-5);
+  border: 1px solid var(--ak-line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+  box-shadow: var(--ak-pop);
+  animation: ak-pop-in var(--duration-quick) var(--ease-out);
 }
-.ak-compose__tools + .ak-egress {
-  margin: 0 var(--space-2) var(--space-0-5);
+.ak-compose__panel--more {
+  left: auto;
+  right: var(--space-3);
+  width: 280px;
+}
+.ak-compose__panel .ak-egress {
+  margin: var(--space-0-5) 0 0;
+  padding: var(--space-1) 10px 6px;
+  border-top: 1px solid var(--ak-line);
+  font-size: var(--text-app-caption-size);
 }
 .ak-compose__rewrite {
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 1px;
+}
+.ak-compose__panel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  width: 100%;
+  height: 32px;
+  padding: 0 6px 0 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--ak-fg-80);
+  font-size: var(--text-app-body-size);
+  text-align: left;
+  cursor: pointer;
+}
+.ak-compose__panel-item:hover:not(:disabled) {
+  background: var(--ak-surface-strong);
+  color: var(--fg-text);
+}
+.ak-compose__panel-item:disabled {
+  color: var(--ak-fg-60);
+  cursor: default;
+}
+.ak-compose__panel-item[aria-pressed="true"] {
+  justify-content: flex-start;
+  color: var(--fg-text);
+}
+.ak-compose__panel-item--danger {
+  color: var(--accent-text);
+}
+.ak-compose__followup {
+  display: grid;
+  gap: var(--space-0-5);
+  padding: 6px 10px var(--space-1);
+  color: var(--ak-fg-70);
+  font-size: var(--text-app-meta-size);
+}
+.ak-compose__followup .ak-input {
+  width: 100%;
+}
+.ak-compose__receipt {
+  margin: 0;
+  padding: 0 10px var(--space-1);
+  font-size: var(--text-app-meta-size);
+}
+.ak-compose {
+  container-type: inline-size;
 }
 .ak-compose__footer {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border-top: 1px solid var(--fg-border-subtle);
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ak-line);
 }
-.ak-compose__followup .ak-input {
-  width: auto;
-  height: 32px;
+.ak-compose__footer .ak-button {
+  height: 30px;
+}
+.ak-compose__toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 28px;
+  margin-left: -6px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--ak-fg-60);
+  cursor: pointer;
+}
+.ak-compose__toggle:hover,
+.ak-compose__toggle[aria-expanded="true"] {
+  background: var(--ak-surface);
+  color: var(--fg-text);
+}
+.ak-compose__undo {
   font-size: var(--text-app-meta-size);
+}
+/* A narrow composer keeps the footer on one line: Send later and Write with AI drop their keycaps first. */
+@container (max-width: 420px) {
+  .ak-compose__footer {
+    gap: 4px;
+  }
+  .ak-compose__footer .ak-button__kbd {
+    display: none;
+  }
+  .ak-compose__footer .ak-button {
+    padding: 0 10px;
+    font-size: var(--text-app-meta-size);
+  }
+}
+@container (max-width: 560px) {
+  .ak-compose__write .ak-button__kbd,
+  .ak-compose__footer .ak-button--secondary .ak-button__kbd {
+    display: none;
+  }
+  .ak-compose__write,
+  .ak-compose__footer .ak-button--secondary {
+    padding-right: 12px;
+  }
 }
 .ak-compose__spacer {
   flex: 1;
 }
+.ak-compose__where {
+  margin: 6px 0 0;
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-caption-size);
+  text-align: right;
+}
 
 /* ───────────── under an open thread ───────────── */
 
-.ak-thread__reply,
+/* The reply box sticks to the foot of the pane (SPEC §3.1.5). */
+.ak-thread__reply {
+  position: sticky;
+  z-index: 1;
+  bottom: 0;
+  order: 99;
+  margin-top: auto;
+  padding: var(--space-3) 0 20px;
+  background: linear-gradient(to bottom, transparent, var(--background) var(--space-2));
+}
+.ak-replybox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-1) 0 14px;
+  border: 1px solid var(--ak-line);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-body-size);
+  text-align: left;
+  cursor: text;
+}
+.ak-replybox:hover,
+.ak-replybox:focus-visible {
+  border-color: var(--ak-stroke);
+  color: var(--ak-fg-80);
+}
+.ak-replybox:focus-visible {
+  outline: none;
+}
+.ak-replybox__text {
+  flex: 1;
+}
+.ak-replybox__more {
+  position: absolute;
+  top: calc(var(--space-3) + 6px);
+  right: 44px;
+  display: none;
+  gap: var(--space-0-5);
+}
+.ak-thread__reply:hover .ak-replybox__more,
+.ak-thread__reply:focus-within .ak-replybox__more {
+  display: flex;
+}
+.ak-replybox__alt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-meta-size);
+  cursor: pointer;
+}
+.ak-replybox__alt:hover {
+  background: var(--ak-surface);
+  color: var(--fg-text);
+}
+/* Notices under a thread: one line, ruled, never tinted. */
 .ak-thread__draft,
 .ak-thread__timer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
-  margin-top: var(--space-2);
-}
-.ak-thread__draft,
-.ak-thread__timer {
-  padding: var(--space-1) var(--space-1-5);
-  border: 1px solid var(--fg-border);
-  border-radius: var(--radius-md);
-  background: var(--accent-wash);
+  margin-top: var(--space-1-5);
+  padding: var(--space-1) 0;
+  border-top: 1px solid var(--ak-line);
+  border-bottom: 1px solid var(--ak-line);
+  color: var(--ak-fg-70);
   font-size: var(--text-app-meta-size);
 }
 .ak-thread__receipts {
@@ -517,80 +1191,134 @@ fieldset.ak-thread__reply {
   flex-direction: column;
 }
 
+/* AI (SPEC §3.8, landing .rp-sum) */
 .ak-ai {
-  margin-top: var(--space-3);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--fg-border-subtle);
+  margin-top: var(--space-2);
 }
 .ak-ai__bar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-0-5);
+  align-items: center;
+  gap: 2px;
+  margin-left: calc(-1 * var(--space-1-5));
 }
-.ak-ai__card {
-  margin-top: var(--space-1-5);
-  padding: var(--space-1-5) var(--space-2);
-  border: 1px solid var(--fg-border);
+.ak-ai__bar .ak-egress {
+  margin: 0 0 0 var(--space-1);
+  flex: 1 1 200px;
+  text-align: right;
+}
+.ak-ai--off .ak-egress {
+  margin-top: var(--space-1);
+}
+.ak-sum {
+  margin: var(--space-2) 0;
+  padding: 14px var(--space-2);
+  border: 1px solid var(--ak-line);
   border-radius: var(--radius-lg);
-  background: var(--background);
-  box-shadow: 0 0 24px var(--accent-wash);
 }
-.ak-ai__tldr {
-  margin: var(--space-1) 0;
-  font-family: var(--text-app-subject-font);
-  font-size: 19px;
-  line-height: 1.35;
-  color: var(--fg-text);
+.ak-sum__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+.ak-sum__hide {
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-meta-size);
+}
+.ak-sum__text {
+  min-height: 40px;
+  margin: 6px 0 0;
+  color: var(--ak-fg-80);
+  font-size: var(--text-app-body-size);
+  line-height: 20px;
+}
+.ak-sum__tldr {
+  margin: 0;
+}
+.ak-sum__text[data-streaming]::after {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--dawn);
+  animation: ak-caret 1s steps(1) infinite;
 }
 .ak-ai__sub {
+  display: block;
   margin: var(--space-1-5) 0 var(--space-0-5);
-  font-family: var(--text-app-label-font);
-  font-size: var(--text-app-label-size);
-  font-weight: var(--text-app-label-weight);
-  letter-spacing: var(--text-app-label-tracking);
-  text-transform: uppercase;
-  color: var(--fg-muted);
 }
 .ak-ai__list {
-  margin: 0;
+  margin: var(--space-0-5) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ak-fg-80);
+  font-size: var(--text-app-body-size);
+  line-height: 20px;
+}
+.ak-ai__list li {
+  position: relative;
   padding-left: var(--space-2);
-  color: var(--fg-secondary);
-  line-height: var(--text-app-body-line-height);
+}
+.ak-ai__list li::before {
+  content: "\2013";
+  position: absolute;
+  left: 0;
+  color: var(--ak-fg-60);
+}
+.ak-ai__suggest {
+  margin: var(--space-2) 0 0;
 }
 .ak-ai__replies {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
-  margin-top: var(--space-1-5);
 }
 .ak-ai__reply {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0-5);
-  padding: var(--space-1) var(--space-1-5);
-  border: 1px solid var(--fg-border);
-  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 280px;
+  height: 32px;
+  padding: 0 6px 0 14px;
+  border: 1px solid var(--ak-line-strong);
+  border-radius: var(--radius-full);
   background: var(--background);
-  color: var(--fg-text);
-  text-align: left;
+  color: var(--ak-fg-80);
+  font-size: var(--text-app-body-size);
   cursor: pointer;
 }
-.ak-ai__reply:hover:not(:disabled),
-.ak-ai__reply:focus-visible {
-  border-color: var(--ak-focus-color);
-  box-shadow: var(--ak-focus-field);
-  outline: none;
+.ak-ai__reply:hover:not(:disabled) {
+  border-color: var(--ak-stroke);
+  color: var(--fg-text);
+}
+.ak-ai__reply:disabled {
+  color: var(--ak-fg-60);
+  cursor: default;
 }
 .ak-ai__reply-label {
-  font-family: var(--text-app-label-font);
-  font-size: var(--text-app-label-size);
-  letter-spacing: var(--text-app-label-tracking);
-  text-transform: uppercase;
-  color: var(--accent-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.ak-ai__reply-body {
-  color: var(--fg-secondary);
+.ak-ai__where {
+  display: block;
+  margin-top: var(--space-1);
+}
+.ak-ai__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  margin: var(--space-1) 0;
+  color: var(--accent-text);
   font-size: var(--text-app-meta-size);
+}
+.ak-ai__error .ak-textbutton {
+  color: var(--fg-text);
 }
 .ak-ai__actions {
   margin: var(--space-1) 0 0;
@@ -601,15 +1329,15 @@ fieldset.ak-thread__reply {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-0-5) 0;
+  min-height: 32px;
+  border-top: 1px solid var(--ak-line);
+  color: var(--ak-fg-80);
+}
+.ak-ai__action:first-child {
+  border-top: 0;
 }
 .ak-ai__action-kind {
   min-width: 72px;
-  font-family: var(--text-app-label-font);
-  font-size: var(--text-app-label-size);
-  letter-spacing: var(--text-app-label-tracking);
-  text-transform: uppercase;
-  color: var(--fg-muted);
 }
 .ak-ai__action-title {
   flex: 1;
@@ -644,7 +1372,7 @@ fieldset.ak-thread__reply {
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) 0;
-  border-bottom: 1px solid var(--fg-border-subtle);
+  border-bottom: 1px solid var(--ak-line);
 }
 .ak-scheduled__what {
   display: flex;
@@ -659,7 +1387,7 @@ fieldset.ak-thread__reply {
 }
 .ak-scheduled__to,
 .ak-scheduled__when {
-  color: var(--fg-muted);
+  color: var(--ak-fg-60);
   font-size: var(--text-app-meta-size);
 }
 .ak-scheduled__error {
@@ -668,7 +1396,7 @@ fieldset.ak-thread__reply {
   font-size: var(--text-app-meta-size);
 }
 
-/* ───────────── settings ───────────── */
+/* ───────────── settings (SPEC §3.10, the Linear pattern) ───────────── */
 
 .ak-settings {
   display: grid;
@@ -676,64 +1404,91 @@ fieldset.ak-thread__reply {
   height: 100%;
   overflow: hidden;
   background: var(--background);
+  color: var(--fg-text);
+  font-family: var(--text-app-body-font);
+  font-size: var(--text-app-body-size);
+  line-height: var(--text-app-body-line-height);
 }
 .ak-settings__nav {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-2);
+  padding: 0 var(--space-1) var(--space-1-5);
   overflow: auto;
-  border-right: 1px solid var(--fg-border-subtle);
+  border-right: 1px solid var(--ak-line);
+  background: var(--ak-surface);
 }
 .ak-settings__nav ul {
+  display: grid;
+  gap: 1px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .ak-settings__back {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: var(--space-1);
-  margin-bottom: var(--space-2);
-  color: var(--fg-secondary);
+  height: var(--layout-toolbar-height);
+  padding: 0 var(--space-1);
+  color: var(--ak-fg-70);
   text-decoration: none;
-  font-size: var(--text-app-meta-size);
+  font-size: var(--text-app-body-size);
 }
 .ak-settings__back:hover {
   color: var(--fg-text);
 }
+.ak-settings__back svg {
+  width: 14px;
+  height: 14px;
+}
+.ak-settings__back .ak-kbd {
+  margin-left: auto;
+}
+.ak-settings__back .ak-kbd__key {
+  background: var(--background);
+}
 .ak-settings__link {
-  display: block;
-  padding: var(--space-0-5) var(--space-1);
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--space-1) 0 var(--space-1-5);
   border-radius: var(--radius-md);
-  color: var(--fg-secondary);
+  color: var(--ak-fg-70);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--text-app-body-size);
 }
 .ak-settings__link:hover {
-  background: var(--ak-raised);
+  background: var(--ak-surface-strong);
   color: var(--fg-text);
-}
-.ak-settings__link:focus-visible {
-  outline: none;
-  box-shadow: var(--ak-focus);
 }
 .ak-settings__link[aria-current="page"] {
-  background: var(--accent-wash);
+  background: var(--background);
   color: var(--fg-text);
+  box-shadow: 0 0 0 1px var(--ak-line);
 }
 .ak-settings__main {
   overflow: auto;
-  padding: var(--space-3) var(--space-5) var(--space-10);
+  padding: var(--space-5) var(--space-6) var(--space-10);
+}
+.ak-settings__page {
+  max-width: 640px;
+}
+.ak-settings__title {
+  margin: 0 0 var(--space-1);
 }
 .ak-settings__top {
   display: flex;
-  justify-content: flex-end;
-  max-width: 760px;
+  justify-content: flex-start;
+  max-width: 640px;
+  margin-bottom: var(--space-2);
 }
 .ak-settings__section {
-  max-width: 760px;
-  margin-bottom: var(--space-5);
+  margin-top: var(--space-4);
+}
+.ak-settings__section[data-page] {
+  margin-top: 0;
 }
 .ak-settings__section-head {
   display: flex;
@@ -742,18 +1497,59 @@ fieldset.ak-thread__reply {
   gap: var(--space-2);
   margin-bottom: var(--space-1);
 }
+/* A page-level section's actions ("Connect a mailbox", "New split") sit on the title's line. */
+.ak-settings__page {
+  position: relative;
+}
+.ak-settings__section[data-page] > .ak-settings__section-head {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 36px;
+  margin: 0;
+}
+.ak-settings__section[data-page] > .ak-settings__section-head .ak-settings__actions {
+  flex-wrap: nowrap;
+}
+.ak-settings__group-head {
+  margin: 0;
+  color: var(--fg-text);
+  font-size: var(--text-app-body-size);
+  font-weight: var(--text-app-body-strong-weight);
+}
 .ak-settings__lede {
+  max-width: 60ch;
   margin: 0 0 var(--space-2);
-  color: var(--fg-secondary);
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-body-size);
   line-height: var(--text-app-body-line-height);
 }
+.ak-settings__section[data-page] > .ak-settings__lede {
+  margin-bottom: var(--space-3);
+}
+/* Rows: title 13/500 and a 12 muted description, the control on the right. Consecutive rows form one
+   hairline-bordered group (radius lg), rows split by hairlines. */
 .ak-settings__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-1-5) 0;
-  border-bottom: 1px solid var(--fg-border-subtle);
+  min-height: 52px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--ak-line);
+  border-top: 0;
+}
+.ak-settings__row:not(.ak-settings__row + .ak-settings__row) {
+  border-top: 1px solid var(--ak-line);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+}
+.ak-settings__row:not(:has(+ .ak-settings__row)) {
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+.ak-settings__row + :not(.ak-settings__row) {
+  margin-top: var(--space-1-5);
 }
 .ak-settings__row-text {
   min-width: 0;
@@ -761,11 +1557,12 @@ fieldset.ak-thread__reply {
 .ak-settings__row-label {
   display: block;
   color: var(--fg-text);
+  font-weight: var(--text-app-body-strong-weight);
 }
 .ak-settings__hint {
   display: block;
-  margin: var(--space-0-5) 0 0;
-  color: var(--fg-muted);
+  margin: 2px 0 0;
+  color: var(--ak-fg-60);
   font-size: var(--text-app-meta-size);
   line-height: var(--text-app-meta-line-height);
 }
@@ -777,7 +1574,14 @@ fieldset.ak-thread__reply {
   max-width: 60%;
 }
 .ak-settings__control .ak-input {
-  min-width: 240px;
+  min-width: 220px;
+  height: 32px;
+  font-size: var(--text-app-body-size);
+}
+.ak-settings__control .ak-input--select {
+  min-width: 0;
+  height: 28px;
+  font-size: var(--text-app-meta-size);
 }
 .ak-settings__actions {
   display: flex;
@@ -786,30 +1590,54 @@ fieldset.ak-thread__reply {
   gap: var(--space-1);
   margin-top: var(--space-1);
 }
-.ak-settings__empty {
-  padding: var(--space-3) 0;
-  color: var(--fg-muted);
-  font-family: var(--text-app-empty-font);
-  font-size: var(--text-app-empty-size);
+.ak-settings__section-head .ak-settings__actions {
+  margin-top: 0;
 }
+.ak-settings__empty {
+  padding: var(--space-2) 0;
+  color: var(--ak-fg-60);
+  font-size: var(--text-app-body-size);
+}
+/* Cards become rows: the list is one bordered group, each item a hairline-ruled row. */
 .ak-settings__cards {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1-5);
   margin: 0;
   padding: 0;
   list-style: none;
+  border: 1px solid var(--ak-line);
+  border-radius: var(--radius-lg);
+}
+.ak-settings__cards:empty {
+  display: none;
 }
 .ak-settings__card {
   padding: var(--space-1-5) var(--space-2);
-  border: 1px solid var(--fg-border);
-  border-radius: var(--radius-lg);
+  border-bottom: 1px solid var(--ak-line);
   background: var(--background);
 }
+.ak-settings__cards > .ak-settings__card:first-child {
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+}
+.ak-settings__cards > .ak-settings__card:last-child {
+  border-bottom: 0;
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
 .ak-settings__card:focus-visible {
-  outline: none;
-  border-color: var(--ak-focus-color);
-  box-shadow: var(--ak-focus-field);
+  outline-offset: -2px;
+}
+/* Rows inside a card row are plain ruled lines (never a box inside a box). */
+.ak-settings__card .ak-settings__row.ak-settings__row {
+  min-height: 44px;
+  padding: var(--space-1) 0;
+  border: 0;
+  border-top: 1px solid var(--ak-line);
+  border-radius: 0;
+}
+.ak-settings__card .ak-settings__row + :not(.ak-settings__row) {
+  margin-top: var(--space-1);
 }
 .ak-settings__card-head {
   display: flex;
@@ -822,45 +1650,85 @@ fieldset.ak-thread__reply {
 }
 .ak-settings__group-title {
   margin: 0 0 var(--space-1);
-  font-family: var(--text-app-label-font);
-  font-size: var(--text-app-label-size);
-  font-weight: var(--text-app-label-weight);
-  letter-spacing: var(--text-app-label-tracking);
-  text-transform: uppercase;
-  color: var(--fg-muted);
+  font-size: var(--text-app-section-size);
+  font-weight: var(--text-app-section-weight);
+  color: var(--ak-fg-70);
 }
 .ak-settings__card-title {
   display: block;
   color: var(--fg-text);
   font-weight: var(--text-app-body-strong-weight);
 }
-.ak-settings__warning {
+/* Consent and warnings: an ordinary group with a hairline, no tint. */
+.ak-settings__warning,
+.ak-settings__consent {
   margin: var(--space-1) 0;
-  padding: var(--space-1-5) var(--space-2);
-  border: 1px solid var(--accent-mid);
+  padding: var(--space-2);
+  border: 1px solid var(--ak-line);
   border-radius: var(--radius-lg);
-  background: var(--accent-wash);
+  color: var(--ak-fg-80);
   line-height: var(--text-app-body-line-height);
 }
-.ak-settings__warning p {
+.ak-settings__warning p,
+.ak-settings__consent p {
   margin-top: 0;
 }
 .ak-settings__code {
   font-family: var(--font-mono);
-  color: var(--fg-muted);
+  color: var(--ak-fg-70);
 }
 .ak-settings__ok {
-  color: var(--fg-secondary);
+  color: var(--ak-fg-70);
   font-size: var(--text-app-meta-size);
 }
 .ak-input--mono {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-app-body-size);
 }
 .ak-settings .ak-input--select,
 .ak-rule__cond .ak-input--select {
   width: auto;
   min-width: 168px;
+}
+
+/* AI provider rows (the model-picker anatomy). */
+.ak-provider {
+  justify-content: flex-start;
+  gap: var(--space-1-5);
+}
+.ak-provider__tile {
+  flex: none;
+  margin-top: 2px;
+}
+.ak-provider__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.ak-provider__egress {
+  color: var(--ak-fg-70);
+  font-size: var(--text-app-meta-size);
+}
+/* "No provider yet": one plain sans row with a secondary button. */
+.ak-settings__emptystate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1-5);
+  min-height: 52px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--ak-line);
+  border-radius: var(--radius-lg);
+}
+.ak-settings__emptytext {
+  flex: 1 1 280px;
+  margin: 0;
+  color: var(--ak-fg-70);
+  font-size: var(--text-app-body-size);
+}
+.ak-settings__emptystate .ak-settings__lede {
+  margin: 0;
 }
 
 .ak-split {
@@ -871,12 +1739,13 @@ fieldset.ak-thread__reply {
 .ak-split__order {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-full);
-  background: var(--ak-raised);
-  color: var(--fg-muted);
-  font-size: var(--text-app-meta-size);
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--ak-line-strong);
+  color: var(--ak-fg-70);
+  font-family: var(--text-app-code-font);
+  font-size: var(--text-app-caption-size);
 }
 .ak-split__text {
   display: flex;
@@ -899,7 +1768,7 @@ fieldset.ak-thread__reply {
   gap: var(--space-1);
 }
 .ak-rule__cond .ak-input {
-  height: 34px;
+  height: 32px;
 }
 .ak-rule-form {
   display: flex;
@@ -908,23 +1777,11 @@ fieldset.ak-thread__reply {
   margin-bottom: var(--space-1-5);
 }
 
-/* While the composer is open, toasts sit above it (its height is --ak-compose-h), so they never cover Send or
-   the follow-up controls, and never move over the sidebar footer. */
-body[data-composing] .ak-toasts {
-  bottom: min(calc(var(--space-3) + var(--ak-compose-h, 0px) + var(--space-1)), calc(100vh - 160px));
-}
-/* Phones: the composer is a full-screen sheet; toasts sit just above its footer (Send, follow-up), which publishes
-   its height as --ak-compose-foot-h. */
-@media (max-width: 600px) {
+/* Phones: while the composer is open, toasts sit above its footer (Send), which publishes its height. */
+@media (max-width: 768px) {
   body[data-composing] .ak-toasts {
     bottom: calc(var(--ak-compose-foot-h, 64px) + var(--space-1) + env(safe-area-inset-bottom, 0px));
   }
-}
-/* Inline links in AI notes are at least 24 px tall (WCAG 2.5.8). */
-.ak-egress a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
 }
 
 .ak-routes {
@@ -934,49 +1791,67 @@ body[data-composing] .ak-toasts {
 .ak-routes th,
 .ak-routes td {
   padding: var(--space-1) var(--space-1) var(--space-1) 0;
-  border-bottom: 1px solid var(--fg-border-subtle);
+  border-bottom: 1px solid var(--ak-line);
   text-align: left;
   vertical-align: top;
   font-weight: normal;
 }
 .ak-routes thead th {
-  font-family: var(--text-app-label-font);
-  font-size: var(--text-app-label-size);
-  letter-spacing: var(--text-app-label-tracking);
-  text-transform: uppercase;
-  color: var(--fg-muted);
+  font-size: var(--text-app-section-size);
+  font-weight: var(--text-app-section-weight);
+  color: var(--ak-fg-70);
 }
 .ak-routes .ak-egress {
   display: block;
   max-width: 260px;
 }
 .ak-routes .ak-input {
-  height: 34px;
+  height: 32px;
 }
 
+/* Billing: the plan, with the price allowed in serif (SPEC §3.10). */
 .ak-plan {
   display: flex;
   flex-direction: column;
   gap: var(--space-0-5);
-  box-shadow: 0 0 32px var(--accent-wash);
+  padding: var(--space-2);
+  border: 1px solid var(--ak-line);
+  border-radius: var(--radius-lg);
+}
+.ak-plan + * {
+  margin-top: var(--space-1-5);
+}
+.ak-plan__title {
+  font-size: var(--text-app-empty-size);
+  line-height: var(--text-app-empty-line-height);
 }
 .ak-plan__features {
   margin: var(--space-2) 0;
-  padding-left: var(--space-2);
-  color: var(--fg-secondary);
-  line-height: 1.8;
+  padding: 0;
+  list-style: none;
+  color: var(--ak-fg-80);
+  line-height: 1.9;
+}
+.ak-plan__features li::before {
+  content: "\2013  ";
+  color: var(--ak-fg-60);
 }
 
+@media (max-width: 1099px) {
+  .ak-settings__main {
+    padding: var(--space-3) var(--space-3) var(--space-10);
+  }
+}
 @media (max-width: 900px) {
   .ak-settings {
     grid-template-columns: 1fr;
   }
   .ak-settings__nav {
     border-right: 0;
-    border-bottom: 1px solid var(--fg-border-subtle);
+    border-bottom: 1px solid var(--ak-line);
   }
   .ak-settings__main {
-    padding: var(--space-2);
+    padding: var(--space-2) var(--space-2) var(--space-10);
   }
   .ak-settings__row {
     flex-direction: column;
@@ -994,7 +1869,7 @@ body[data-composing] .ak-toasts {
   gap: var(--space-0-5);
   min-height: 32px;
   margin-right: auto;
-  color: var(--fg-secondary);
+  color: var(--ak-fg-70);
   text-decoration: none;
   font-size: 14px;
 }
@@ -1014,37 +1889,18 @@ body[data-composing] .ak-toasts {
     border-bottom: 0;
   }
   .ak-settings__link {
-    padding: var(--space-1) var(--space-1);
+    height: 40px;
     font-size: 15px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ak-compose {
+  .ak-compose,
+  .ak-compose[data-docked="bottom"],
+  .ak-compose__panel,
+  .ak-rec,
+  .ak-sum__text[data-streaming]::after,
+  .ak-code:focus-within .ak-code__cell[data-current]:not([data-filled])::after {
     animation: none;
   }
-  .ak-switch,
-  .ak-switch__thumb {
-    transition: none;
-  }
-}
-
-/* An empty settings list: orbs, a serif line, one sentence, then the action (D-399). */
-.ak-settings__emptystate {
-  position: relative;
-  display: grid;
-  justify-items: start;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  overflow: hidden;
-  isolation: isolate;
-  border: 1px solid var(--fg-border-subtle);
-  border-radius: var(--radius-lg);
-}
-.ak-settings__emptystate .ak-orbs {
-  z-index: -1;
-}
-.ak-settings__emptystate .ak-settings__lede {
-  margin: 0;
-  max-width: 52ch;
 }

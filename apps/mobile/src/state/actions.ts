@@ -244,6 +244,66 @@ export function useThreadActions() {
     [mail, single],
   );
 
+  /**
+   * Applies an action built per account to many threads (bulk label and move). Threads whose account cannot do
+   * it (`build` returns null) are skipped; one Undo covers every call.
+   */
+  const applyEach = useCallback(
+    (
+      threads: readonly ThreadRef[],
+      build: (h: ThreadActions, accountId: string) => ThreadAction | null,
+      done: string,
+    ) => {
+      const byAccount = new Map<string, string[]>();
+      for (const t of threads) byAccount.set(t.accountId, [...(byAccount.get(t.accountId) ?? []), t._id]);
+      const clientOpIds: string[] = [];
+      for (const [accountId, ids] of byAccount) {
+        const helpers = mail.actionsFor(accountId);
+        let action: ThreadAction | null = null;
+        try {
+          action = helpers ? build(helpers, accountId) : null;
+        } catch {
+          action = null;
+        }
+        if (!action) continue;
+        for (let i = 0; i < ids.length; i += 500) {
+          const clientOpId = newClientId();
+          const args = { clientOpId, threadIds: ids.slice(i, i + 500) as Id<"threads">[], action };
+          clientOpIds.push(clientOpId);
+          outbox.run("mail.apply", clientOpId, args, () => applyMutation(args)).catch(fail(clientOpId));
+        }
+      }
+      if (clientOpIds.length === 0) return 0;
+      haptics.success();
+      offerUndo(done, undoOps(clientOpIds));
+      return clientOpIds.length;
+    },
+    [mail, applyMutation, offerUndo, undoOps, fail],
+  );
+
+  /** Adds a label (of one mailbox) to the threads of that mailbox. */
+  const labelMany = useCallback(
+    (threads: readonly ThreadRef[], labelId: string, labelAccountId: string) =>
+      applyEach(
+        threads.filter((t) => t.accountId === labelAccountId),
+        (h) => h.addLabel(labelId),
+        threads.length === 1 ? "Label added" : "Labels added",
+      ),
+    [applyEach],
+  );
+
+  /** Moves threads to a folder key (`sys:inbox` works for every account; other folders for their own). */
+  const moveMany = useCallback(
+    (threads: readonly ThreadRef[], folderKey: string, title: string, folderAccountId?: string) =>
+      applyEach(
+        folderAccountId ? threads.filter((t) => t.accountId === folderAccountId) : threads,
+        (h) =>
+          h.available("moveTo") ? h.moveTo(folderKey) : folderKey === "sys:inbox" ? h.moveToInbox() : null,
+        `Moved to ${title}`,
+      ),
+    [applyEach],
+  );
+
   /** The `z` key: undo the newest gesture that is still inside its window. */
   const undoLast = useCallback(() => {
     const last = lastUndo;
@@ -252,5 +312,5 @@ export function useThreadActions() {
     return true;
   }, []);
 
-  return { run, snooze, remind, labelAction, moveTo, unsubscribe, undoLast };
+  return { run, snooze, remind, labelAction, moveTo, labelMany, moveMany, unsubscribe, undoLast };
 }

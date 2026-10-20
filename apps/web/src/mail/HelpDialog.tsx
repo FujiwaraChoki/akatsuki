@@ -1,6 +1,7 @@
 // "?" — every shortcut of the current keymap, grouped as in packages/shortcuts.
 import { SHORTCUTS } from "@akatsuki/shortcuts";
 import { Dialog, firstKeys, Kbd, useUiConfig } from "@akatsuki/ui";
+import { useEffect, useRef, useState } from "react";
 
 /** Web-only accessibility bindings outside packages/shortcuts (D-399): listed with the Navigation group. */
 const WEB_ONLY: Record<string, { label: string; keys: string }[]> = {
@@ -11,6 +12,20 @@ const WEB_ONLY: Record<string, { label: string; keys: string }[]> = {
 };
 
 export function HelpDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [q, setQ] = useState("");
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    setQ("");
+    // A letter typed while the sheet itself has focus goes to the filter (and stays there).
+    const onKey = (e: KeyboardEvent) => {
+      const a = document.activeElement;
+      if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey || e.key === " ") return;
+      if (a instanceof HTMLElement && a.classList.contains("ak-dialog--help")) input.current?.focus();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [open]);
   return (
     <Dialog
       open={open}
@@ -26,7 +41,19 @@ export function HelpDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         (e.currentTarget as HTMLElement | null)?.focus();
       }}
     >
-      <ShortcutGroups />
+      {/* Typing anywhere in the sheet filters it (SPEC §3.11); the sheet keeps focus so the keys scroll it. */}
+      <input
+        ref={input}
+        className="ak-picker__input ak-picker__input--filter ak-help__filter"
+        type="search"
+        aria-label="Filter shortcuts"
+        placeholder="Filter shortcuts"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        autoComplete="off"
+        spellCheck={false}
+      />
+      <ShortcutGroups filter={q} />
     </Dialog>
   );
 }
@@ -49,11 +76,13 @@ function FunctionKeys({ keys }: { keys: string }) {
 }
 
 /** The shortcut list of the current keymap (the help dialog and Settings, Shortcuts). */
-export function ShortcutGroups() {
+export function ShortcutGroups({ filter = "" }: { filter?: string }) {
   const config = useUiConfig();
   const groups = new Map<string, (typeof SHORTCUTS)[number][]>();
+  const f = filter.trim().toLowerCase();
   for (const s of SHORTCUTS) {
     if (!firstKeys(s.id, config) || s.scope === "palette") continue;
+    if (f && !`${s.label} ${s.group}`.toLowerCase().includes(f)) continue;
     const g = groups.get(s.group) ?? [];
     g.push(s);
     groups.set(s.group, g);
@@ -72,7 +101,7 @@ export function ShortcutGroups() {
                 </dd>
               </div>
             ))}
-            {(WEB_ONLY[group] ?? []).map((w) => (
+            {(f ? [] : (WEB_ONLY[group] ?? [])).map((w) => (
               <div key={w.keys} className="ak-help__row">
                 <dt>{w.label}</dt>
                 <dd>

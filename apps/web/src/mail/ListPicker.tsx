@@ -1,7 +1,10 @@
-// A small filterable list in a dialog: label picker (l), "Go to label" (g l), "Move to folder" (v).
+// A small filterable list in a popover: label picker (l), "Go to label" (g l), "Move to folder" (v), snippets.
 // Keyboard: type to filter; the palette.* bindings of packages/shortcuts move, choose and close.
-import { Dialog, eventMatchesShortcut, useUiConfig } from "@akatsuki/ui";
+// First Light (SPEC §3.7): anchored under the row it acts on (320 wide, no scrim); labels show a check column and
+// the hairline label mark; the last row creates a label.
+import { type AnchorRect, Dialog, eventMatchesShortcut, useUiConfig } from "@akatsuki/ui";
 import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { IconCheck, IconPlus } from "../components/Icons.tsx";
 
 export interface PickerItem {
   id: string;
@@ -23,6 +26,12 @@ export interface ListPickerProps {
   onCreate?: (name: string) => void;
   /** The noun in that row ("label"). */
   createNoun?: string;
+  /** Where the popover hangs; centred near the top without one. */
+  anchor?: AnchorRect | null;
+  /** Popover width (320 for labels and folders, 400 for snippets). */
+  width?: number;
+  /** A check column with the label mark (the label picker). */
+  checkboxes?: boolean;
 }
 
 /** The id of the "Create …" row. */
@@ -38,6 +47,9 @@ export function ListPicker({
   onPick,
   onCreate,
   createNoun = "label",
+  anchor,
+  width = 320,
+  checkboxes = false,
 }: ListPickerProps) {
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
@@ -87,6 +99,16 @@ export function ListPicker({
       onOpenChange={onOpenChange}
       title={title}
       size="sm"
+      anchor={
+        anchor ?? {
+          top: 120,
+          bottom: 120,
+          left: Math.max(16, (globalThis.innerWidth ?? 1024) / 2 - width / 2),
+          right: 0,
+        }
+      }
+      width={width}
+      className="ak-picker"
       onOpenAutoFocus={(e) => {
         e.preventDefault();
         input.current?.focus();
@@ -94,7 +116,7 @@ export function ListPicker({
     >
       <input
         ref={input}
-        className="ak-input"
+        className="ak-picker__input ak-picker__input--filter"
         role="combobox"
         aria-expanded="true"
         aria-controls={listId}
@@ -125,9 +147,19 @@ export function ListPicker({
             onClick={() => choose(item)}
             onPointerMove={() => setActive(shown.indexOf(item))}
           >
-            <span>{item.label}</span>
+            {item.id === CREATE_ID ? (
+              <span className="ak-picker__lead" aria-hidden="true">
+                <IconPlus />
+              </span>
+            ) : checkboxes ? (
+              <span className="ak-picker__lead" aria-hidden="true">
+                <span className="ak-picker__box">{item.checked && <IconCheck />}</span>
+                <span className="ak-picker__mark" />
+              </span>
+            ) : null}
+            <span className="ak-picker__label">{item.label}</span>
             {item.detail && <span className="ak-picker__when">{item.detail}</span>}
-            {item.checked && <span className="ak-picker__check">Applied</span>}
+            {item.checked && <span className="ak-visually-hidden">Applied</span>}
           </div>
         ))}
       </div>

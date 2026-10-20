@@ -126,6 +126,61 @@ describe("toCss", () => {
   });
 });
 
+describe("First Light additions (D-480..D-482)", () => {
+  it("adds dawn and onAccent to both palettes, everywhere", () => {
+    for (const mode of ["light", "dark"] as const) {
+      expect(tokens.color[mode].dawn).toBe("#C1272D");
+      expect(tokens.color[mode].onAccent).toBe("#FFFFFF");
+    }
+    const css = toCss(tokens);
+    expect(css).toContain("--dawn: #C1272D;");
+    expect(css).toContain("--dawn-rgb: 193 39 45;");
+    expect(css).toContain("--on-accent: #FFFFFF;");
+    const rs = toRust(tokens);
+    expect(rs).toContain("dawn: Rgb { r: 193, g: 39, b: 45 }");
+    expect(rs).toContain("on_accent: Rgb { r: 255, g: 255, b: 255 }");
+    expect(rs).toContain("pub on_accent: Rgb,");
+    expect(toTs(tokens)).toContain(
+      'export type ColorName = "accent" | "accentText" | "background" | "foreground" | "dawn" | "onAccent";',
+    );
+  });
+  it("emits the neutral roles, section style, quick/cine motion, shell layout and pop shadow opacities", () => {
+    const css = toCss(tokens);
+    expect(css).toContain("--opacity-fg-tertiary: 0.7;");
+    expect(css).toContain("--opacity-fg-surface: 0.04;");
+    expect(css).toContain("--opacity-fg-surface-strong: 0.07;");
+    expect(css).toContain("--text-app-section-weight: 500;");
+    expect(css).toContain("--text-app-label-font: var(--font-mono);");
+    expect(css).toContain("--text-app-body-strong-weight: 500;");
+    expect(css).toContain("--text-app-subject-size-wide: 30px;");
+    expect(css).toContain("--duration-quick: 140ms;");
+    expect(css).toContain("--ease-cine: cubic-bezier(0.16, 1, 0.3, 1);");
+    expect(css).toContain("--layout-sidebar-width: 216px;");
+    expect(css).toContain("--layout-status-bar-height: 28px;");
+    expect(css).toContain("--effect-pop-opacity-light: 0.14;");
+    expect(css).toContain("--effect-pop-opacity-dark: 0.9;");
+    const rs = toRust(tokens);
+    expect(rs).toContain("pub const POP_OPACITY_DARK: f32 = 0.9;");
+    expect(rs).toContain("pub const ROW_HEIGHT_TOUCH: f32 = 64.0;");
+    expect(rs).toContain("pub const CINE: [f32; 4] = [0.16, 1.0, 0.3, 1.0];");
+  });
+  it("zeroes every duration under reduced motion, including new ones", () => {
+    const css = toCss(tokens);
+    const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+    for (const k of Object.keys(tokens.motion.duration))
+      expect(reduced).toContain(`--duration-${kebab(k)}: 0ms;`);
+  });
+  it("keeps the deprecated tokens until desktop and mobile migrate, and names them in every output", () => {
+    expect(tokens.motion.orb.blur).toBeGreaterThan(0);
+    expect(tokens.effect.glowBlur).toBeGreaterThan(0);
+    expect(toCss(tokens)).toContain("Deprecated (First Light, D-481");
+    expect(toRust(tokens)).toContain("// Deprecated (First Light, D-481");
+    const t = clone();
+    t.$deprecated = { paths: ["effect.nope"] };
+    expect(() => validateTokens(t)).toThrow(/effect.nope does not exist/);
+  });
+});
+
 describe("toFontFaceCss", () => {
   it("references every bundled font file", () => {
     const css = toFontFaceCss(tokens);

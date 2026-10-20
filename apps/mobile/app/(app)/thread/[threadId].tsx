@@ -8,12 +8,14 @@ import { useMutation, useQuery } from "convex/react";
 import * as Linking from "expo-linking";
 import { type ErrorBoundaryProps, router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Pressable, View } from "react-native";
+import { Alert, Pressable, useWindowDimensions, View } from "react-native";
 import { ActionMenu, type MenuItem } from "../../../src/components/ActionMenu";
+import { EgressLine } from "../../../src/components/Egress";
 import { Header, HeaderButton } from "../../../src/components/Header";
 import { ThreadBody } from "../../../src/components/ThreadBody";
 import { openCompose, openSnooze } from "../../../src/components/ThreadList";
-import { Button, Screen, Spinner, Txt } from "../../../src/components/ui";
+import { Toolbar, ToolbarButton, ToolbarPill } from "../../../src/components/Toolbar";
+import { Button, Crumb, Screen, Spinner, showKeyHints, Txt } from "../../../src/components/ui";
 import { ENV } from "../../../src/env";
 import { useInlineImages, useThreadBodies } from "../../../src/lib/bodies";
 import { worker } from "../../../src/lib/clients";
@@ -40,6 +42,16 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
       </View>
     </Screen>
   );
+}
+
+/** The crumb's place word (spec §4.4 `INBOX · 3 MESSAGES`). */
+function crumbPlace(keys: readonly string[]): string | null {
+  if (keys.includes(SYS.trash)) return "Trash";
+  if (keys.includes(SYS.spam)) return "Spam";
+  if (keys.includes(SYS.inbox)) return "Inbox";
+  if (keys.includes(SYS.snoozed)) return "Snoozed";
+  if (keys.includes(SYS.sent)) return "Sent";
+  return "Archive";
 }
 
 export default function ThreadScreen() {
@@ -119,6 +131,7 @@ export default function ThreadScreen() {
         muted: t.colors.muted,
         border: t.colors.borderSubtle,
         accent: t.colors.accentText,
+        secondary: t.colors.secondary,
         paper: t.colors.paper,
         paperText: t.colors.paperText,
         dark: t.mode === "dark",
@@ -200,7 +213,9 @@ export default function ThreadScreen() {
       .catch((err) => showToast({ id: `att:${partId}`, text: errorText(err), tone: "error" }));
   }, []);
 
+  const { width } = useWindowDimensions();
   const hint = (id: string) => {
+    if (!showKeyHints(width)) return null;
     const k = keysFor(getShortcut(id), keyboard.platform, keyboard.keymap)[0];
     return k ? formatKeys(k, keyboard.platform) : null;
   };
@@ -257,43 +272,67 @@ export default function ThreadScreen() {
     );
 
   const menuItems: MenuItem[] = [
-    { key: "summarize", label: "Summarize", hint: hint("ai.summarize"), onPress: commands["ai.summarize"]! },
+    {
+      key: "summarize",
+      icon: "message" as const,
+      label: "Summarize",
+      hint: hint("ai.summarize"),
+      onPress: commands["ai.summarize"]!,
+    },
     {
       key: "replies",
+      icon: "reply" as const,
       label: "Suggest replies",
       hint: hint("ai.instantReply"),
       onPress: commands["ai.instantReply"]!,
     },
     {
       key: "replyAll",
+      icon: "reply" as const,
       label: "Reply all",
       hint: hint("thread.replyAll"),
       onPress: commands["thread.replyAll"]!,
     },
-    { key: "forward", label: "Forward", hint: hint("thread.forward"), onPress: commands["thread.forward"]! },
+    {
+      key: "forward",
+      icon: "send" as const,
+      label: "Forward",
+      hint: hint("thread.forward"),
+      onPress: commands["thread.forward"]!,
+    },
     {
       key: "star",
+      icon: "star" as const,
       label: starred ? "Unstar" : "Star",
       hint: hint("thread.star"),
       onPress: commands["thread.star"]!,
     },
     {
       key: "unread",
+      icon: "message" as const,
       label: "Mark unread",
       hint: hint("thread.toggleRead"),
       onPress: commands["thread.toggleRead"]!,
     },
     {
       key: "remind",
+      icon: "bell" as const,
       label: "Remind me if no reply",
       hint: hint("thread.remind"),
       onPress: commands["thread.remind"]!,
     },
-    { key: "label", label: "Label", hint: hint("thread.label"), onPress: commands["thread.label"]! },
+    {
+      key: "label",
+      icon: "tag" as const,
+      label: "Label",
+      hint: hint("thread.label"),
+      onPress: commands["thread.label"]!,
+    },
     ...(helpers?.available("moveTo")
       ? [
           {
             key: "move",
+            icon: "inbox" as const,
             label: "Move to folder",
             hint: hint("thread.move"),
             onPress: commands["thread.move"]!,
@@ -304,6 +343,7 @@ export default function ThreadScreen() {
       ? [
           {
             key: "inbox",
+            icon: "inbox" as const,
             label: "Move to Inbox",
             hint: hint("thread.moveToInbox"),
             onPress: commands["thread.moveToInbox"]!,
@@ -311,13 +351,29 @@ export default function ThreadScreen() {
         ]
       : []),
     ...(unsub
-      ? [{ key: "unsub", label: "Unsubscribe", hint: hint("thread.unsubscribe"), onPress: unsubscribe }]
+      ? [
+          {
+            key: "unsub",
+            icon: "octagon" as const,
+            label: "Unsubscribe",
+            hint: hint("thread.unsubscribe"),
+            onPress: unsubscribe,
+          },
+        ]
       : []),
     ...(remoteImages > 0 && !showImages
-      ? [{ key: "images", label: "Show images", onPress: commands["thread.showImages"]! }]
+      ? [
+          {
+            key: "images",
+            icon: "image" as const,
+            label: "Show images",
+            onPress: commands["thread.showImages"]!,
+          },
+        ]
       : []),
     {
       key: "spam",
+      icon: "octagon" as const,
       label: "Report spam",
       hint: hint("thread.spam"),
       destructive: true,
@@ -325,6 +381,7 @@ export default function ThreadScreen() {
     },
     {
       key: "trash",
+      icon: "trash" as const,
       label: inTrash ? "Restore from Trash" : "Move to Trash",
       hint: hint("thread.trash"),
       destructive: !inTrash,
@@ -338,28 +395,38 @@ export default function ThreadScreen() {
     .filter((n): n is string => !!n);
 
   return (
-    <Screen edges={["top", "left", "right", "bottom"]}>
+    <Screen edges={["top", "left", "right"]}>
       <Header
         title=""
+        variant="bar"
         onBack={() => router.back()}
         right={
-          <HeaderButton
-            label={starred ? "Starred" : "Star"}
-            accent={starred}
-            onPress={commands["thread.star"]!}
-          />
+          <>
+            <HeaderButton
+              label={starred ? "Unstar" : "Star"}
+              icon="star"
+              filled={starred}
+              onPress={commands["thread.star"]!}
+            />
+            <HeaderButton label="More" icon="more" onPress={() => setMenu(true)} />
+          </>
         }
       />
-      <View style={{ paddingHorizontal: t.space[2], paddingBottom: t.space[1], gap: t.space["0_5"] }}>
+      <View style={{ paddingHorizontal: t.space[2], paddingBottom: t.space["1_5"], gap: 6 }}>
+        <Crumb>
+          {[
+            crumbPlace(thread.labelKeys),
+            `${messages.length} ${messages.length === 1 ? "message" : "messages"}`,
+            ...labels,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </Crumb>
         <Txt variant="subject" accessibilityRole="header" selectable>
           {thread.subject.trim() || "(no subject)"}
         </Txt>
-        <Txt variant="label" tone="muted" numberOfLines={1}>
-          {[
-            `${messages.length} ${messages.length === 1 ? "message" : "messages"}`,
-            ...labels,
-            data.account.email,
-          ].join(" · ")}
+        <Txt variant="meta" tone="muted" numberOfLines={1}>
+          {data.account.email}
         </Txt>
       </View>
       {remoteImages > 0 && !showImages ? (
@@ -367,35 +434,46 @@ export default function ThreadScreen() {
           style={{
             flexDirection: "row",
             alignItems: "center",
-            gap: t.space[1],
-            marginHorizontal: t.space[2],
-            marginBottom: t.space[1],
-            padding: t.space[1],
-            borderRadius: t.radius.md,
-            backgroundColor: t.colors.accentWash,
+            flexWrap: "wrap",
+            paddingHorizontal: t.space[2],
+            paddingBottom: t.space[1],
           }}
         >
-          <Txt variant="meta" tone="secondary" style={{ flex: 1 }}>
-            {remoteImages} remote {remoteImages === 1 ? "image" : "images"} blocked
+          <Txt variant="meta" tone="tertiary">
+            {remoteImages === 1 ? "1 image hidden" : `${remoteImages} images hidden`}
+            {" · "}
           </Txt>
-          <Button compact title="Show" variant="ghost" onPress={() => setShowImagesNow(true)} />
+          <Pressable accessibilityRole="button" onPress={() => setShowImagesNow(true)} hitSlop={8}>
+            <Txt variant="meta" style={{ textDecorationLine: "underline" }}>
+              Show
+            </Txt>
+          </Pressable>
           {lastSender ? (
-            <Button
-              compact
-              title="Always"
-              variant="ghost"
-              accessibilityLabel={`Always show images from ${lastSender}`}
-              onPress={() => {
-                setShowImagesNow(true);
-                setSenderPref({ sender: lastSender, allowRemoteImages: true }).catch(() => {});
-              }}
-            />
+            <>
+              <Txt variant="meta" tone="tertiary">
+                {" · "}
+              </Txt>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Always show images from ${lastSender}`}
+                hitSlop={8}
+                onPress={() => {
+                  setShowImagesNow(true);
+                  setSenderPref({ sender: lastSender, allowRemoteImages: true }).catch(() => {});
+                }}
+              >
+                <Txt variant="meta" style={{ textDecorationLine: "underline" }}>
+                  Always
+                </Txt>
+              </Pressable>
+            </>
           ) : null}
         </View>
       ) : null}
       <ThreadAiPanel
         summary={ai.summary}
         replies={ai.replies}
+        egress={{ summary: ai.egress("summarize"), replies: ai.egress("instant_reply") }}
         onReply={(body) =>
           threadId && router.push({ pathname: "/compose", params: { kind: "reply", threadId, body } })
         }
@@ -414,21 +492,16 @@ export default function ThreadScreen() {
           </Pressable>
         ) : null}
       </View>
-      <View
-        accessibilityRole="toolbar"
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-around",
-          borderTopWidth: 1,
-          borderTopColor: t.colors.borderSubtle,
-          paddingVertical: t.space["0_5"],
-        }}
-      >
-        <HeaderButton label={inInbox ? "Archive" : "Inbox"} onPress={commands["thread.archive"]!} />
-        <HeaderButton label="Snooze" onPress={commands["thread.snooze"]!} />
-        <HeaderButton label="Reply" accent onPress={commands["thread.reply"]!} />
-        <HeaderButton label="More" onPress={() => setMenu(true)} />
-      </View>
+      <Toolbar>
+        <ToolbarButton
+          icon={inInbox ? "archive" : "inbox"}
+          label={inInbox ? "Archive" : "Inbox"}
+          onPress={commands["thread.archive"]!}
+        />
+        <ToolbarButton icon="clock" label="Snooze" onPress={commands["thread.snooze"]!} />
+        <ToolbarPill icon="reply" label="Reply" onPress={commands["thread.reply"]!} />
+        <ToolbarButton icon="more" label="More" onPress={() => setMenu(true)} />
+      </Toolbar>
       <ActionMenu visible={menu} onClose={() => setMenu(false)} items={menuItems} title="Conversation" />
     </Screen>
   );
@@ -438,67 +511,90 @@ export default function ThreadScreen() {
 function ThreadAiPanel({
   summary,
   replies,
+  egress,
   onReply,
 }: {
   summary: ReturnType<typeof useThreadAi>["summary"];
   replies: ReturnType<typeof useThreadAi>["replies"];
+  /** Where each feature's data went (§12.2: shown under every AI action). */
+  egress: { summary: string | null; replies: string | null };
   onReply: (body: string) => void;
 }) {
   const t = useTheme();
-  if (summary.state === "idle" && replies.state === "idle") return null;
+  const [hidden, setHidden] = useState(false);
+  if ((summary.state === "idle" && replies.state === "idle") || hidden) return null;
   return (
-    <View
-      accessibilityLabel="AI"
-      style={{
-        marginHorizontal: t.space[2],
-        marginBottom: t.space[1],
-        padding: t.space["1_5"],
-        gap: t.space[1],
-        borderRadius: t.radius.lg,
-        borderWidth: 1,
-        borderColor: t.colors.borderSubtle,
-      }}
-    >
-      {summary.state === "running" ? <Spinner /> : null}
-      {summary.state === "error" ? (
-        <Txt variant="meta" tone="accent">
-          {summary.message}
-        </Txt>
-      ) : null}
-      {summary.state === "done" ? (
-        <View accessibilityLiveRegion="polite" style={{ gap: t.space["0_5"] }}>
-          <Txt variant="label" tone="muted">
-            SUMMARY
-          </Txt>
-          {summary.value.tldr ? <Txt variant="reading">{summary.value.tldr}</Txt> : null}
-          {summary.value.bullets.slice(0, 5).map((b) => (
-            <Txt key={b} variant="body" tone="secondary">
-              {`• ${b}`}
+    <View style={{ marginHorizontal: t.space[2], marginBottom: t.space["1_5"], gap: t.space["1_5"] }}>
+      {summary.state !== "idle" ? (
+        <View
+          accessibilityLabel="Summary"
+          style={{
+            paddingHorizontal: t.space[2],
+            paddingVertical: 14,
+            gap: t.space[1],
+            borderRadius: t.radius.lg,
+            borderWidth: 1,
+            borderColor: t.colors.borderSubtle,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: t.space[1] }}>
+            <View style={{ flex: 1 }}>
+              {egress.summary ? <EgressLine what="Summary" text={egress.summary} /> : <Crumb>Summary</Crumb>}
+            </View>
+            <Pressable accessibilityRole="button" onPress={() => setHidden(true)} hitSlop={10}>
+              <Txt variant="meta" tone="muted">
+                Hide
+              </Txt>
+            </Pressable>
+          </View>
+          {summary.state === "running" ? (
+            <View style={{ minHeight: 40, justifyContent: "center", alignItems: "flex-start" }}>
+              <Spinner />
+            </View>
+          ) : null}
+          {summary.state === "error" ? (
+            <Txt variant="meta" tone="error">
+              {summary.message}
             </Txt>
-          ))}
+          ) : null}
+          {summary.state === "done" ? (
+            <View accessibilityLiveRegion="polite" style={{ gap: t.space["0_5"] }}>
+              {summary.value.tldr ? (
+                <Txt variant="body" tone="secondary">
+                  {summary.value.tldr}
+                </Txt>
+              ) : null}
+              {summary.value.bullets.slice(0, 5).map((b) => (
+                <Txt key={b} variant="body" tone="secondary">
+                  {`– ${b}`}
+                </Txt>
+              ))}
+            </View>
+          ) : null}
         </View>
       ) : null}
-      {replies.state === "running" ? <Spinner /> : null}
-      {replies.state === "error" ? (
-        <Txt variant="meta" tone="accent">
-          {replies.message}
-        </Txt>
-      ) : null}
-      {replies.state === "done" && replies.value.length > 0 ? (
-        <View style={{ gap: t.space["0_5"] }}>
-          <Txt variant="label" tone="muted">
-            SUGGESTED REPLIES
-          </Txt>
-          {replies.value.slice(0, 3).map((r) => (
-            <Button
-              key={r.label}
-              compact
-              variant="ghost"
-              title={r.label}
-              accessibilityLabel={`Reply: ${r.label}`}
-              onPress={() => onReply(r.body)}
-            />
-          ))}
+      {replies.state !== "idle" ? (
+        <View style={{ gap: t.space[1] }}>
+          {replies.state === "running" ? <Spinner /> : null}
+          {replies.state === "error" ? (
+            <Txt variant="meta" tone="error">
+              {replies.message}
+            </Txt>
+          ) : null}
+          {replies.state === "done" && replies.value.length > 0 ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: t.space[1] }}>
+              {replies.value.slice(0, 3).map((r) => (
+                <Button
+                  key={r.label}
+                  compact
+                  title={r.label}
+                  accessibilityLabel={`Reply: ${r.label}`}
+                  onPress={() => onReply(r.body)}
+                />
+              ))}
+            </View>
+          ) : null}
+          {egress.replies ? <EgressLine what="Suggested replies" text={egress.replies} /> : null}
         </View>
       ) : null}
     </View>

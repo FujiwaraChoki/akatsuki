@@ -1,7 +1,7 @@
 // Registers the composer with the mail shell (src/app/extensions.ts, D-268): `c`, `r`, `a`, `f`, the compose-
 // scope keys while it has focus, `z` for undo-send inside the window, palette entries (continue a draft, the
 // scheduled messages), a `/compose?to=&subject=&body=` deep link, and the thread footer's "Continue draft".
-import { Button, Dialog, errorMessage, type PaletteItem, useToast } from "@akatsuki/ui";
+import { Button, Dialog, errorMessage, Kbd, type PaletteItem, useToast } from "@akatsuki/ui";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { notifyExtensions, registerExtension } from "../app/extensions.ts";
 import { navigate } from "../app/router.tsx";
@@ -282,22 +282,39 @@ function DraftFooter({ thread }: { thread: ThreadDetail }) {
   const draft = [...thread.messages].reverse().find((x) => x.isDraft);
   const [busy, setBusy] = useState(false);
   const id = thread.thread._id;
+  // The reply box (SPEC §3.1.5): a 40px hairline box at the foot of the pane, "Reply…" and its key; reply-all and
+  // forward show their keys when it is hovered or focused. r opens the inline composer in its place.
   const replyBar = (
     <fieldset className="ak-thread__reply">
       <legend className="ak-visually-hidden">Respond</legend>
-      <Button shortcut="thread.reply" onClick={() => composer.requestReply(id, "reply")}>
-        Reply
-      </Button>
-      <Button
-        variant="ghost"
-        shortcut="thread.replyAll"
-        onClick={() => composer.requestReply(id, "reply_all")}
+      <button
+        type="button"
+        className="ak-replybox"
+        aria-keyshortcuts="r"
+        onClick={() => composer.requestReply(id, "reply")}
       >
-        Reply all
-      </Button>
-      <Button variant="ghost" shortcut="thread.forward" onClick={() => composer.requestReply(id, "forward")}>
-        Forward
-      </Button>
+        <span className="ak-visually-hidden">Reply</span>
+        <span className="ak-replybox__text" aria-hidden="true">
+          Reply…
+        </span>
+        <Kbd shortcut="thread.reply" />
+      </button>
+      <span className="ak-replybox__more">
+        <button
+          type="button"
+          className="ak-replybox__alt"
+          onClick={() => composer.requestReply(id, "reply_all")}
+        >
+          Reply all <Kbd shortcut="thread.replyAll" />
+        </button>
+        <button
+          type="button"
+          className="ak-replybox__alt"
+          onClick={() => composer.requestReply(id, "forward")}
+        >
+          Forward <Kbd shortcut="thread.forward" />
+        </button>
+      </span>
     </fieldset>
   );
   if (!draft) return replyBar;
@@ -336,7 +353,7 @@ function DraftFooter({ thread }: { thread: ThreadDetail }) {
     <>
       <div className="ak-thread__draft">
         <span>You have a draft in this conversation.</span>
-        <Button size="sm" variant="primary" loading={busy} onClick={() => void open()}>
+        <Button size="sm" variant="secondary" loading={busy} onClick={() => void open()}>
           Continue draft
         </Button>
       </div>

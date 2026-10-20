@@ -2,7 +2,7 @@
 // per person, no free hosted tier. Checkout and the customer portal are Stripe pages created by apps/api
 // (`POST /v1/billing/checkout`, `/portal`); the entitlement updates live from Convex once Stripe's webhook lands.
 // Self-hosted servers run without billing. The onboarding step for new hosted users is `CheckoutStep`.
-import { Button, Eyebrow, errorMessage, Heading, Orbs, useToast } from "@akatsuki/ui";
+import { Button, errorMessage, Heading, useToast } from "@akatsuki/ui";
 import { useEffect, useState } from "react";
 import { useBackend } from "../../backend/context.tsx";
 import type { BillingInfo, MeView } from "../../backend/types.ts";
@@ -105,9 +105,8 @@ export function BillingSection({ me }: { me: MeView }) {
           Thanks. Stripe is confirming your subscription; this page updates by itself.
         </p>
       )}
-      <div className="ak-settings__card ak-plan">
-        <Eyebrow>Plan</Eyebrow>
-        <Heading level={3} variant="heading">
+      <div className="ak-plan">
+        <Heading level={3} variant="heading" className="ak-plan__title">
           {plan.title}
         </Heading>
         <p className="ak-settings__hint">{plan.detail}</p>
@@ -119,7 +118,7 @@ export function BillingSection({ me }: { me: MeView }) {
               </Button>
             ) : (
               <Button
-                variant="primary"
+                variant="brand"
                 loading={busy === "checkout"}
                 disabled={!configured}
                 onClick={() => void go("checkout")}
@@ -181,9 +180,10 @@ export function CheckoutStep() {
   }, [me]);
   return (
     <main className="ak-onboarding">
-      <Orbs variant="hero" />
+      <a className="ak-auth__dot" href="https://akatsuki.vc">
+        <span className="ak-visually-hidden">Akatsuki</span>
+      </a>
       <div className="ak-onboarding__inner">
-        <Eyebrow>Akatsuki Pro</Eyebrow>
         <Heading level={1} variant="display" className="ak-onboarding__title">
           {waiting ? "Almost there." : "Start your trial."}
         </Heading>
@@ -199,7 +199,7 @@ export function CheckoutStep() {
         </ul>
         <div className="ak-auth__actions">
           <Button
-            variant="primary"
+            variant="brand"
             size="lg"
             loading={busy === "checkout"}
             disabled={!configured}
@@ -207,9 +207,9 @@ export function CheckoutStep() {
           >
             {waiting ? "Open checkout again" : "Start 14-day free trial"}
           </Button>
-          <Button variant="ghost" onClick={() => void backend.auth.signOut()}>
+          <button type="button" className="ak-auth__text" onClick={() => void backend.auth.signOut()}>
             Sign out
-          </Button>
+          </button>
         </div>
         {!configured && <p className="ak-onboarding__error">Billing is not configured in this build.</p>}
       </div>

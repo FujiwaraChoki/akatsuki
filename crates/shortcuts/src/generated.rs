@@ -185,6 +185,108 @@ pub const SHORTCUTS: &[Shortcut] = &[
         gmail: None,
     },
     Shortcut {
+        id: "ops.retry",
+        label: "Retry failed action",
+        group: "General",
+        scope: Scope::Global,
+        palette: true,
+        keywords: &["failed", "error", "again", "try again"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
+        id: "labels.create",
+        label: "Create label",
+        group: "General",
+        scope: Scope::Global,
+        palette: true,
+        keywords: &["new label", "add label", "tag"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
+        id: "labels.rename",
+        label: "Rename label",
+        group: "General",
+        scope: Scope::Global,
+        palette: true,
+        keywords: &["edit label", "label name"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
+        id: "labels.remove",
+        label: "Delete label",
+        group: "General",
+        scope: Scope::Global,
+        palette: true,
+        keywords: &["remove label", "delete tag"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
+        id: "sends.scheduled",
+        label: "Show scheduled messages",
+        group: "General",
+        scope: Scope::Global,
+        palette: true,
+        keywords: &["send later", "scheduled", "outbox", "reschedule"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
+        id: "compose.continueDraft",
+        label: "Continue a draft",
+        group: "General",
+        scope: Scope::Global,
+        palette: true,
+        keywords: &["resume", "unsent", "draft", "restore"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
         id: "go.inbox",
         label: "Go to Inbox",
         group: "Navigation",
@@ -869,6 +971,23 @@ pub const SHORTCUTS: &[Shortcut] = &[
         gmail: None,
     },
     Shortcut {
+        id: "ai.extractActions",
+        label: "Find action items",
+        group: "AI",
+        scope: Scope::Thread,
+        palette: true,
+        keywords: &["todo", "tasks", "deadlines", "extract actions"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
         id: "compose.send",
         label: "Send",
         group: "Compose",
@@ -1022,6 +1141,74 @@ pub const SHORTCUTS: &[Shortcut] = &[
         gmail: None,
     },
     Shortcut {
+        id: "compose.rewrite",
+        label: "Rewrite with AI",
+        group: "Compose",
+        scope: Scope::Compose,
+        palette: true,
+        keywords: &["shorter", "friendlier", "formal", "fix grammar", "tone", "polish"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
+        id: "compose.dictate",
+        label: "Dictate",
+        group: "Compose",
+        scope: Scope::Compose,
+        palette: true,
+        keywords: &["voice", "speech", "microphone", "transcribe", "record"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
+        id: "search.fullMailbox",
+        label: "Search the full mailbox",
+        group: "Search",
+        scope: Scope::Global,
+        palette: true,
+        keywords: &["provider", "server", "everything", "older mail"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
+        id: "search.ai",
+        label: "Search with AI",
+        group: "Search",
+        scope: Scope::Global,
+        palette: true,
+        keywords: &["natural language", "ask", "find"],
+        keys: Keys {
+            mac: &[],
+            windows: &[],
+            linux: &[],
+            gpui_mac: &[],
+            gpui_windows: &[],
+            gpui_linux: &[],
+        },
+        gmail: None,
+    },
+    Shortcut {
         id: "search.close",
         label: "Close search",
         group: "Search",
@@ -1137,6 +1324,12 @@ pub mod ids {
     pub const SEARCH_OPEN: &str = "search.open";
     pub const UNDO: &str = "undo";
     pub const SETTINGS_OPEN: &str = "settings.open";
+    pub const OPS_RETRY: &str = "ops.retry";
+    pub const LABELS_CREATE: &str = "labels.create";
+    pub const LABELS_RENAME: &str = "labels.rename";
+    pub const LABELS_REMOVE: &str = "labels.remove";
+    pub const SENDS_SCHEDULED: &str = "sends.scheduled";
+    pub const COMPOSE_CONTINUE_DRAFT: &str = "compose.continueDraft";
     pub const GO_INBOX: &str = "go.inbox";
     pub const GO_STARRED: &str = "go.starred";
     pub const GO_SENT: &str = "go.sent";
@@ -1176,6 +1369,7 @@ pub mod ids {
     pub const THREAD_SHOW_IMAGES: &str = "thread.showImages";
     pub const AI_SUMMARIZE: &str = "ai.summarize";
     pub const AI_INSTANT_REPLY: &str = "ai.instantReply";
+    pub const AI_EXTRACT_ACTIONS: &str = "ai.extractActions";
     pub const COMPOSE_SEND: &str = "compose.send";
     pub const COMPOSE_SEND_LATER: &str = "compose.sendLater";
     pub const COMPOSE_DISCARD: &str = "compose.discard";
@@ -1185,6 +1379,10 @@ pub mod ids {
     pub const COMPOSE_CC: &str = "compose.cc";
     pub const COMPOSE_BCC: &str = "compose.bcc";
     pub const COMPOSE_AI_WRITE: &str = "compose.aiWrite";
+    pub const COMPOSE_REWRITE: &str = "compose.rewrite";
+    pub const COMPOSE_DICTATE: &str = "compose.dictate";
+    pub const SEARCH_FULL_MAILBOX: &str = "search.fullMailbox";
+    pub const SEARCH_AI: &str = "search.ai";
     pub const SEARCH_CLOSE: &str = "search.close";
     pub const SEARCH_SUBMIT: &str = "search.submit";
     pub const PALETTE_CLOSE: &str = "palette.close";

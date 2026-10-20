@@ -3,27 +3,35 @@
 The iOS, iPadOS and Android app: Expo SDK 58 (React Native 0.88, React 19.3), Expo Router, Convex live queries with
 Better Auth (`@better-auth/expo` + `@convex-dev/better-auth`), message bodies from the sync worker. Contract:
 `docs/ARCHITECTURE.md` §6.4 (auth), §16.2 (lists and caches), §14.3 (sandboxed rendering), §14.2 (push privacy).
-Decisions D-330 to D-339.
+Decisions D-330 to D-339, D-408, D-418, D-460 to D-472.
 
 ## What is in it
 
 - Sign-in: magic link (`akatsuki://auth/callback`), email code, Google / Microsoft when the server has them.
 - Split inbox (Inbox, each split, Other) and every mailbox view, swipe right to archive, left to snooze, far left to
   trash, with haptics; instant optimistic actions and instant Undo (10 s, also `z`); durable outbox in SQLite.
+- Multi-select: long-press a row (or `x`), tap to add, Shift+J/K, Ctrl/⌘+A; bulk archive, snooze, read/unread,
+  trash, star, label, move and spam with one Undo (D-460).
 - Thread view in a WebView with JavaScript off, the §14.3 CSP, links opened outside the app, remote images blocked
   until allowed, inline images and attachments through the worker.
-- Compose, reply, reply all, forward with 2 s autosave to the provider draft, Send with undo, Send later.
+- Compose, reply, reply all, forward with 2 s autosave to the provider draft, Send with undo, Send later, and a
+  Scheduled screen (change time, cancel, resolve unknown sends). Snippets from a picker or `;shortcut` with
+  `{{variables}}` (shared helpers in `@akatsuki/mail-model/snippets`), Write with AI and Rewrite streaming into the
+  body with Undo, and Dictate (expo-audio; managed via apps/api, your own OpenAI key, or a Whisper server on your
+  network), each with its "where your data goes" label (D-461 to D-463).
 - Snooze and "Remind me if no reply" pickers in the user's time zone.
 - Search with the shared grammar (chips, errors), Convex results, then "Search the full mailbox" via the worker.
-- Settings: plan status only (the app sells nothing, D-333), mailboxes (Gmail, Outlook, IMAP), notifications
+- Settings: plan status only (the app sells nothing, D-333), mailboxes (Gmail, Outlook, IMAP with host autodetect,
+  D-465), labels (rename, delete; folders rename-only, D-464), snippets, per-feature AI routes, notifications
   (`private` by default; `full` explains that sender and subject pass through Expo, Apple and Google), theme,
   keymap, undo-send delay, remote images, on-device body cache, AI providers (Akatsuki AI, BYO key kept only in
   SecureStore, Ollama or an OpenAI-compatible server on the LAN, each with its "where data goes" label and Test
   connection), devices, account deletion.
 - AI under an open conversation (D-408): Summarize and Suggest replies (menu, `Shift+S` / `Shift+R`, palette),
   through the same route as web: Akatsuki AI via apps/api, or the user's own provider straight from the device with
-  the key from SecureStore. A suggested reply opens the composer with it. Results stay on the screen. Not on mobile
-  yet: Write with AI, rewrite, dictation, Search with AI and triage.
+  the key from SecureStore. A suggested reply opens the composer with it. Results stay on the screen, with a
+  provenance line naming where the thread went. Search with AI turns a sentence into the search grammar. Not on
+  mobile yet: BYO auto-triage, Find action items, Open original.
 - Hardware keyboards (iPad first): the shared key map from `packages/shortcuts`, `⌘K` command palette with every
   implemented action plus theme, density, settings pages, mailboxes and sign out.
 
@@ -46,6 +54,13 @@ pnpm ios              # macOS + Xcode only
 
 The app uses native modules that Expo Go does not ship (`expo-key-event`), so it runs as a development build.
 Without the variables the app shows which ones are missing instead of starting.
+
+## Look (First Light, D-469 to D-472)
+
+Ink on paper, hairlines, red only for the brand dot, carets, the keyboard cursor bar, recording, errors, the sign-in
+button and the long-swipe Trash layer. Icons come from the shared stroke set through `node scripts/icons.mjs`
+(`src/components/_generated/iconData.ts`, checked by `test/icons.test.ts`). Toasts, sheets and swipes respect the
+system's reduced-motion setting.
 
 ## Checks
 

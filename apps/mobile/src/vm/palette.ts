@@ -86,6 +86,7 @@ export function appPaletteItems(current: { theme: ThemeChoice; density: DensityC
     { id: "app.settings", label: "Settings", group: "Settings", hint: null },
     { id: "app.settings.ai", label: "Settings: AI", group: "Settings", hint: null },
     { id: "app.settings.shortcuts", label: "Settings: Keyboard shortcuts", group: "Settings", hint: null },
+    { id: "app.settings.snippets", label: "Settings: Snippets", group: "Settings", hint: null },
     { id: "app.mailboxes", label: "Mailboxes", group: "Navigation", hint: null },
     { id: "app.signOut", label: "Sign out", group: "Account", hint: null },
   );

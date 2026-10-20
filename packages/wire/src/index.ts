@@ -6,6 +6,7 @@ export * from "./clients.ts";
 export * from "./errors.ts";
 export * from "./http.ts";
 export * from "./ids.ts";
+export * from "./imap.ts";
 export * from "./offsets.ts";
 export * from "./token.ts";
 export * from "./worker.ts";

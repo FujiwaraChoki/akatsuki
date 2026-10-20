@@ -16,7 +16,15 @@ const defined = (src: string) => new Set([...src.matchAll(/(--[a-z0-9-]+)\s*:/g)
 describe("styles.css", () => {
   it("has no colour literals", () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
-    expect(css).not.toMatch(/\b(rgb|rgba|hsl|hsla|oklch|lab|color-mix)\((?!var\()/);
+    // Colour functions only over token variables: rgb(var(--x-rgb) / a) and color-mix of two token colours.
+    expect(css).not.toMatch(/\b(rgb|rgba|hsl|hsla|oklch|lab)\((?!var\()/);
+    for (const m of css.matchAll(/\bcolor-mix\(/g))
+      expect(
+        css
+          .slice(m.index + 10, m.index + 60)
+          .replace(/\s+/g, " ")
+          .trim(),
+      ).toMatch(/^in (srgb|oklab), var\(--[a-z-]+\)/);
     expect(css).not.toMatch(/:\s*(white|black|red|gray|grey)\b/i);
     for (const m of css.matchAll(/\brgb\(/g))
       expect(css.slice(m.index + 4, m.index + 60)).toMatch(/^var\(--[a-z-]+-rgb\) \/ /);
@@ -29,11 +37,13 @@ describe("styles.css", () => {
     expect(used.filter((v) => !known.has(v))).toEqual([]);
   });
 
-  it("builds focus indicators from a colour with at least 3:1 against the page in both modes (D-409)", () => {
-    expect(css).toMatch(/--ak-focus-color: var\(--accent-text\);/);
-    expect(css).toMatch(/--ak-focus: 0 0 0 2px var\(--background\), 0 0 0 4px var\(--ak-focus-color\);/);
+  it("draws focus in the text colour, at least 3:1 against the page in both modes (D-484, supersedes D-399/D-409)", () => {
+    expect(css).toMatch(/--ak-focus-color: var\(--foreground\);/);
+    expect(css).toMatch(
+      /:focus-visible \{\s*outline: 2px solid var\(--ak-focus-color\);\s*outline-offset: 2px;/,
+    );
     const tokens = createRequire(import.meta.url)("@akatsuki/tokens/tokens.json") as {
-      color: Record<"light" | "dark", { accentText: string; background: string }>;
+      color: Record<"light" | "dark", { foreground: string; background: string }>;
     };
     const lum = (hex: string) => {
       const c = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16) / 255);
@@ -46,12 +56,18 @@ describe("styles.css", () => {
     };
     for (const mode of ["light", "dark"] as const) {
       const p = tokens.color[mode];
-      expect(ratio(p.accentText, p.background), mode).toBeGreaterThanOrEqual(3);
+      expect(ratio(p.foreground, p.background), mode).toBeGreaterThanOrEqual(3);
     }
   });
 
+  it("has no decoration: no blur, no radial glow, no accent tints (First Light, D-480)", () => {
+    expect(css).not.toMatch(/backdrop-filter|blur\(|radial-gradient|--glow\b|--accent-(tint|wash|glow|mid)/);
+    expect(css).not.toMatch(/\.ak-orb/);
+  });
+
   it("stops motion for reduced-motion users", () => {
-    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.ak-orb[\s\S]*animation: none/);
-    expect(css).toMatch(/\.ak-orbs\[data-motion="reduce"\] \.ak-orb \{\s*animation: none;/);
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.ak-palette[\s\S]*animation: ak-fade-in 80ms/,
+    );
   });
 });
