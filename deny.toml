@@ -73,6 +73,10 @@ yanked = "warn"
 # Accepted advisories, each with its reason (D-396). Anything not listed fails `cargo deny check`, so a new
 # advisory still breaks the build. Review this list whenever GPUI or jsonwebtoken is bumped.
 ignore = [
+    # webpki-roots 0.26.11 (via convex -> tokio-tungstenite) is only a shim that re-exports webpki-roots 1.0.10,
+    # which carries the fix; the advisory matches the shim's version number, not the roots it ships. Drop this
+    # once convex moves to tokio-tungstenite with webpki-roots 1.x directly.
+    { id = "RUSTSEC-2026-0381", reason = "0.26.11 re-exports the fixed webpki-roots 1.0.10" },
     # rsa (Marvin timing attack) comes in through jsonwebtoken's rust_crypto backend. Akatsuki only verifies
     # RS256 signatures with public keys (Better Auth JWKS, Google push JWTs); it never decrypts or signs with an
     # RSA private key, which is what the attack needs.
