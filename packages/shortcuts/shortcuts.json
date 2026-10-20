@@ -72,7 +72,7 @@
       "scope": "global",
       "palette": true,
       "keywords": ["failed", "error", "again", "try again"],
-      "keys": { "default": [] }
+      "keys": { "default": ["."] }
     },
     {
       "id": "labels.create",
@@ -81,7 +81,7 @@
       "scope": "global",
       "palette": true,
       "keywords": ["new label", "add label", "tag"],
-      "keys": { "default": [] }
+      "keys": { "default": ["shift+l"] }
     },
     {
       "id": "labels.rename",
@@ -108,7 +108,7 @@
       "scope": "global",
       "palette": true,
       "keywords": ["send later", "scheduled", "outbox", "reschedule"],
-      "keys": { "default": [] }
+      "keys": { "default": ["g w"] }
     },
     {
       "id": "compose.continueDraft",
@@ -117,7 +117,7 @@
       "scope": "global",
       "palette": true,
       "keywords": ["resume", "unsent", "draft", "restore"],
-      "keys": { "default": [] }
+      "keys": { "default": ["shift+c"] }
     },
     {
       "id": "go.inbox",
@@ -423,7 +423,7 @@
       "scope": "thread",
       "palette": true,
       "keywords": ["source", "raw", "headers", "print", "show original"],
-      "keys": { "default": [] }
+      "keys": { "default": ["shift+o"] }
     },
     {
       "id": "thread.showImages",
@@ -432,7 +432,7 @@
       "scope": "thread",
       "palette": true,
       "keywords": ["pictures", "load images"],
-      "keys": { "default": [] }
+      "keys": { "default": ["i"] }
     },
 
     {
@@ -461,7 +461,7 @@
       "scope": "thread",
       "palette": true,
       "keywords": ["todo", "tasks", "deadlines", "extract actions"],
-      "keys": { "default": [] }
+      "keys": { "default": ["shift+a"] }
     },
     {
       "id": "compose.send",
@@ -548,7 +548,7 @@
       "scope": "compose",
       "palette": true,
       "keywords": ["shorter", "friendlier", "formal", "fix grammar", "tone", "polish"],
-      "keys": { "default": [] }
+      "keys": { "default": ["ctrl+shift+y"], "mac": ["cmd+shift+y"] }
     },
     {
       "id": "compose.dictate",
@@ -557,7 +557,7 @@
       "scope": "compose",
       "palette": true,
       "keywords": ["voice", "speech", "microphone", "transcribe", "record"],
-      "keys": { "default": [] }
+      "keys": { "default": ["ctrl+shift+d"], "mac": ["cmd+shift+d"] }
     },
     {
       "id": "search.fullMailbox",
@@ -566,7 +566,7 @@
       "scope": "global",
       "palette": true,
       "keywords": ["provider", "server", "everything", "older mail"],
-      "keys": { "default": [] }
+      "keys": { "default": ["ctrl+shift+f"], "mac": ["cmd+shift+f"] }
     },
     {
       "id": "search.ai",
@@ -575,7 +575,7 @@
       "scope": "global",
       "palette": true,
       "keywords": ["natural language", "ask", "find"],
-      "keys": { "default": [] }
+      "keys": { "default": ["ctrl+/"], "mac": ["cmd+/"] }
     },
     {
       "id": "search.close",

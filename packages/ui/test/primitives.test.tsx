@@ -43,7 +43,7 @@ describe("Kbd", () => {
     const { container } = render(
       <>
         <Kbd shortcut="go.inbox" />
-        <Kbd shortcut="thread.openOriginal" data-testid="none" />
+        <Kbd shortcut="labels.remove" data-testid="none" />
       </>,
       { wrapper: linux },
     );

@@ -99,7 +99,8 @@ describe("parsing and formatting", () => {
     const archive = cmds.find((c) => c.id === "thread.archive");
     expect(archive?.hint).toBe("E");
     expect(cmds.find((c) => c.id === "palette.open")).toBeUndefined();
-    expect(cmds.find((c) => c.id === "thread.openOriginal")?.hint).toBeNull();
+    expect(cmds.find((c) => c.id === "thread.openOriginal")?.hint).toBe("⇧O");
+    expect(cmds.find((c) => c.id === "labels.remove")?.hint).toBeNull();
   });
 });
 

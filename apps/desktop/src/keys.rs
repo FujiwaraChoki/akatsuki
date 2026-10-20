@@ -510,6 +510,6 @@ mod tests {
         assert_eq!(format_keys("g i", Platform::Linux), "G then I");
         assert_eq!(format_keys("shift+tab", Platform::Windows), "Shift+Tab");
         assert_eq!(hint("thread.archive", Keymap::Superhuman).as_deref(), Some("E"));
-        assert_eq!(hint("thread.openOriginal", Keymap::Superhuman), None, "palette-only");
+        assert_eq!(hint("labels.remove", Keymap::Superhuman), None, "palette-only");
     }
 }
