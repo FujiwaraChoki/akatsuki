@@ -178,7 +178,11 @@ already fixes `sync`/`api` as DNS-only. No other records change.
 
 ## 5. Vercel
 
-Two projects in the owner's Vercel team, both connected to the GitHub repository:
+Two projects in the owner's Vercel team (`fujiwarachokis-projects`). As of 2026-10-20 the landing is live and is
+deployed with `scripts/deploy-landing.sh --prod`: Vercel's builders offer Node 24 at most and the repo pins Node 26
+with `engine-strict`, so the site is built locally (or in CI) and uploaded as static files. The team already has an
+unrelated project called `akatsuki-web` (the owner's earlier todo app), so the mail web client's project needs
+another name, e.g. `akatsuki-app`.
 
 | Project | Root Directory | Domain | Settings come from |
 |---|---|---|---|

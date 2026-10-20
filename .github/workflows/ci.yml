@@ -277,7 +277,9 @@ jobs:
           for img in akatsuki-sync:ci akatsuki-api:ci; do
             docker image inspect "$img" --format '{{.Config.User}} {{json .Config.Healthcheck.Test}}'
             id="$(docker create "$img")"
-            if docker export "$id" | tar -t | grep -E '(^|/)\.env($|\.)|\.pem$|(^|/)usr/local/bin/(npm|npx|corepack)$'; then
+            # The base image's public CA bundle (etc/ssl*/cert.pem) is the one expected .pem file.
+            if docker export "$id" | tar -t | grep -v -E '^etc/ssl[0-9.]*/cert\.pem$' \
+              | grep -E '(^|/)\.env($|\.)|\.pem$|(^|/)usr/local/bin/(npm|npx|corepack)$'; then
               echo "::error::$img contains an env file, a key or a package manager"; exit 1
             fi
             docker rm "$id" >/dev/null

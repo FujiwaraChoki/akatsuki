@@ -1,7 +1,10 @@
 // jsdom gaps that Radix and the app need: matchMedia (reduced motion, colour scheme), ResizeObserver,
 // scrollIntoView, pointer capture. Storage and the URL are reset between tests.
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach, beforeEach } from "vitest";
+
+// The app lazy-loads its shell, which can take more than the default 1 s on a cold CI runner.
+configure({ asyncUtilTimeout: 5000 });
 
 const hasDom = typeof window !== "undefined";
 
