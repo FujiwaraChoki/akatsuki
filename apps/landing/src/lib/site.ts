@@ -7,10 +7,10 @@ export const SITE = {
   appUrl: "https://app.akatsuki.vc",
   contact: "sami@samihindi.com",
   owner: "Sami Hindi",
-  title: "Akatsuki: the keyboard-first email client",
+  title: "Akatsuki: the open-source Superhuman alternative",
   tagline: "Clear your inbox by first light.",
   description:
-    "Akatsuki is an email client you drive from the keyboard. Gmail, Outlook and any IMAP account in one inbox, on the web, your desktop and your phone, with AI you can run on any provider, including a local model. Open source, free for personal use.",
+    "Akatsuki is the open-source Superhuman alternative: an email client you drive from the keyboard. Gmail, Outlook and any IMAP account in one inbox, on the web, your desktop and your phone, with AI you can run on any provider, including a local model. Open source, free for personal use.",
 } as const;
 
 /** The waitlist note, previewed on the page and opened in the visitor's mail app. */

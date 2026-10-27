@@ -44,8 +44,9 @@ export default function Home() {
             </h1>
             <div className="hero-copy">
               <p className="lead">
-                Akatsuki is an email client you drive from the keyboard. Gmail, Outlook and any IMAP account
-                in one inbox, on the web, your desktop and your phone.
+                Akatsuki is the open-source Superhuman alternative: an email client you drive from the
+                keyboard. Gmail, Outlook and any IMAP account in one inbox, on the web, your desktop and your
+                phone.
               </p>
               <div className="hero-cta">
                 <a className="btn btn-primary btn-block-m" href="#waitlist" data-waitlist>
@@ -188,7 +189,7 @@ export default function Home() {
                 </a>
                 <p className="pz-self">
                   Rather run it yourself? Self-hosting is free for personal,{" "}
-                  <span className="nowrap">non-commercial</span> use.{" "}
+                  <span className="nowrap">non-commercial</span> use. Commercial use needs written permission.{" "}
                   <a className="tlink" href="/license">
                     How self-hosting works <span className="arr">→</span>
                   </a>

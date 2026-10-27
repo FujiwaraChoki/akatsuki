@@ -1,14 +1,29 @@
 # Akatsuki
 
-**Akatsuki is open source, free for personal use.** You can read, run and self-host it for personal, non-commercial use. Commercial use of any kind, including use by any organisation, needs written permission from the copyright holder (sami@samihindi.com). The licence, the Akatsuki Source-Available License (ASAL-1.0) in [`LICENSE`](LICENSE), is not an OSI-approved licence, because it reserves commercial use. It has not yet been reviewed by a lawyer, and it must be reviewed before any commercial launch.
+**The open-source Superhuman alternative.**
 
----
-
-Akatsuki (暁, "dawn") is a fast, keyboard-first email client. It works with Gmail and Google Workspace, Outlook and Microsoft 365, and any IMAP/SMTP host, on the web, desktop and phone.
+Akatsuki (暁, "dawn") is a fast, keyboard-first email client. It works with Gmail and Google Workspace, Outlook and Microsoft 365, and any IMAP/SMTP host, on the web, desktop and phone, with AI you can run on any provider, including a model on your own machine.
 
 Email should take less of your day. Akatsuki keeps your hands on the keyboard, keeps the list fast at any size, and keeps your mail where it already lives: with your provider, and on your devices.
 
-Website: [akatsuki.vc](https://akatsuki.vc)
+[akatsuki.vc](https://akatsuki.vc) · [Status](docs/STATUS.md) · [Architecture](docs/ARCHITECTURE.md) · [Licence](LICENSE)
+
+> **Open source, free for personal use.** You can read, run and self-host it for personal, non-commercial use. Commercial use of any kind, including use by any organisation, needs written permission. See [Licence in brief](#licence-in-brief).
+
+## Why Akatsuki instead of Superhuman
+
+| | Akatsuki | Superhuman |
+|---|---|---|
+| Keyboard-first, with a command palette | Yes | Yes |
+| Split inbox, snooze, send later, undo send | Yes | Yes |
+| Gmail and Outlook | Yes | Yes |
+| Any IMAP/SMTP host (Fastmail, iCloud, your own server) | Yes | No |
+| Source code you can read and change | Yes | No |
+| Self-host for free | Yes, for personal use | No |
+| Bring your own AI provider or key | Yes: OpenRouter, Anthropic, OpenAI, Google and any OpenAI-compatible endpoint | No |
+| Run AI on a local model | Yes: Ollama, LM Studio, llama.cpp, vLLM | No |
+
+Akatsuki is in pre-alpha, so its column describes what it is built to do. [Status](#status) says what works today. Akatsuki Pro, the hosted plan, is $20 a month with managed AI included.
 
 ## Status
 
@@ -120,6 +135,8 @@ There is no free hosted plan. Using Akatsuki for a business, self-hosted or othe
 | Contribute back | | |
 | | Use the Akatsuki name or logo for your copy | |
 
+The licence, the Akatsuki Source-Available License (ASAL-1.0), is not an OSI-approved licence, because it reserves commercial use. It has not yet been reviewed by a lawyer, and it must be reviewed before any commercial launch. For commercial use, write to sami@samihindi.com.
+
 The full terms are in [`LICENSE`](LICENSE). Third-party components keep their own licences; see [`THIRD_PARTY.md`](THIRD_PARTY.md). The Convex backend is licensed FSL-1.1-Apache-2.0.
 
 ## Contributing and security
@@ -131,3 +148,5 @@ The full terms are in [`LICENSE`](LICENSE). Third-party components keep their ow
 ## Copyright
 
 Copyright (c) 2026 Sami Hindi. "Akatsuki" and the Akatsuki logo are not licensed for use by others.
+
+Superhuman is a trademark of its owner. Akatsuki is not affiliated with or endorsed by Superhuman.

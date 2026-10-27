@@ -152,7 +152,7 @@ export function OgArtwork() {
             width: 470,
           }}
         >
-          The email client you drive from the keyboard. Gmail, Outlook and IMAP.
+          The open-source Superhuman alternative. Gmail, Outlook and IMAP, driven from the keyboard.
         </div>
       </div>
       <div

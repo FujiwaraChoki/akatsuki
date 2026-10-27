@@ -45,6 +45,8 @@ async function renderPage(href: string): Promise<{ main: string; footer: string 
 }
 
 const PHRASE = "open source, free for personal use";
+/** How the hero, metadata and README position Akatsuki. */
+const POSITIONING = "open-source superhuman alternative";
 /** "Commercial use, including by any organisation, needs written permission." and its short forms. */
 const CAVEAT = /commercial use[^.]*needs (written )?permission/i;
 
@@ -57,9 +59,14 @@ describe("copy", () => {
       for (const m of text.matchAll(/open[ -]source/gi)) {
         const rest = text.slice(m.index).toLowerCase();
         const around = text.slice(m.index - 1, m.index + m[0].length + 1);
-        // Allowed: the phrase itself, the FAQ question ("Is Akatsuki open source?") and the bare
-        // search keyword in the root layout's metadata.
-        if (!rest.startsWith(PHRASE) && !rest.startsWith("open source?") && around !== '"open source"')
+        // Allowed: the phrase itself, the positioning line, the FAQ question ("Is Akatsuki open
+        // source?") and the bare search keyword in the root layout's metadata.
+        if (
+          !rest.startsWith(PHRASE) &&
+          !rest.startsWith(POSITIONING) &&
+          !rest.startsWith("open source?") &&
+          around !== '"open source"'
+        )
           offenders.push(at(m.index));
       }
       // "Source-available" survives only in the licence's name.

@@ -21,6 +21,7 @@ export const metadata: Metadata = {
     "Outlook",
     "IMAP",
     "Superhuman alternative",
+    "open-source Superhuman alternative",
     "open source",
     "free for personal use",
     "Ollama",
