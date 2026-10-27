@@ -166,14 +166,13 @@
   font-size: var(--text-brand-small-size);
   font-weight: var(--text-brand-small-weight);
 }
-/* Mono caps (`text.app.label`): only the reader crumb, the AI provenance line and chips (SPEC §2.1). */
+/* Mono label (`text.app.label`, sentence case): only the reader crumb, the AI provenance line and chips (SPEC §2.1). */
 .ak-crumb {
   font-family: var(--text-app-label-font);
   font-size: var(--text-app-label-size);
   line-height: var(--text-app-label-line-height);
   font-weight: var(--text-app-label-weight);
   letter-spacing: var(--text-app-label-tracking);
-  text-transform: uppercase;
   color: var(--ak-fg-60);
 }
 
@@ -1005,7 +1004,7 @@
   object-fit: cover;
 }
 
-/* Counts are mono grey numbers; labels are mono caps chips (SPEC §3.1.4). */
+/* Counts are mono grey numbers; labels are mono sentence-case chips (SPEC §3.1.4). */
 .ak-badge {
   display: inline-flex;
   align-items: center;
@@ -1026,8 +1025,6 @@
   border-radius: var(--radius-sm);
   font-family: var(--text-app-label-font);
   font-weight: 400;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--ak-fg-60);
 }
 .ak-badge--label.ak-badge--accent {

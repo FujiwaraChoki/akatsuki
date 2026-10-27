@@ -2,7 +2,7 @@
 // (which is also the no-JS version) and the client uses the same functions after every action,
 // so the two can never disagree.
 import { glyphHtml } from "./glyphs";
-import { EMPTY_VIEWS, type Split, THREADS, type Thread, type ViewId } from "./inbox-fixture";
+import { EMPTY_VIEWS, type Split, THREADS, type Thread, VIEWS, type ViewId } from "./inbox-fixture";
 
 export type Loc = "inbox" | "archived" | "snoozed" | "trash";
 export interface TState extends Thread {
@@ -171,7 +171,8 @@ export function paneHtml(s: InboxState): string {
   const words = t.summary.join(" ").split(" ");
   const shown = s.sumWords == null ? words.join(" ") : words.slice(0, s.sumWords).join(" ");
   const streaming = s.sumWords != null && s.sumWords < words.length;
-  const crumb = s.view === "inbox" ? `Inbox · ${t.split}` : s.view;
+  const crumb =
+    s.view === "inbox" ? `Inbox · ${t.split}` : (VIEWS.find((v) => v.id === s.view)?.label ?? s.view);
   return `<p class="rp-crumb">${esc(crumb)}</p>
 <p class="rp-subj">${esc(t.subject)}</p>
 <p class="rp-from">${esc(t.from)} · to me · ${esc(t.time)}</p>

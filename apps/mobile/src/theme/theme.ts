@@ -124,7 +124,6 @@ export interface TextStyleSpec {
   fontSize: number;
   lineHeight: number;
   letterSpacing: number;
-  textTransform?: "uppercase";
 }
 
 type AppStyle = keyof typeof textTokens.app;
@@ -137,7 +136,6 @@ export function textStyle(name: AppStyle, scale = 1): TextStyleSpec {
     lineHeight: number;
     tracking: number;
     weight: number;
-    uppercase?: boolean;
   };
   const size = Math.round(t.size * scale * 10) / 10;
   return {
@@ -145,7 +143,6 @@ export function textStyle(name: AppStyle, scale = 1): TextStyleSpec {
     fontSize: size,
     lineHeight: Math.round(size * t.lineHeight),
     letterSpacing: Math.round(t.tracking * size * 100) / 100,
-    ...(t.uppercase ? { textTransform: "uppercase" as const } : {}),
   };
 }
 
@@ -160,7 +157,6 @@ function sized(
     lineHeight: number;
     tracking: number;
     weight: number;
-    uppercase?: boolean;
   };
   const lh = over.lineHeight ?? t.lineHeight;
   return {
@@ -168,7 +164,6 @@ function sized(
     fontSize: size,
     lineHeight: Math.round(size * lh),
     letterSpacing: Math.round(t.tracking * size * 100) / 100,
-    ...(t.uppercase ? { textTransform: "uppercase" as const } : {}),
   };
 }
 
@@ -193,9 +188,9 @@ export interface Theme {
     title: TextStyleSpec;
     reading: TextStyleSpec;
     code: TextStyleSpec;
-    /** Sentence-case group header (`text.app.section`; was the uppercase label). */
+    /** Sentence-case group header (`text.app.section`). */
     label: TextStyleSpec;
-    /** Mono caps: only the thread crumb, AI provenance and chips (`text.app.label`). */
+    /** Mono label, sentence case: only the thread crumb, AI provenance and chips (`text.app.label`). */
     crumb: TextStyleSpec;
     subject: TextStyleSpec;
     heading: TextStyleSpec;

@@ -79,7 +79,7 @@ export function MenuCheckboxItem({ children, className, ...rest }: MenuCheckboxI
   );
 }
 
-/** An uppercase, tracked section label. */
+/** A sentence-case section label. */
 export function MenuLabel({ className, ...rest }: RadixMenu.DropdownMenuLabelProps) {
   return <RadixMenu.Label className={cx("ak-menu__heading", className)} {...rest} />;
 }

@@ -1,6 +1,6 @@
 // The reading pane: an open thread (ARCHITECTURE §4.2 `mail.getThread`, §7.2 bodies, §14.3 rendering).
 // Headers come live from Convex; bodies stream from the worker once per thread and are cached on the device.
-// First Light (SPEC §3.1.5): a mono caps crumb, the serif subject with its chips inline, a from-line, and messages
+// First Light (SPEC §3.1.5): a mono crumb, the serif subject with its chips inline, a from-line, and messages
 // without cards: collapsed 40px rows and expanded messages separated by hairlines. No avatars.
 import { SYS } from "@akatsuki/mail-model";
 import { Badge, Crumb, Heading, Kbd, Spinner } from "@akatsuki/ui";
@@ -61,7 +61,7 @@ export interface ThreadViewProps {
   showImagesTick: number;
   /** Bumped by the "Expand all messages" command (shift+x). */
   expandAllTick: number;
-  /** The mono caps crumb: where the thread was opened from ("Inbox", "Inbox · VIP"). */
+  /** The mono crumb: where the thread was opened from ("Inbox", "Inbox · VIP"). */
   crumb: string;
 }
 

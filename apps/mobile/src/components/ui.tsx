@@ -63,7 +63,7 @@ export function Label({ children, style }: { children: ReactNode; style?: StyleP
   );
 }
 
-/** Mono caps (spec §2.1): only the thread crumb, AI provenance and chips. */
+/** Mono label in sentence case (spec §2.1): only the thread crumb, AI provenance and chips. */
 export function Crumb({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
   return (
     <Txt variant="crumb" tone="muted" style={style}>

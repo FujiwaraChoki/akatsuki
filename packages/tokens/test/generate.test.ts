@@ -111,8 +111,8 @@ describe("toCss", () => {
     expect(css).toContain("--space-0-5: 4px;");
     expect(css).toContain("--radius-full: 9999px;");
     expect(css).toContain('--font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;');
-    expect(css).toContain("--text-app-label-tracking: 0.12em;");
-    expect(css).toContain("--text-brand-label-tracking: 0.3em;");
+    expect(css).toContain("--text-app-label-tracking: 0em;");
+    expect(css).toContain("--text-brand-label-tracking: 0em;");
     expect(css).toContain("--ease-out: cubic-bezier(0, 0, 0.2, 1);");
   });
   it("honours reduced motion", () => {
@@ -205,7 +205,7 @@ describe("toTs", () => {
       expect(mod.space["1"]).toBe(8);
       expect(mod.fg("dark", "muted")).toBe("rgba(237, 237, 237, 0.6)");
       expect(mod.accent("light", "tint")).toBe("rgba(193, 39, 45, 0.15)");
-      expect(mod.tokens.text.app.label.tracking).toBe(0.12);
+      expect(mod.tokens.text.app.label.tracking).toBe(0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

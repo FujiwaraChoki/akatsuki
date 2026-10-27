@@ -438,14 +438,14 @@ describe("keyboard subset", () => {
 });
 
 describe("egress provenance (design spec §3.8)", () => {
-  it("shortens the packages/ai sentences for mono-caps lines", async () => {
+  it("shortens the packages/ai sentences for mono provenance lines", async () => {
     const { egressShort, provenance } = await import("../src/vm/egress.ts");
     expect(egressShort("Stays on this device")).toBe("On this device");
     expect(egressShort("Stays on your local network (192.168.1.9:8000)")).toBe("On your network");
-    expect(egressShort("Sent to Akatsuki for processing, not stored")).toBe("Akatsuki · not stored");
+    expect(egressShort("Sent to Akatsuki for processing, not stored")).toBe("Akatsuki · Not stored");
     expect(
       egressShort("Sent to OpenAI through Akatsuki; may be kept up to 30 days for abuse monitoring"),
-    ).toBe("OpenAI via Akatsuki · kept up to 30 days");
+    ).toBe("OpenAI via Akatsuki · Kept up to 30 days");
     expect(egressShort("Leaves this device: the thread you run this on, sent to api.anthropic.com")).toBe(
       "Leaves this device · api.anthropic.com",
     );

@@ -163,7 +163,7 @@ pub mod text {
         pub const BODY_STRONG: TextStyle = TextStyle { font: FontRole::Sans, size: 13.0, size_wide: None, line_height: 1.5, tracking_em: 0.0, weight: 500, uppercase: false };
         pub const READING: TextStyle = TextStyle { font: FontRole::Sans, size: 15.0, size_wide: None, line_height: 1.6, tracking_em: 0.0, weight: 400, uppercase: false };
         pub const CODE: TextStyle = TextStyle { font: FontRole::Mono, size: 12.0, size_wide: None, line_height: 1.5, tracking_em: 0.0, weight: 400, uppercase: false };
-        pub const LABEL: TextStyle = TextStyle { font: FontRole::Mono, size: 11.0, size_wide: None, line_height: 1.4, tracking_em: 0.12, weight: 500, uppercase: true };
+        pub const LABEL: TextStyle = TextStyle { font: FontRole::Mono, size: 11.0, size_wide: None, line_height: 1.4, tracking_em: 0.0, weight: 500, uppercase: false };
         pub const SECTION: TextStyle = TextStyle { font: FontRole::Sans, size: 12.0, size_wide: None, line_height: 1.4, tracking_em: 0.0, weight: 500, uppercase: false };
         pub const SUBJECT: TextStyle = TextStyle { font: FontRole::Serif, size: 24.0, size_wide: Some(30.0), line_height: 1.15, tracking_em: -0.01, weight: 400, uppercase: false };
         pub const HEADING: TextStyle = TextStyle { font: FontRole::Serif, size: 28.0, size_wide: None, line_height: 1.3, tracking_em: 0.0, weight: 400, uppercase: false };
@@ -177,7 +177,7 @@ pub mod text {
         pub const SUBHEAD: TextStyle = TextStyle { font: FontRole::Serif, size: 20.0, size_wide: None, line_height: 1.4, tracking_em: 0.0, weight: 400, uppercase: false };
         pub const BODY: TextStyle = TextStyle { font: FontRole::Serif, size: 16.0, size_wide: None, line_height: 1.75, tracking_em: 0.0, weight: 400, uppercase: false };
         pub const SMALL: TextStyle = TextStyle { font: FontRole::Serif, size: 14.0, size_wide: None, line_height: 1.5, tracking_em: 0.0, weight: 400, uppercase: false };
-        pub const LABEL: TextStyle = TextStyle { font: FontRole::Serif, size: 14.0, size_wide: None, line_height: 1.4, tracking_em: 0.3, weight: 400, uppercase: true };
+        pub const LABEL: TextStyle = TextStyle { font: FontRole::Serif, size: 14.0, size_wide: None, line_height: 1.4, tracking_em: 0.0, weight: 400, uppercase: false };
     }
 }
 

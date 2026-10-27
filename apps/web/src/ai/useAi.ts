@@ -159,7 +159,7 @@ export function useAi() {
     [ai, settings],
   );
   /**
-   * The mono caps provenance line's words (SPEC §3.8): "llama3.3 · On this device", "Akatsuki · Not stored",
+   * The mono provenance line's words (SPEC §3.8): "llama3.3 · On this device", "Akatsuki · Not stored",
    * "Leaves this device · Anthropic". The full sentence stays `egress()`.
    */
   const provenance = useCallback(

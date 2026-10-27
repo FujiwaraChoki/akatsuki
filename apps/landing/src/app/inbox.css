@@ -745,8 +745,6 @@
   font-family: var(--mono);
   font-weight: 500;
   font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--fg-60);
 }
 .rp-subj {
@@ -774,8 +772,6 @@
   font-family: var(--mono);
   font-weight: 500;
   font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--fg-60);
 }
 .rp-sum-text {

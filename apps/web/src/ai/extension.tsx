@@ -61,6 +61,14 @@ interface Replies {
 interface Actions {
   actions?: { kind?: string; title?: string; due?: string | null; quote?: string }[];
 }
+/** Sentence-case display names for `ActionItem.kind`; unknown kinds (mid-stream) show as sent. */
+const ACTION_KIND: Record<string, string> = {
+  todo: "To-do",
+  deadline: "Deadline",
+  meeting: "Meeting",
+  payment: "Payment",
+  reply: "Reply",
+};
 
 function ThreadAiFooter({ thread }: { thread: ThreadDetail }) {
   return <ThreadAi key={thread.thread._id} detail={thread} />;
@@ -158,7 +166,7 @@ function ThreadAi({ detail }: { detail: ThreadDetail }) {
   return (
     <section className="ak-ai" aria-label="AI">
       {(summary.state.status === "running" || summary.state.status === "done") && s && !hidden && (
-        // The summary block (SPEC §3.8, landing .rp-sum): a hairline box, the provenance line in mono caps, then
+        // The summary block (SPEC §3.8, landing .rp-sum): a hairline box, the provenance line in mono, then
         // the text in Geist 13/20. No serif, no tinted fill.
         <div className="ak-sum ak-sum--summary" aria-live="polite">
           <div className="ak-sum__head">
@@ -226,7 +234,9 @@ function ThreadAi({ detail }: { detail: ThreadDetail }) {
               {a.actions.map((x, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: positional
                 <li key={i} className="ak-ai__action">
-                  <span className="ak-crumb ak-ai__action-kind">{x.kind}</span>
+                  <span className="ak-crumb ak-ai__action-kind">
+                    {x.kind && (ACTION_KIND[x.kind] ?? x.kind)}
+                  </span>
                   <span className="ak-ai__action-title">
                     {x.title}
                     {x.due ? ` (${x.due})` : ""}

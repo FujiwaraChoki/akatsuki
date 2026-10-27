@@ -62,17 +62,36 @@ pub fn label(t: &Theme, text: &str) -> Div {
         .child(text.to_owned())
 }
 
-/// Mono caps (reader crumb, AI provenance line). GPUI has no letter-spacing; mono is spaced already.
+/// Mono label, sentence case as given (reader crumb, AI provenance line).
 pub fn crumb(t: &Theme, text: &str) -> Div {
     div()
         .font_family(fonts::MONO)
         .text_size(px(styles::LABEL.size))
         .font_weight(FontWeight::MEDIUM)
         .text_color(t.muted)
-        .child(text.to_uppercase())
+        .child(text.to_owned())
 }
 
-/// A label or triage chip: mono caps 11, 18 px, hairline, radius 4.
+/// Sentence-case display name for a triage category (web `TRIAGE_LABEL`).
+pub fn triage_label(category: &str) -> String {
+    match category {
+        "important" => "Important".into(),
+        "personal" => "Personal".into(),
+        "updates" => "Updates".into(),
+        "newsletters" => "Newsletter".into(),
+        "promotions" => "Promotion".into(),
+        "receipts" => "Receipt".into(),
+        "calendar" => "Calendar".into(),
+        "notifications" => "Notification".into(),
+        "other" => "Other".into(),
+        c => {
+            let mut chars = c.chars();
+            chars.next().map(|f| f.to_uppercase().chain(chars).collect()).unwrap_or_default()
+        }
+    }
+}
+
+/// A label or triage chip: mono 11, sentence case as given, 18 px, hairline, radius 4.
 pub fn chip(t: &Theme, text: &str) -> Div {
     div()
         .flex()
@@ -87,7 +106,7 @@ pub fn chip(t: &Theme, text: &str) -> Div {
         .text_size(px(styles::CAPTION.size))
         .line_height(px(12.))
         .text_color(t.muted)
-        .child(text.to_uppercase())
+        .child(text.to_owned())
 }
 
 /// Button kinds (§5.3): flat pills, no shadow.

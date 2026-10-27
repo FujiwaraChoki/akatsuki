@@ -261,9 +261,10 @@ describe("theme", () => {
     expect(color.dark.accentText).toBe("#B77777");
     expect(light.colors.accentText).toBe(color.light.accent);
     expect(light.colors.muted).toBe("#747474");
-    // Group headers are sentence case; mono caps survive only as the crumb (spec §2.1).
-    expect(light.text.label.textTransform).toBeUndefined();
-    expect(light.text.crumb).toMatchObject({ textTransform: "uppercase", fontSize: 11, letterSpacing: 1.32 });
+    // Group headers and the mono crumb are both sentence case with no tracking (spec §2.1).
+    expect(light.text.label).not.toHaveProperty("textTransform");
+    expect(light.text.crumb).not.toHaveProperty("textTransform");
+    expect(light.text.crumb).toMatchObject({ fontSize: 11, letterSpacing: 0 });
     expect(light.text.crumb.fontFamily).toBe("GeistMono-Medium");
     expect(light.text.body.fontSize).toBe(15);
     expect(light.text.reading).toMatchObject({ fontSize: 16, lineHeight: 25 });

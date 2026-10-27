@@ -164,11 +164,10 @@ export function OgArtwork() {
           fontFamily: "Geist Mono",
           fontWeight: 500,
           fontSize: 15,
-          letterSpacing: "0.16em",
           color: C.fg55,
         }}
       >
-        AKATSUKI.VC · PRE-ALPHA
+        akatsuki.vc · Pre-alpha
       </div>
     </div>
   );

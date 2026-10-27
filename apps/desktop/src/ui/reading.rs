@@ -8,14 +8,14 @@ use akatsuki_core::convex::AiFeature;
 use akatsuki_shortcuts::ids as sc;
 
 use super::body;
-use super::widgets::{chip, crumb, icon, keys, pill};
+use super::widgets::{chip, crumb, icon, keys, pill, triage_label};
 use super::workspace::Workspace;
 use crate::keys::caps;
 use crate::theme::{fonts, styles};
 use crate::vm::mail::Folder;
 use crate::vm::time;
 
-/// The short form of an egress sentence for the mono-caps provenance line (§3.8).
+/// The short form of an egress sentence for the mono provenance line (§3.8).
 pub fn egress_short(sentence: &str) -> String {
     if sentence.starts_with("Stays on this device") {
         "On this device".into()
@@ -24,7 +24,7 @@ pub fn egress_short(sentence: &str) -> String {
     } else if sentence.starts_with("Sent to OpenAI through Akatsuki") {
         "OpenAI via Akatsuki".into()
     } else if sentence.starts_with("Sent to Akatsuki") {
-        "Akatsuki · not stored".into()
+        "Akatsuki · Not stored".into()
     } else if let Some(host) = sentence.rsplit_once("sent to ").map(|(_, h)| h.trim_end_matches('.')) {
         format!("Leaves this device · {host}")
     } else {
@@ -88,7 +88,7 @@ impl Workspace {
                         .items_center()
                         .gap(px(10.))
                         .py(px(4.))
-                        .child(chip(&t, &a.kind))
+                        .child(chip(&t, a.kind_label()))
                         .child(
                             div().flex_1().min_w(px(0.)).flex().flex_col().child(text(a.title.clone())).child(
                                 div()
@@ -241,7 +241,7 @@ impl Workspace {
             crumb_parts.push(tab.name.clone());
         }
         if let Some(c) = summary.as_ref().and_then(|s| s.triage.clone()) {
-            crumb_parts.push(c);
+            crumb_parts.push(triage_label(&c));
         }
         let narrow = !self.three_panes(window);
         let now = akatsuki_core::time::now_ms();
@@ -584,7 +584,7 @@ mod tests {
     fn egress_has_a_short_form() {
         assert_eq!(egress_short("Stays on this device"), "On this device");
         assert_eq!(egress_short("Stays on your local network (nas.local)"), "On your network");
-        assert_eq!(egress_short("Sent to Akatsuki for processing, not stored"), "Akatsuki · not stored");
+        assert_eq!(egress_short("Sent to Akatsuki for processing, not stored"), "Akatsuki · Not stored");
         assert_eq!(
             egress_short("Sent to OpenAI through Akatsuki; may be kept up to 30 days for abuse monitoring"),
             "OpenAI via Akatsuki"

@@ -168,7 +168,7 @@ pub mod styles {
     pub const BODY: TextStyle = text::app::BODY;
     /// 15 px reading text.
     pub const READING: TextStyle = text::app::READING;
-    /// Mono caps: the reader crumb, the AI provenance line, chips (§2.1).
+    /// Mono label, sentence case: the reader crumb, the AI provenance line, chips (§2.1).
     pub const LABEL: TextStyle = text::app::LABEL;
     /// Section headers: 12/500, sentence case.
     pub const SECTION: TextStyle = text::app::SECTION;

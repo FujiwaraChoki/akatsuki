@@ -1,5 +1,5 @@
-// The "where your data goes" label under every AI action (ARCHITECTURE §12.2, design spec §3.8, §4.9): mono caps
-// in `muted`, no fill, from packages/ai `egressText`. `full` adds the whole sentence (where the user decides to
+// The "where your data goes" label under every AI action (ARCHITECTURE §12.2, design spec §3.8, §4.9): a mono
+// label in `muted`, no fill, from packages/ai `egressText`. `full` adds the whole sentence (where the user decides to
 // send something: the dictation and write sheets, settings).
 import { View } from "react-native";
 import { useTheme } from "../theme/ThemeProvider";

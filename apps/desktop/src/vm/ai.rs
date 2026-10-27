@@ -217,6 +217,20 @@ pub struct ActionItem {
     pub quote: String,
 }
 
+impl ActionItem {
+    /// The kind as a sentence-case chip label ("To-do", "Deadline"); unknown kinds show as sent.
+    pub fn kind_label(&self) -> &str {
+        match self.kind.as_str() {
+            "todo" => "To-do",
+            "deadline" => "Deadline",
+            "meeting" => "Meeting",
+            "payment" => "Payment",
+            "reply" => "Reply",
+            k => k,
+        }
+    }
+}
+
 /// The action items of an `extract_actions` result.
 pub fn action_items(output: &serde_json::Value) -> Vec<ActionItem> {
     output.get("actions").and_then(|a| serde_json::from_value::<Vec<ActionItem>>(a.clone()).ok()).unwrap_or_default()

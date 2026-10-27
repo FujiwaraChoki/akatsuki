@@ -1,5 +1,5 @@
 // Typography (First Light, D-482): Instrument Serif headings once per screen at most (subject, empty states,
-// sign-in, settings page title), the sentence-case section label, and mono caps only for the reader crumb, the AI
+// sign-in, settings page title), the sentence-case section label, and the mono label only for the reader crumb, the AI
 // provenance line and chips.
 import type { HTMLAttributes } from "react";
 import { cx } from "./config.tsx";
@@ -32,7 +32,7 @@ export function Eyebrow({ variant = "app", className, ...rest }: EyebrowProps) {
   return <span className={cx("ak-eyebrow", `ak-eyebrow--${variant}`, className)} {...rest} />;
 }
 
-/** Mono caps (`INBOX · IMPORTANT`, `SUMMARY · ON THIS DEVICE`): the reader crumb and the AI provenance line only. */
+/** Mono label (`Inbox · Important`, `Summary · On this device`): the reader crumb and the AI provenance line only. */
 export function Crumb({ className, ...rest }: HTMLAttributes<HTMLSpanElement>) {
   return <span className={cx("ak-crumb", className)} {...rest} />;
 }

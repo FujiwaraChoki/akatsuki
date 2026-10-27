@@ -336,7 +336,7 @@ function ThreadRowImpl({
   );
 }
 
-/** Draft, Needs reply: mono caps chips on line 1 (spec §4.2). */
+/** Draft, Needs reply: mono sentence-case chips on line 1 (spec §4.2). */
 function RowChip({ text }: { text: string }) {
   const t = useTheme();
   return (
@@ -350,7 +350,7 @@ function RowChip({ text }: { text: string }) {
         justifyContent: "center",
       }}
     >
-      <Txt variant="crumb" tone="tertiary" style={{ fontSize: 9, lineHeight: 12, letterSpacing: 0.36 }}>
+      <Txt variant="crumb" tone="tertiary" style={{ fontSize: 9, lineHeight: 12 }}>
         {text}
       </Txt>
     </View>

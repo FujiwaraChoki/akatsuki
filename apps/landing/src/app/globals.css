@@ -2,7 +2,7 @@
 /* biome-ignore-all lint/style/noDescendingSpecificity: rules are ordered by component; later, less specific rules are scoped by a media query or a state class and never meet the earlier ones */
 /* Akatsuki landing, "First Light". Tokens, type, grid, shared components, header, overlays, footer.
    Type scale (the only sizes on the site): 11 · 12 · 13 · 14 · 16 · 19 · 24 · 30 · 36 · 80 · 144,
-   plus the price. The logo is a red dot (--dawn); the hero and the finale end on it. Mono caps exist only inside the product mock. */
+   plus the price. The logo is a red dot (--dawn); the hero and the finale end on it. The mono label exists only inside the product mock. */
 
 /* ───────────── fonts ───────────── */
 @font-face {
@@ -430,7 +430,7 @@ em,
   line-height: 1.55;
   color: var(--fg-60);
 }
-/* Marketing labels are sentence-case Geist; mono caps are reserved for the product mock (.mlabel). */
+/* Marketing labels are sentence-case Geist; the mono label is reserved for the product mock (.mlabel). */
 .label {
   font-size: 13px;
   line-height: 20px;
@@ -442,8 +442,6 @@ em,
   font-weight: 500;
   font-size: 11px;
   line-height: 16px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: var(--fg-60);
 }
 @media (max-width: 767px) {
@@ -584,8 +582,6 @@ em,
   border-radius: 4px;
   font-family: var(--mono);
   font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--fg-60);
   line-height: 1;
   white-space: nowrap;

@@ -10,7 +10,7 @@ use gpui::{AnimationExt, AnyElement, Context, FontWeight, Window, div, prelude::
 use akatsuki_core::time::now_ms;
 use akatsuki_shortcuts::ids as sc;
 
-use super::widgets::{chip, icon, keys};
+use super::widgets::{chip, icon, keys, triage_label};
 use super::workspace::Workspace;
 use crate::keys::caps;
 use crate::theme::{fonts, styles};
@@ -65,10 +65,10 @@ impl Workspace {
                 let snippet = super::reading::one_line(&r.snippet);
                 let mut chips: Vec<String> = Vec::new();
                 if let Some(c) = r.triage.as_ref().filter(|c| !matches!(c.as_str(), "other" | "personal")) {
-                    chips.push(c.clone());
+                    chips.push(triage_label(c));
                 }
                 if r.needs_reply {
-                    chips.push("needs reply".into());
+                    chips.push("Needs reply".into());
                 }
                 let group = gpui::SharedString::from(format!("row-{ix}"));
                 let (surface, surface_strong) = (t.surface, t.surface_strong);
